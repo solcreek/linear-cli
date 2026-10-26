@@ -8,12 +8,16 @@ before guessing a flag. Always pass `--json`.
 - Auth: `LINEAR_API_KEY` in the environment, else the key stored by
   `auth login` (Keychain on macOS, `credentials.json` elsewhere). Never put a
   key in argv: `auth login` reads it from stdin.
-- Mutating: `issue create`, `issue update`, `issue archive`, `comment create`,
-  `file download`, `config set`, `auth login`, `auth logout`. Run each with
-  `--dry-run` first, then `--yes`.
-- `issue create` and `comment create` need `--id UUID` with `--yes`. Take the
-  `id` that `--dry-run` prints and pass it to `--yes`; retrying with the same
-  id returns the existing item with `"changed": false`, never a duplicate.
+- Mutating (every command `describe` marks mutates): `auth login`,
+  `auth logout`, `comment create`, `comment delete`, `comment update`,
+  `config set`, `cycle archive`, `cycle create`, `cycle update`,
+  `file download`, `issue archive`, `issue create`, `issue unarchive`,
+  `issue update`, `project update`, `relation create`, `relation delete`. Run
+  each with `--dry-run` first, then `--yes`.
+- `issue create`, `comment create` and `cycle create` need `--id UUID` with
+  `--yes`. Take the `id` that `--dry-run` prints and pass it to `--yes`;
+  retrying with the same id returns the existing item with `"changed": false`,
+  never a duplicate.
 - A rerun of any mutating command that has nothing to do succeeds with
   `"changed": false`.
 - Exit codes: 0 ok, 1 failed (read `error`; "not found: …" names what), 2 usage
