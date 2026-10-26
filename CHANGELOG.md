@@ -28,6 +28,13 @@ names are only ever added, never renamed or removed.
   token's own user, which must be an app (an agent); a person's key is refused
   with an explanation.
 
+### Fixed
+
+- An unknown command exits 2 even with `--help` (`linearctl nope --help`,
+  `linearctl issue nope -h`, `linearctl help nope`, and one argument holding
+  a space, `"api query" --help`). It printed the parent's help and exited 0, so
+  a mistyped command read as success.
+
 ## [0.4.0] - 2026-10-26
 
 ### Added

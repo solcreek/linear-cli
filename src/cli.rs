@@ -364,6 +364,13 @@ pub fn parse<'a>(root: &'a Cmd, args: &[String]) -> Outcome<'a> {
         return Outcome::Usage(e, Some(ctx));
     }
     if ctx.bool("help") {
+        // cobra showed the group's help for `issue nope --help` and exited 0,
+        // so a mistyped command read as success. A word a group does not
+        // know is a usage error, --help or not.
+        if !cmd.subs.is_empty() && !ctx.args.is_empty() {
+            let e = format!("unknown command {} for {}", quote_go(&ctx.args[0]), quote_go(&ctx.path()));
+            return Outcome::Usage(e, Some(ctx));
+        }
         return Outcome::Help(ctx);
     }
     if ctx.found.is_root() && ctx.bool("version") {
@@ -817,6 +824,11 @@ pub fn root_found(root: &Cmd) -> Found<'_> {
 /// The command at path (names, not aliases), if there is one.
 pub fn found_at<'a>(root: &'a Cmd, args: &[String]) -> Found<'a> {
     find(root, args).0
+}
+
+/// The command args name, and the words left over that name none.
+pub fn found_with_rest<'a>(root: &'a Cmd, args: &[String]) -> (Found<'a>, Vec<String>) {
+    find(root, args)
 }
 
 #[cfg(test)]
