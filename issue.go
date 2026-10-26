@@ -107,7 +107,7 @@ func issueList() *cobra.Command {
 	c.Flags().String("team", "", "only issues of team `KEY` (e.g. ENG)")
 	c.Flags().String("assignee", "", "only issues assigned to `WHO`: me, none, or an email")
 	c.Flags().StringArray("state", nil, "only issues in workflow state `NAME` (repeatable; any of)")
-	c.Flags().StringArray("state-type", nil, "only issues whose state is of `TYPE` (repeatable): triage, backlog,\nunstarted, started, completed, canceled")
+	c.Flags().StringArray("state-type", nil, "only issues whose state is of `TYPE` (repeatable): triage, backlog,\nunstarted, started, completed, canceled, duplicate")
 	c.Flags().StringArray("label", nil, "only issues with label `NAME` (repeatable; all of)")
 	c.Flags().String("project", "", "only issues in project `NAME`")
 	c.Flags().String("cycle", "", "only issues in cycle `CYCLE`: current, next, or a cycle number")
@@ -120,7 +120,7 @@ func issueList() *cobra.Command {
 	return c
 }
 
-var stateTypes = []string{"triage", "backlog", "unstarted", "started", "completed", "canceled"}
+var stateTypes = []string{"triage", "backlog", "unstarted", "started", "completed", "canceled", "duplicate"}
 
 // listFilter is Linear's IssueFilter for issue list's flags. Names go to
 // Linear as names, so listing needs no lookups.

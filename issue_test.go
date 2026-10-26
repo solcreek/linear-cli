@@ -58,6 +58,7 @@ func TestIssueListFilters(t *testing.T) {
 		{[]string{"--assignee", "ada@example.com"}, `{"assignee":{"email":{"eqIgnoreCase":"ada@example.com"}}}`},
 		{[]string{"--state", "Todo", "--state", "In Progress"}, `{"state":{"name":{"in":["Todo","In Progress"]}}}`},
 		{[]string{"--state-type", "started", "--state", "QA"}, `{"state":{"name":{"in":["QA"]},"type":{"in":["started"]}}}`},
+		{[]string{"--state-type", "duplicate"}, `{"state":{"type":{"in":["duplicate"]}}}`},
 		{[]string{"--label", "bug", "--label", "p1"}, `{"and":[{"labels":{"some":{"name":{"eqIgnoreCase":"bug"}}}},{"labels":{"some":{"name":{"eqIgnoreCase":"p1"}}}}]}`},
 		{[]string{"--project", "Q4 launch"}, `{"project":{"name":{"eqIgnoreCase":"Q4 launch"}}}`},
 		{[]string{"--cycle", "current"}, `{"cycle":{"isActive":{"eq":true}}}`},
