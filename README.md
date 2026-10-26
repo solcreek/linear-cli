@@ -51,6 +51,7 @@ linearctl auth status
 linearctl issue list --assignee me --state-type started
 linearctl issue list --team ENG --label bug --updated-since 7d --json
 linearctl issue list --query "login timeout" --limit 10
+linearctl issue list --any-label bug --any-label regression --without-label wontfix
 linearctl issue show ENG-123
 linearctl issue show ENG-123 --signed-urls 300 --json   # image URLs that open without the key
 

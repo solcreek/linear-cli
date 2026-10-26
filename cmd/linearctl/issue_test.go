@@ -60,6 +60,9 @@ func TestIssueListFilters(t *testing.T) {
 		{[]string{"--state-type", "started", "--state", "QA"}, `{"state":{"name":{"in":["QA"]},"type":{"in":["started"]}}}`},
 		{[]string{"--state-type", "duplicate"}, `{"state":{"type":{"in":["duplicate"]}}}`},
 		{[]string{"--label", "bug", "--label", "p1"}, `{"and":[{"labels":{"some":{"name":{"eqIgnoreCase":"bug"}}}},{"labels":{"some":{"name":{"eqIgnoreCase":"p1"}}}}]}`},
+		{[]string{"--any-label", "bug", "--any-label", "p1"}, `{"and":[{"or":[{"labels":{"some":{"name":{"eqIgnoreCase":"bug"}}}},{"labels":{"some":{"name":{"eqIgnoreCase":"p1"}}}}]}]}`},
+		{[]string{"--without-label", "wontfix"}, `{"and":[{"labels":{"every":{"name":{"neqIgnoreCase":"wontfix"}}}}]}`},
+		{[]string{"--label", "bug", "--any-label", "p1", "--any-label", "p2", "--without-label", "dup"}, `{"and":[{"labels":{"some":{"name":{"eqIgnoreCase":"bug"}}}},{"or":[{"labels":{"some":{"name":{"eqIgnoreCase":"p1"}}}},{"labels":{"some":{"name":{"eqIgnoreCase":"p2"}}}}]},{"labels":{"every":{"name":{"neqIgnoreCase":"dup"}}}}]}`},
 		{[]string{"--project", "Q4 launch"}, `{"project":{"name":{"eqIgnoreCase":"Q4 launch"}}}`},
 		{[]string{"--cycle", "current"}, `{"cycle":{"isActive":{"eq":true}}}`},
 		{[]string{"--cycle", "next"}, `{"cycle":{"isNext":{"eq":true}}}`},
@@ -96,7 +99,7 @@ func TestIssueListRefusesBadFilters(t *testing.T) {
 	cases := [][]string{
 		{"--assignee", "ada"}, {"--state-type", "done"}, {"--cycle", "last"}, {"--updated-since", "yesterday"},
 		{"--sort", "title"}, {"--query", "x", "--sort", "priority"}, {"--fields", "identifier,nope"},
-		{"--team", "E N G"}, {"--state", "a\x07"}, {"--limit", "-1"},
+		{"--team", "E N G"}, {"--state", "a\x07"}, {"--limit", "-1"}, {"--any-label", ""}, {"--without-label", "a\x07"},
 	}
 	api := newFake(t)
 	for _, args := range cases {

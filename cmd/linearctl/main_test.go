@@ -305,6 +305,7 @@ func TestRepeatableFlagsRefuseAnEmptyValue(t *testing.T) {
 	api := newFake(t)
 	for _, args := range [][]string{
 		{"issue", "list", "--state", ""}, {"issue", "list", "--state-type", ""}, {"issue", "list", "--label", ""},
+		{"issue", "list", "--any-label", ""}, {"issue", "list", "--without-label", ""},
 		{"issue", "create", "--team", "ENG", "--title", "x", "--label", "", "--dry-run"},
 		{"issue", "update", "ENG-1", "--label", "", "--dry-run"},
 		{"issue", "update", "ENG-1", "--add-label", "", "--dry-run"},

@@ -32,7 +32,8 @@ func issueList() *cobra.Command {
 		Use:   "list",
 		Short: "List issues, most recently updated first",
 		Long: "List issues, most recently updated first. Filters combine with AND; a repeated\n" +
-			"--state or --state-type matches any of its values, a repeated --label all of them.\n" +
+			"--state or --state-type matches any of its values, a repeated --label all of them;\n" +
+			"--any-label matches any of its values, --without-label none of them.\n" +
 			"--query searches titles, descriptions and comments, ranked by relevance unless\n" +
 			"--sort is given; Linear allows 30 searches a minute.\n" +
 			"--team falls back to LINEARCTL_TEAM, then to default-team in config.",
@@ -109,6 +110,8 @@ func issueList() *cobra.Command {
 	c.Flags().StringArray("state", nil, "only issues in workflow state `NAME` (repeatable; any of)")
 	c.Flags().StringArray("state-type", nil, "only issues whose state is of `TYPE` (repeatable): triage, backlog,\nunstarted, started, completed, canceled, duplicate")
 	c.Flags().StringArray("label", nil, "only issues with label `NAME` (repeatable; all of)")
+	c.Flags().StringArray("any-label", nil, "only issues with label `NAME` (repeatable; any of)")
+	c.Flags().StringArray("without-label", nil, "only issues without label `NAME` (repeatable; none of)")
 	c.Flags().String("project", "", "only issues in project `NAME`")
 	c.Flags().String("cycle", "", "only issues in cycle `CYCLE`: current, next, or a cycle number")
 	c.Flags().String("updated-since", "", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h")
@@ -170,6 +173,25 @@ func listFilter(cmd *cobra.Command) (map[string]any, error) {
 	}
 	for _, l := range labels {
 		and = append(and, map[string]any{"labels": map[string]any{"some": map[string]any{"name": map[string]any{"eqIgnoreCase": l}}}})
+	}
+	anyOf, err := values(cmd, "any-label")
+	if err != nil {
+		return nil, err
+	}
+	if len(anyOf) > 0 {
+		var or []any
+		for _, l := range anyOf {
+			or = append(or, map[string]any{"labels": map[string]any{"some": map[string]any{"name": map[string]any{"eqIgnoreCase": l}}}})
+		}
+		and = append(and, map[string]any{"or": or})
+	}
+	without, err := values(cmd, "without-label")
+	if err != nil {
+		return nil, err
+	}
+	// "every label differs" also holds for an issue with no labels.
+	for _, l := range without {
+		and = append(and, map[string]any{"labels": map[string]any{"every": map[string]any{"name": map[string]any{"neqIgnoreCase": l}}}})
 	}
 	if len(and) > 0 {
 		filter["and"] = and

@@ -26,6 +26,8 @@ before guessing a flag. Always pass `--json`.
 - Names: `--state`, `--label`, `--project` and `--assignee EMAIL` take names;
   get them from `state list`, `label list`, `project list`, `user list`.
   `--team` falls back to `LINEARCTL_TEAM`, then `config set default-team`.
+- Labels: `issue list --label A --label B` is all of them, `--any-label` any of
+  them, `--without-label` none of them (unlabelled issues included).
 - Images: `issue show --signed-urls 300` returns file URLs that open without
   the key for 300 s; `file download URL` saves one with the key.
 - Anything the typed commands lack: `api query --json-input -` with
