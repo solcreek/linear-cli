@@ -138,6 +138,24 @@ func addLookups(root *cobra.Command) {
 			},
 		},
 		{
+			noun: "notification", short: "List your inbox notifications, newest first", conn: "notifications", doc: qNotifications,
+			long: "List your inbox notifications, newest first. readAt is null for an unread one;\n" +
+				"Linear has no unread filter, so filter on readAt yourself.",
+			example: "  linearctl notification list --limit 20 --json",
+			fields:  []string{"id", "type", "title", "subtitle", "url", "createdAt", "readAt", "snoozedUntilAt", "actor", "issue", "comment"},
+			cols:    []string{"createdAt", "type", "issue.identifier", "title"},
+			filter: func(cmd *cobra.Command, _ string) (map[string]any, error) {
+				kind, _ := cmd.Flags().GetString("type")
+				if kind == "" {
+					return nil, nil
+				}
+				if _, err := plain("--type", kind); err != nil {
+					return nil, err
+				}
+				return map[string]any{"type": map[string]any{"eq": kind}}, nil
+			},
+		},
+		{
 			noun: "cycle", short: "List cycles", conn: "cycles", doc: qCycles,
 			example: "  linearctl cycle list --team ENG --json",
 			fields:  []string{"id", "number", "name", "startsAt", "endsAt", "isActive", "isNext", "team"},
@@ -236,6 +254,8 @@ func (l lookup) command() *cobra.Command {
 	case "user":
 		list.Flags().Bool("active", false, "only active users")
 		list.Flags().Bool("app", false, "only app users: the agents issues can be delegated to")
+	case "notification":
+		list.Flags().String("type", "", "only notifications of `TYPE` as Linear names them (e.g. issueAssignedToYou)")
 	case "milestone":
 		list.Flags().String("project", "", "only milestones of project `NAME`")
 	case "project":

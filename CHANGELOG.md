@@ -26,6 +26,8 @@ names are only ever added, never renamed or removed.
   `project update` (name, description, content). PROJECT is a URL, slugId,
   UUID or exact name; a name two projects share is an error that lists both.
 - `issue unarchive`.
+- `notification list [--type TYPE]`: your inbox, with `readAt` (null when
+  unread), the actor and the issue.
 - `issue update --parent none` detaches an issue from its parent.
 - `issue list --attachment-url URL`: the issues that link a URL, such as a pull
   request. A caller that must wait for Linear to link one polls this.

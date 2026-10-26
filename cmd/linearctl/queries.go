@@ -181,6 +181,13 @@ var (
   projectMilestones(filter: $filter, first: $first, after: $after) { nodes { id name targetDate progress project { id name } } ` + pageInfo + ` }
 }`
 
+	qNotifications = `query Notifications($filter: NotificationFilter, $first: Int!, $after: String) {
+  notifications(filter: $filter, first: $first, after: $after) { nodes {
+    id type title subtitle url createdAt readAt snoozedUntilAt actor { id name }
+    ... on IssueNotification { issue { id identifier title } comment { id } }
+  } ` + pageInfo + ` }
+}`
+
 	qCycles = `query Cycles($filter: CycleFilter, $first: Int!, $after: String) {
   cycles(filter: $filter, first: $first, after: $after) { nodes { id number name startsAt endsAt isActive isNext team { key } } ` + pageInfo + ` }
 }`
@@ -196,7 +203,7 @@ func documents() map[string]string {
 		"RelationResolve": qRelationResolve, "RelationCreate": qRelationCreate, "RelationDelete": qRelationDelete,
 		"Comment": qComment, "CommentUpdate": qCommentUpdate, "CommentDelete": qCommentDelete,
 		"Teams": qTeams, "States": qStates, "Labels": qLabels, "Users": qUsers, "Projects": qProjects,
-		"Cycles": qCycles, "Milestones": qMilestones, "ProjectFind": qProjectFind, "ProjectUpdate": qProjectUpdate,
+		"Cycles": qCycles, "Notifications": qNotifications, "Milestones": qMilestones, "ProjectFind": qProjectFind, "ProjectUpdate": qProjectUpdate,
 	}
 }
 

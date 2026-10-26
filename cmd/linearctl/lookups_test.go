@@ -80,3 +80,14 @@ func TestLookupFieldsAndRefusals(t *testing.T) {
 		t.Errorf("help: %q", r.out)
 	}
 }
+
+func TestNotificationList(t *testing.T) {
+	t.Parallel()
+	api := newFake(t).on("Notifications", map[string]any{"notifications": conn("", map[string]any{"id": "n1", "type": "issueAssignedToYou",
+		"title": "Fix login", "createdAt": "2026-10-26T00:00:00.000Z", "readAt": nil, "issue": map[string]any{"identifier": "ENG-1"}})})
+	r := runWith(t, opts{api: api, key: testKey}, "notification", "list", "--type", "issueAssignedToYou")
+	if r.code != 0 || r.out != "2026-10-26T00:00:00.000Z\tissueAssignedToYou\tENG-1\tFix login\n" ||
+		jsonOf(api.last("Notifications").Vars["filter"]) != `{"type":{"eq":"issueAssignedToYou"}}` {
+		t.Errorf("exit %d, %q, %v", r.code, r.out, api.last("Notifications").Vars)
+	}
+}

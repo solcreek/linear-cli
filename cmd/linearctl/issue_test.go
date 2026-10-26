@@ -459,10 +459,10 @@ func currentIssue() map[string]any {
 	return map[string]any{
 		"id": "id-ENG-5", "identifier": "ENG-5", "title": "Old title", "description": nil, "priority": 3,
 		"updatedAt": "2026-10-02T08:00:00.000Z",
-		"team":     map[string]any{"id": "team-eng", "key": "ENG", "states": conn("", map[string]any{"id": "st-doing", "name": "In Progress"})},
-		"state":    map[string]any{"id": "st-doing", "name": "In Progress"},
-		"assignee": map[string]any{"id": "u-ada", "email": "ada@example.com"},
-		"project":  nil, "parent": nil,
+		"team":      map[string]any{"id": "team-eng", "key": "ENG", "states": conn("", map[string]any{"id": "st-doing", "name": "In Progress"})},
+		"state":     map[string]any{"id": "st-doing", "name": "In Progress"},
+		"assignee":  map[string]any{"id": "u-ada", "email": "ada@example.com"},
+		"project":   nil, "parent": nil,
 		"labels": conn("", map[string]any{"id": "l-bug", "name": "bug"}),
 	}
 }
