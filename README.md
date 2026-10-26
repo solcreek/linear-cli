@@ -29,8 +29,15 @@ go install github.com/solcreek/linear-cli/cmd/linearctl@latest
 
 Or download a binary from [Releases](https://github.com/solcreek/linear-cli/releases/latest)
 (`checksums.txt` alongside). The npm package installs the native binary for
-your platform; no Node runs when you call `linearctl`, unless install scripts
-were skipped (`--ignore-scripts`, pnpm), where a small Node shim runs it.
+your platform, and its install script puts that binary where `linearctl`
+points, so no Node runs when you call it (4 ms a run). Where install scripts
+are skipped (`--ignore-scripts`, pnpm, and npm versions that ask for
+`--allow-scripts`), a small Node shim runs the same binary instead (~34 ms).
+To keep the fast path on npm 11.19 and later:
+
+```sh
+npm install -g @solcreek/linear-cli --allow-scripts=@solcreek/linear-cli
+```
 
 ## Authenticate
 

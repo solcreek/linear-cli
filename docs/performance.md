@@ -26,6 +26,10 @@ api.linear.app costs ~150 ms, and everything linearctl does around it costs
 100-issue page (84,080 → 54,655), 30% with `--fields`, 17% for an issue with
 100 comments. At a terminal it stays indented.
 
+Installed from npm (0.1.0, measured 2026-10-26): 4.0 ms a run when the
+install script replaced the shim with the binary, 34.3 ms through the Node
+shim when install scripts were skipped.
+
 Requests per command: reads 1; `issue create`/`update`/`archive` and
 `comment create` 2 (resolve, then mutate) on one connection; `--limit 0`
 one per page of 100.
