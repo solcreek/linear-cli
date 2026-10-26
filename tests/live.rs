@@ -118,13 +118,22 @@ impl Drop for Watch {
     }
 }
 
-/// Archives the issue unless the test got that far.
+/// Archives the issue unless the test got that far. Best effort: this runs
+/// while a failed test unwinds, where a second panic would abort the run.
 struct Archive(String, bool);
 
 impl Drop for Archive {
     fn drop(&mut self) {
-        if !self.1 {
-            live(&["issue", "archive", &self.0, "--yes"]);
+        if self.1 {
+            return;
+        }
+        let dir = std::env::temp_dir().join(format!("linearctl-live-cleanup-{}", std::process::id()));
+        let archived = std::fs::create_dir_all(&dir)
+            .and_then(|()| command(&dir, &["issue", "archive", &self.0, "--yes", "--json"]).output());
+        match archived {
+            Ok(out) if out.status.success() => eprintln!("live: archived {}", self.0),
+            Ok(out) => eprintln!("live: could not archive {}: {}", self.0, String::from_utf8_lossy(&out.stderr).trim()),
+            Err(e) => eprintln!("live: could not archive {}: {e}", self.0),
         }
     }
 }
