@@ -105,12 +105,14 @@ def main():
         shutil.rmtree(EXPECTED, ignore_errors=True)
         EXPECTED.mkdir()
         for name, case in zip(names, cases):
-            (EXPECTED / f"{name}.txt").write_text(run_case(binary, case), newline="")
+            with open(EXPECTED / f"{name}.txt", "w", newline="") as f:
+                f.write(run_case(binary, case))
         print(f"recorded {len(cases)} cases")
         return
     failed = 0
     for name, case in zip(names, cases):
-        want = (EXPECTED / f"{name}.txt").read_text(newline="")
+        with open(EXPECTED / f"{name}.txt", newline="") as f:
+            want = f.read()
         got = run_case(binary, case)
         if got != want:
             failed += 1
