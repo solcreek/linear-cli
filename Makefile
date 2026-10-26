@@ -26,9 +26,10 @@ cover:
 	scripts/cover.sh
 
 # Against the real API, changing a real team: LINEARCTL_LIVE_TEAM names a
-# sandbox team, LINEAR_API_KEY a key for it. Never part of test or check.
-live: build
-	LINEARCTL_BIN=target/debug/linearctl go test -count=1 -v -run Live ./acceptance
+# sandbox team, LINEAR_API_KEY a key for it. Without both, tests/live.rs
+# returns at once, so make test and CI pass over it.
+live:
+	cargo test --test live -- --nocapture
 
 # Refresh Linear's schema; the tests then check every query against it.
 schema:
