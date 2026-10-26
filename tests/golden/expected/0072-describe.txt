@@ -3557,7 +3557,7 @@ exit: 0
   ],
   "name": "linearctl",
   "summary": "An agent-first CLI for Linear",
-  "version": "0.2.1"
+  "version": "<VERSION>"
 }
 
 --- stderr

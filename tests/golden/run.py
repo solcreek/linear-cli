@@ -11,7 +11,8 @@ Each line of cases.jsonl is one invocation: {"args": [...]} with optional
 in an empty working directory and LINEARCTL_HOME, with no API key and an API
 URL nothing answers, so only help, usage errors, local state and demo mode
 (--demo) produce output. Paths of the temporary directories, times and dates
-are replaced with <TMP>, <TIME> and <DATE>, since demo times move with now.
+are replaced with <TMP>, <TIME> and <DATE>, since demo times move with now,
+and the binary's own version with <VERSION>, so a release needs no re-record.
 """
 import json
 import os
@@ -33,7 +34,12 @@ def slug(args):
     return s[:80] or "root"
 
 
-def run_case(binary, case):
+def version_of(binary):
+    out = subprocess.run([binary, "--version"], capture_output=True, text=True).stdout
+    return out.split()[-1]
+
+
+def run_case(binary, case, version):
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="lc-golden-"))
     try:
         cwd, home = tmp / "cwd", tmp / "home"
@@ -56,6 +62,7 @@ def run_case(binary, case):
         text = f"exit: {code}\n--- stdout\n{out.decode(errors='replace')}\n--- stderr\n{err.decode(errors='replace')}"
         for d in {str(tmp), os.path.realpath(tmp)}:
             text = text.replace(d, "<TMP>")
+        text = re.sub(r"(linearctl |\"version\":\s?\")" + re.escape(version) + r"\b", r"\g<1><VERSION>", text)
         text = re.sub(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z", "<TIME>", text)
         text = re.sub(r"\b\d{4}-\d\d-\d\d\b", "<DATE>", text)
         return text
@@ -97,6 +104,7 @@ def main():
         sys.exit(__doc__)
     mode, binary = sys.argv[1], os.path.abspath(sys.argv[2])
     cases = [json.loads(line) for line in (HERE / "cases.jsonl").read_text().splitlines() if line.strip()]
+    version = version_of(binary)
     names = []
     for i, case in enumerate(cases):
         name = f"{i:04d}-{slug(case['args'])}"
@@ -106,14 +114,14 @@ def main():
         EXPECTED.mkdir()
         for name, case in zip(names, cases):
             with open(EXPECTED / f"{name}.txt", "w", newline="") as f:
-                f.write(run_case(binary, case))
+                f.write(run_case(binary, case, version))
         print(f"recorded {len(cases)} cases")
         return
     failed = 0
     for name, case in zip(names, cases):
         with open(EXPECTED / f"{name}.txt", newline="") as f:
             want = f.read()
-        got = run_case(binary, case)
+        got = run_case(binary, case, version)
         if got != want:
             failed += 1
             if failed <= 5:
