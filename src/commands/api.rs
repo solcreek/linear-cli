@@ -96,10 +96,22 @@ fn query(run: &mut Run, ctx: &Ctx) -> R {
     }
     let expires = cl.signed_until();
     let a = cl.send(run, body)?;
-    if !a.errors.is_empty() && a.data.is_null() {
-        return Err(linear_failure(&a.errors));
-    }
+    // Linear's answer as it came: data and errors, with each error's path
+    // and extensions (code, userPresentableMessage), for a caller that
+    // reads them. Failing outright (no data) also carries error and usage,
+    // like every failure under --json.
+    let failure = (!a.errors.is_empty() && a.data.is_null()).then(|| linear_failure(&a.errors));
     let mut out = json!({"data": a.data, "complexity": cl.complexity()});
+    if !a.errors.is_empty() {
+        out["errors"] = json!(a.errors);
+    }
+    if let Some(f) = &failure {
+        out["error"] = json!(f.to_string());
+        out["usage"] = json!(false);
+        out["code"] = json!(f.kind());
+        run.print_json_keeping(out, &["data", "errors"])?;
+        return Err(Fail::Reported(f.to_string()));
+    }
     if !expires.is_null() {
         out["signedUrlsExpireAt"] = expires;
     }
@@ -117,7 +129,7 @@ fn query(run: &mut Run, ctx: &Ctx) -> R {
         out["problems"] = json!(problems);
     }
     // Linear's data keeps its own order, as it always printed.
-    run.print_json_keeping(out, &["data"])?;
+    run.print_json_keeping(out, &["data", "errors"])?;
     if !a.errors.is_empty() {
         return Err(Fail::Partial(format!("{} errors", a.errors.len())));
     }

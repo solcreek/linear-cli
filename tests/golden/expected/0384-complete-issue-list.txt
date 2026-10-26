@@ -7,9 +7,12 @@ exit: 0
 --any-label	only issues with label `NAME` (repeatable; any of)
 --assignee	only issues assigned to `WHO`: me, none, or an email
 --attachment-url	only issues with an attachment at `URL` (e.g. a linked pull request)
+--creator	only issues created by `WHO`: me, none, or an email
 --cursor	continue after `CURSOR` (nextCursor from the previous page)
 --cycle	only issues in cycle `CYCLE`: current, next, previous, a number, a UUID
---delegate	only issues delegated to the agent `WHO` (name or email; any; none)
+--delegate	only issues delegated to the agent `WHO` (name, email, me, any, none)
+--due-after	only issues due on or after `DATE`
+--due-before	only issues due on or before `DATE` (<DATE>)
 --fields	return only these comma-separated `FIELDS` (see Fields above)
 --help	help for list
 --id	only the issue `ISSUE` (ENG-123 or a UUID; repeatable); one not
@@ -18,13 +21,15 @@ exit: 0
 --limit	show at most `N` items; 0 for all
 --milestone	only issues in project milestone `NAME` (none: in no milestone)
 --priority	only issues of `PRIORITY`: 0-4 or none, urgent, high, medium, low
---project	only issues in project `NAME`
+--project	only issues in project `NAME` (none: in no project)
 --query	full-text search for `TEXT`
---sort	order by `FIELD`: updated (default), created, priority
+--reverse	reverse the order of --sort
+--sort	`FIELD`: updated (default), created, priority, due-date, title, state
 --state	only issues in workflow state `NAME` (repeatable; any of)
 --state-type	only issues whose state is of `TYPE` (repeatable): triage, backlog,
 --team	only issues of team `KEY` (e.g. ENG; repeatable, any of)
 --updated-since	only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h
+--view	only issues in Linear's saved custom view `VIEW` (a name or its id)
 --without-label	only issues without label `NAME` (repeatable; none of)
 :4
 

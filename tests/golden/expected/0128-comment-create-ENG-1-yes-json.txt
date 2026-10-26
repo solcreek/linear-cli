@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--yes needs --id UUID so a rerun cannot post twice; run --dry-run for one","usage":true}
+{"code":"USAGE","error":"--yes needs --id UUID so a rerun cannot post twice; run --dry-run for one","usage":true}
 
 --- stderr
 linearctl: --yes needs --id UUID so a rerun cannot post twice; run --dry-run for one

@@ -318,3 +318,20 @@ func TestRepeatableFlagsRefuseAnEmptyValue(t *testing.T) {
 		t.Errorf("an empty filter reached Linear: %v", api.ops())
 	}
 }
+
+// A mistyped command is a usage error even with --help: showing the parent's
+// help and exiting 0 would read as success to a caller.
+func TestUnknownCommandWithHelpExits2(t *testing.T) {
+	t.Parallel()
+	for _, args := range [][]string{{"nope", "--help"}, {"help", "nope"}, {"issue", "nope", "--help"}, {"api query", "--help"}, {"issue", "nope", "-h"}} {
+		r := run(t, args...)
+		if r.code != exitUsage || r.out != "" || !strings.Contains(r.err, "unknown") {
+			t.Errorf("%q: exit %d, stdout %q, stderr %q", args, r.code, r.out, r.err)
+		}
+	}
+	for _, args := range [][]string{{"issue", "--help"}, {"issue", "show", "X", "--help"}, {"help", "issue", "show"}} {
+		if r := run(t, args...); r.code != 0 || !strings.Contains(r.out, "Usage") {
+			t.Errorf("%q: exit %d", args, r.code)
+		}
+	}
+}

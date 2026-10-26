@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"an issue cannot relate to itself: ENG-1","usage":true}
+{"code":"USAGE","error":"an issue cannot relate to itself: ENG-1","usage":true}
 
 --- stderr
 linearctl: an issue cannot relate to itself: ENG-1

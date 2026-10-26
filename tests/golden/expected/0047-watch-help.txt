@@ -14,12 +14,14 @@ usual exit codes (5 auth, 6 rate-limited, 1 failed) and a last {error} line.
 Linear's subscriptions name the changed issues; linearctl checks each batch
 against the filter with one request (at most one per 2 s) and reconciles every
 --reconcile seconds. --mode poll asks Linear every --poll-interval seconds instead.
+When Linear allows only one subscription (it closes the rest with 4003), watch
+subscribes to issue updates alone and catches up every 60 s (or --reconcile).
 Removes are reported for issues known to match: up to 2,500 found at start, and
 any since; beyond that (everything: true) every non-matching change is a remove.
 
 Fields: id, identifier, title, priority, priorityLabel, url, createdAt,
-updatedAt, state, assignee, delegate, team, project, cycle, projectMilestone,
-labels
+updatedAt, dueDate, estimate, state, assignee, delegate, team, project, cycle,
+projectMilestone, labels
 
 Usage:
   linearctl watch [flags]
@@ -32,8 +34,11 @@ Flags:
       --any-label NAME       only issues with label NAME (repeatable; any of)
       --assignee WHO         only issues assigned to WHO: me, none, or an email
       --attachment-url URL   only issues with an attachment at URL (e.g. a linked pull request)
+      --creator WHO          only issues created by WHO: me, none, or an email
       --cycle CYCLE          only issues in cycle CYCLE: current, next, previous, a number, a UUID
-      --delegate WHO         only issues delegated to the agent WHO (name or email; any; none)
+      --delegate WHO         only issues delegated to the agent WHO (name, email, me, any, none)
+      --due-after DATE       only issues due on or after DATE
+      --due-before DATE      only issues due on or before DATE (<DATE>)
       --fields FIELDS        return only these comma-separated FIELDS (see Fields above)
       --heartbeat N          print a heartbeat every N seconds (default 30)
   -h, --help                 help for watch
@@ -43,7 +48,7 @@ Flags:
       --poll-interval N      when polling, ask Linear every N seconds (default 60)
       --priority PRIORITY    only issues of PRIORITY: 0-4 or none, urgent, high, medium, low
                              (repeatable, any of)
-      --project NAME         only issues in project NAME
+      --project NAME         only issues in project NAME (none: in no project)
       --reconcile N          with subscriptions, catch up on missed changes every N s (default 300)
       --since WHEN           first replay changes since WHEN (a date, RFC 3339 time, 7d, 24h)
       --state NAME           only issues in workflow state NAME (repeatable; any of)

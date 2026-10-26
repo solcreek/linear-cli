@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--status is empty","usage":true}
+{"code":"USAGE","error":"--status is empty","usage":true}
 
 --- stderr
 linearctl: --status is empty

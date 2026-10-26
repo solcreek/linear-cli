@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--parent must be a comment id (a UUID, as comment list shows); got \"nope\"","usage":true}
+{"code":"USAGE","error":"--parent must be a comment id (a UUID, as comment list shows); got \"nope\"","usage":true}
 
 --- stderr
 linearctl: --parent must be a comment id (a UUID, as comment list shows); got "nope"

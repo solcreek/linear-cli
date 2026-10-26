@@ -364,6 +364,13 @@ pub fn parse<'a>(root: &'a Cmd, args: &[String]) -> Outcome<'a> {
         return Outcome::Usage(e, Some(ctx));
     }
     if ctx.bool("help") {
+        // cobra showed the group's help for `issue nope --help` and exited 0,
+        // so a mistyped command read as success. A word a group does not
+        // know is a usage error, --help or not.
+        if !cmd.subs.is_empty() && !ctx.args.is_empty() {
+            let e = format!("unknown command {} for {}", quote_go(&ctx.args[0]), quote_go(&ctx.path()));
+            return Outcome::Usage(e, Some(ctx));
+        }
         return Outcome::Help(ctx);
     }
     if ctx.found.is_root() && ctx.bool("version") {
@@ -789,6 +796,12 @@ pub fn describe(found: &Found, version: &str) -> serde_json::Value {
             json!({"ok": 0, "failed": 1, "usage": 2, "partial": 3, "busy": 4, "auth": 5,
             "rateLimited": 6, "conflict": 7}),
         );
+        // The "code" a failure's JSON carries, beside its exit code.
+        let codes: Vec<Value> = crate::fail::ERROR_CODES
+            .iter()
+            .map(|(code, exit, meaning)| json!({"code": code, "exit": exit, "meaning": meaning}))
+            .collect();
+        d.insert("errorCodes".into(), Value::Array(codes));
         return Value::Object(d);
     }
     let args: Vec<Value> = c
@@ -817,6 +830,11 @@ pub fn root_found(root: &Cmd) -> Found<'_> {
 /// The command at path (names, not aliases), if there is one.
 pub fn found_at<'a>(root: &'a Cmd, args: &[String]) -> Found<'a> {
     find(root, args).0
+}
+
+/// The command args name, and the words left over that name none.
+pub fn found_with_rest<'a>(root: &'a Cmd, args: &[String]) -> (Found<'a>, Vec<String>) {
+    find(root, args)
 }
 
 #[cfg(test)]

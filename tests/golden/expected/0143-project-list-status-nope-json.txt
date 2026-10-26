@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--status must be one of backlog, planned, started, paused, completed, canceled; got \"nope\"","usage":true}
+{"code":"USAGE","error":"--status must be one of backlog, planned, started, paused, completed, canceled; got \"nope\"","usage":true}
 
 --- stderr
 linearctl: --status must be one of backlog, planned, started, paused, completed, canceled; got "nope"

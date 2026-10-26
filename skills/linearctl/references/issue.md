@@ -42,10 +42,13 @@ Examples:
 
 Flags:
       --assignee WHO            assign to WHO: me, none, or an email
-      --delegate WHO            delegate to the agent (app user) WHO: its name or email, or none
+      --cycle CYCLE             cycle CYCLE (current, next, previous, N, a UUID), or none
+      --delegate WHO            delegate to the agent (app user) WHO: its name or email, me, or none
       --description TEXT        the description, Markdown TEXT
       --description-file PATH   read the description from PATH (- for stdin)
       --dry-run                 show what would change; change nothing
+      --due-date DATE           the due date, DATE (2026-11-30), or none
+      --estimate POINTS         the estimate, POINTS (a whole number), or none
   -h, --help                    help for create
       --id UUID                 the new issue's UUID; required with --yes
       --json-input PATH         read Linear's input object from PATH (- for stdin); flags win
@@ -54,8 +57,9 @@ Flags:
                                 when the issue has none
       --parent ISSUE            make it a sub-issue of ISSUE (none: of no issue)
       --priority PRIORITY       PRIORITY: 0-4 or none, urgent, high, medium, low
-      --project NAME            project NAME
+      --project NAME            project NAME, or none to clear it
       --state NAME              workflow state NAME (see 'linearctl state list')
+      --state-type TYPE         the team's first workflow state of TYPE (e.g. started)
       --team KEY                create in team KEY (e.g. ENG)
       --title TEXT              the title, TEXT
       --yes                     apply the change
@@ -72,8 +76,8 @@ List issues, most recently updated first. Filters combine with AND; a repeated
 --team falls back to LINEARCTL_TEAM, then to default-team in config.
 
 Fields: id, identifier, title, priority, priorityLabel, url, createdAt,
-updatedAt, state, assignee, delegate, team, project, cycle, projectMilestone,
-labels
+updatedAt, dueDate, estimate, state, assignee, delegate, team, project, cycle,
+projectMilestone, labels
 
 Usage:
   linearctl issue list [flags]
@@ -87,9 +91,12 @@ Flags:
       --any-label NAME       only issues with label NAME (repeatable; any of)
       --assignee WHO         only issues assigned to WHO: me, none, or an email
       --attachment-url URL   only issues with an attachment at URL (e.g. a linked pull request)
+      --creator WHO          only issues created by WHO: me, none, or an email
       --cursor CURSOR        continue after CURSOR (nextCursor from the previous page)
       --cycle CYCLE          only issues in cycle CYCLE: current, next, previous, a number, a UUID
-      --delegate WHO         only issues delegated to the agent WHO (name or email; any; none)
+      --delegate WHO         only issues delegated to the agent WHO (name, email, me, any, none)
+      --due-after DATE       only issues due on or after DATE
+      --due-before DATE      only issues due on or before DATE (2026-11-30)
       --fields FIELDS        return only these comma-separated FIELDS (see Fields above)
   -h, --help                 help for list
       --id ISSUE             only the issue ISSUE (ENG-123 or a UUID; repeatable); one not
@@ -100,14 +107,16 @@ Flags:
       --milestone NAME       only issues in project milestone NAME (none: in no milestone)
       --priority PRIORITY    only issues of PRIORITY: 0-4 or none, urgent, high, medium, low
                              (repeatable, any of)
-      --project NAME         only issues in project NAME
+      --project NAME         only issues in project NAME (none: in no project)
       --query TEXT           full-text search for TEXT
-      --sort FIELD           order by FIELD: updated (default), created, priority
+      --reverse              reverse the order of --sort
+      --sort FIELD           FIELD: updated (default), created, priority, due-date, title, state
       --state NAME           only issues in workflow state NAME (repeatable; any of)
       --state-type TYPE      only issues whose state is of TYPE (repeatable): triage, backlog,
                              unstarted, started, completed, canceled, duplicate
       --team KEY             only issues of team KEY (e.g. ENG; repeatable, any of)
       --updated-since WHEN   only issues updated since WHEN: a date, an RFC 3339 time, 7d or 24h
+      --view VIEW            only issues in Linear's saved custom view VIEW (a name or its id)
       --without-label NAME   only issues without label NAME (repeatable; none of)
 ```
 
@@ -121,8 +130,8 @@ many seconds, so a viewer can fetch images directly; signedUrlsExpireAt says unt
 Comments are included (20 by default); give another count as --comments=N.
 
 Fields: id, identifier, title, priority, priorityLabel, url, createdAt,
-updatedAt, state, assignee, delegate, team, project, cycle, projectMilestone,
-labels, description, dueDate, estimate, branchName, startedAt, completedAt,
+updatedAt, dueDate, estimate, state, assignee, delegate, team, project, cycle,
+projectMilestone, labels, description, branchName, startedAt, completedAt,
 canceledAt, archivedAt, creator, parent, children, relations, inverseRelations,
 attachments, comments
 
@@ -184,10 +193,13 @@ Examples:
 Flags:
       --add-label NAME          add label NAME (repeatable)
       --assignee WHO            assign to WHO: me, none, or an email
-      --delegate WHO            delegate to the agent (app user) WHO: its name or email, or none
+      --cycle CYCLE             cycle CYCLE (current, next, previous, N, a UUID), or none
+      --delegate WHO            delegate to the agent (app user) WHO: its name or email, me, or none
       --description TEXT        the description, Markdown TEXT
       --description-file PATH   read the description from PATH (- for stdin)
       --dry-run                 show what would change; change nothing
+      --due-date DATE           the due date, DATE (2026-11-30), or none
+      --estimate POINTS         the estimate, POINTS (a whole number), or none
   -h, --help                    help for update
       --if-updated-at TIME      change it only if its updatedAt is still TIME (else exit 7)
       --json-input PATH         read Linear's input object from PATH (- for stdin); flags win
@@ -196,9 +208,10 @@ Flags:
                                 when the issue has none
       --parent ISSUE            make it a sub-issue of ISSUE (none: of no issue)
       --priority PRIORITY       PRIORITY: 0-4 or none, urgent, high, medium, low
-      --project NAME            project NAME
+      --project NAME            project NAME, or none to clear it
       --remove-label NAME       remove label NAME (repeatable)
       --state NAME              workflow state NAME (see 'linearctl state list')
+      --state-type TYPE         the team's first workflow state of TYPE (e.g. started)
       --title TEXT              the title, TEXT
       --yes                     apply the change
 ```

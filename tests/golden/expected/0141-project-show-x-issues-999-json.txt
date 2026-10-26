@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--issues is at most 250; page with 'linearctl issue list --project'","usage":true}
+{"code":"USAGE","error":"--issues is at most 250; page with 'linearctl issue list --project'","usage":true}
 
 --- stderr
 linearctl: --issues is at most 250; page with 'linearctl issue list --project'

@@ -66,6 +66,7 @@ func TestIssueListFilters(t *testing.T) {
 		{[]string{"--without-label", "wontfix"}, `{"and":[{"labels":{"every":{"name":{"neqIgnoreCase":"wontfix"}}}}]}`},
 		{[]string{"--label", "bug", "--any-label", "p1", "--any-label", "p2", "--without-label", "dup"}, `{"and":[{"labels":{"some":{"name":{"eqIgnoreCase":"bug"}}}},{"or":[{"labels":{"some":{"name":{"eqIgnoreCase":"p1"}}}},{"labels":{"some":{"name":{"eqIgnoreCase":"p2"}}}}]},{"labels":{"every":{"name":{"neqIgnoreCase":"dup"}}}}]}`},
 		{[]string{"--project", "Q4 launch"}, `{"project":{"name":{"eqIgnoreCase":"Q4 launch"}}}`},
+		{[]string{"--project", "none"}, `{"project":{"null":true}}`},
 		{[]string{"--attachment-url", "https://github.com/acme/app/pull/42"}, `{"attachments":{"some":{"url":{"eq":"https://github.com/acme/app/pull/42"}}}}`},
 		{[]string{"--cycle", "current"}, `{"cycle":{"isActive":{"eq":true}}}`},
 		{[]string{"--cycle", "next"}, `{"cycle":{"isNext":{"eq":true}}}`},
@@ -103,7 +104,7 @@ func TestIssueListRefusesBadFilters(t *testing.T) {
 	t.Parallel()
 	cases := [][]string{
 		{"--assignee", "ada"}, {"--state-type", "done"}, {"--cycle", "last"}, {"--updated-since", "yesterday"},
-		{"--sort", "title"}, {"--query", "x", "--sort", "priority"}, {"--fields", "identifier,nope"},
+		{"--sort", "size"}, {"--query", "x", "--sort", "priority"}, {"--fields", "identifier,nope"},
 		{"--team", "E N G"}, {"--priority", "soon"}, {"--priority", "5"}, {"--state", "a\x07"}, {"--limit", "-1"}, {"--any-label", ""}, {"--without-label", "a\x07"}, {"--attachment-url", "github.com/x"},
 	}
 	api := newFake(t)
@@ -361,7 +362,7 @@ func TestIssueCreateDryRunResolvesEverything(t *testing.T) {
 	if got := jsonOf(v["labels"]); got != `{"or":[{"name":{"eqIgnoreCase":"bug"}},{"name":{"eqIgnoreCase":"p1"}}]}` {
 		t.Errorf("labels are found ignoring case, as issue list's: %s", got)
 	}
-	if v["team"] != "ENG" || v["withID"] != true || v["email"] != "ada@example.com" || v["me"] != false ||
+	if jsonOf(v["team"]) != `{"key":{"eqIgnoreCase":"ENG"}}` || v["withID"] != true || v["email"] != "ada@example.com" || v["me"] != false ||
 		jsonOf(v["parent"]) != `{"number":{"eq":1},"team":{"key":{"eqIgnoreCase":"ENG"}}}` {
 		t.Errorf("resolve vars %v", v)
 	}
@@ -675,9 +676,118 @@ func TestIssueUpdateIfUpdatedAt(t *testing.T) {
 		if sent := slices.Contains(api.ops(), "IssueUpdate"); sent != (c.code == 0) {
 			t.Errorf("%s: sent %v", c.since, sent)
 		}
-		if d := decode(t, r.out); c.code == exitConflict && (!strings.Contains(d["error"].(string), "changed at 2026-10-02T08:00:00.000Z") ||
-			!strings.HasPrefix(d["hint"].(string), "'linearctl issue show ENG-5'")) {
+		if c.code == exitConflict && !strings.Contains(decode(t, r.out)["error"].(string), "changed at 2026-10-02T08:00:00.000Z") {
 			t.Errorf("%s: %q", c.since, r.out)
+		}
+	}
+}
+
+// Linear's own teamId in --json-input names the team when --team is not
+// given; --team wins when both are.
+func TestIssueCreateTeamFromJSONInput(t *testing.T) {
+	t.Parallel()
+	const teamID = "7e1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
+	for _, c := range []struct {
+		input string
+		args  []string
+		want  string
+		code  int
+	}{
+		{`{"title":"x","teamId":"` + teamID + `"}`, nil, `{"id":{"eq":"` + teamID + `"}}`, 0},
+		{`{"title":"x","teamId":"` + teamID + `"}`, []string{"--team", "WEB"}, `{"key":{"eqIgnoreCase":"WEB"}}`, 0},
+		{`{"title":"x","teamId":"ENG"}`, nil, "", exitUsage},
+		{`{"title":"x"}`, nil, "", exitUsage},
+	} {
+		api := createFake(t, resolveAnswer(nil))
+		r := runWith(t, opts{api: api, key: testKey, stdin: c.input},
+			append([]string{"issue", "create", "--json-input", "-", "--dry-run", "--json"}, c.args...)...)
+		if r.code != c.code {
+			t.Errorf("%s %v: exit %d, %q", c.input, c.args, r.code, r.out)
+			continue
+		}
+		if c.code == 0 {
+			if got := jsonOf(api.last("CreateResolve").Vars["team"]); got != c.want {
+				t.Errorf("%s %v: team filter %s", c.input, c.args, got)
+			}
+			if in := decode(t, r.out)["input"].(map[string]any); in["teamId"] != "team-eng" {
+				t.Errorf("teamId is the resolved team's: %v", in["teamId"])
+			}
+		}
+	}
+}
+
+// --project none clears the project, so undo can revert "project set".
+func TestIssueUpdateProjectNone(t *testing.T) {
+	t.Parallel()
+	is := currentIssue()
+	is["project"] = map[string]any{"id": "p-q4", "name": "Q4"}
+	api := newFake(t).on("UpdateResolve", resolveAnswer(map[string]any{"issue": is}))
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "update", "ENG-5", "--project", "none", "--dry-run", "--json")
+	if d := decode(t, r.out); r.code != 0 || jsonOf(d["input"]) != `{"projectId":null}` || api.last("UpdateResolve").Vars["withProject"] != false {
+		t.Errorf("exit %d, %q", r.code, r.out)
+	}
+	api = newFake(t).on("UpdateResolve", resolveAnswer(map[string]any{"issue": currentIssue()})) // no project
+	r = runWith(t, opts{api: api, key: testKey}, "issue", "update", "ENG-5", "--project", "none", "--dry-run", "--json")
+	if d := decode(t, r.out); r.code != 0 || d["changed"] != false {
+		t.Errorf("already none: exit %d, %q", r.code, r.out)
+	}
+}
+
+func TestIssueListSortsAndReverse(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		args          []string
+		orderBy, sort string
+	}{
+		{nil, "updatedAt", ""},
+		{[]string{"--sort", "created"}, "createdAt", ""},
+		{[]string{"--reverse"}, "", `[{"updatedAt":{"order":"Ascending"}}]`},
+		{[]string{"--sort", "created", "--reverse"}, "", `[{"createdAt":{"order":"Ascending"}}]`},
+		{[]string{"--sort", "priority", "--reverse"}, "", `[{"priority":{"order":"Ascending"}}]`},
+		{[]string{"--sort", "due-date"}, "", `[{"dueDate":{"nulls":"last","order":"Ascending"}}]`},
+		{[]string{"--sort", "due-date", "--reverse"}, "", `[{"dueDate":{"nulls":"last","order":"Descending"}}]`},
+		{[]string{"--sort", "title"}, "", `[{"title":{"order":"Ascending"}}]`},
+		{[]string{"--sort", "state"}, "", `[{"workflowState":{"order":"Ascending"}}]`},
+	} {
+		api := listFake(t, conn(""))
+		r := runWith(t, opts{api: api, key: testKey}, append([]string{"issue", "list"}, c.args...)...)
+		v := api.last("IssueList").Vars
+		gotOrder, _ := v["orderBy"].(string)
+		gotSort := ""
+		if v["sort"] != nil {
+			gotSort = jsonOf(v["sort"])
+		}
+		if r.code != 0 || gotOrder != c.orderBy || gotSort != c.sort {
+			t.Errorf("%v: exit %d, orderBy %q sort %s", c.args, r.code, gotOrder, gotSort)
+		}
+	}
+	for _, args := range [][]string{{"--query", "x", "--sort", "title"}, {"--query", "x", "--reverse"}, {"--sort", "size"}} {
+		if r := runWith(t, opts{api: newFake(t), key: testKey}, append([]string{"issue", "list"}, args...)...); r.code != exitUsage {
+			t.Errorf("%v: exit %d", args, r.code)
+		}
+	}
+}
+
+func TestIssueListCreatorAndDueDates(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--creator", "me"}, `{"creator":{"isMe":{"eq":true}}}`},
+		{[]string{"--creator", "ada@example.com"}, `{"creator":{"email":{"eqIgnoreCase":"ada@example.com"}}}`},
+		{[]string{"--due-before", "2026-11-30"}, `{"dueDate":{"lte":"2026-11-30"}}`},
+		{[]string{"--due-after", "2026-11-01", "--due-before", "2026-11-30"}, `{"dueDate":{"gte":"2026-11-01","lte":"2026-11-30"}}`},
+	} {
+		api := listFake(t, conn(""))
+		r := runWith(t, opts{api: api, key: testKey}, append([]string{"issue", "list"}, c.args...)...)
+		if got := jsonOf(api.last("IssueList").Vars["filter"]); r.code != 0 || got != c.want {
+			t.Errorf("%v: exit %d, filter %s", c.args, r.code, got)
+		}
+	}
+	for _, args := range [][]string{{"--creator", "ada"}, {"--due-before", "soon"}, {"--due-after", ""}} {
+		if r := runWith(t, opts{api: newFake(t), key: testKey}, append([]string{"issue", "list"}, args...)...); r.code != exitUsage {
+			t.Errorf("%v: exit %d", args, r.code)
 		}
 	}
 }

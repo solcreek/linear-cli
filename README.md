@@ -36,6 +36,15 @@ To keep the fast path on npm 11.19 and later:
 npm install -g @solcreek/linear-cli --allow-scripts=@solcreek/linear-cli
 ```
 
+A program that depends on the npm package can run the native binary itself,
+with no Node in between. Its path is stable, the one the package's own shim
+uses:
+
+```js
+const exe = process.platform === "win32" ? "linearctl.exe" : "linearctl"
+const bin = require.resolve(`@solcreek/linear-cli-${process.platform}-${process.arch}/bin/${exe}`)
+```
+
 ## Try it without a key
 
 ```sh
@@ -120,8 +129,10 @@ flags and exit codes as JSON.
   duplicate.
 - Lists are `{items, total, shown, truncated, nextCursor}`; continue with
   `--cursor`, trim with `--fields` and `--limit`.
-- A failure is `{error, usage}`, plus `hint` when there is a next step: the
-  command that finds what was not found, or that a rerun is safe.
+- A failure is `{error, usage, code}`, plus `hint` when there is a next step:
+  the command that finds what was not found, or that a rerun is safe. Branch on
+  `code` (`NOT_FOUND`, `AMBIGUOUS`, `NETWORK`, …; `describe` lists them all),
+  not on the words of `error`.
 
 | exit | meaning |
 |---|---|
@@ -133,6 +144,23 @@ flags and exit codes as JSON.
 | 5 | auth: no API key, or Linear rejected it |
 | 6 | rate-limited: retry after `retryAt` |
 | 7 | conflict: `--if-updated-at` no longer holds; read it again |
+
+## Calling linearctl from a program
+
+- Pass `--json` and read one document from stdout (one line, in a pipe). Decide
+  by the exit code, then by `code` in a failure (`describe` lists the codes).
+- Give linearctl a stdin pipe only when you send input (`--json-input -`,
+  `--body-file -`, `--description-file -`, `auth login`); otherwise give it none
+  or `/dev/null`. linearctl can exit before reading stdin, after a usage error
+  or for a command that reads none, and your write to the pipe then fails with
+  EPIPE: ignore that error and use the exit code.
+- Retry on `NETWORK`, and on `RATE_LIMITED` after `retryAt`. Changes are safe to
+  rerun (`changed: false`); `issue create`, `comment create` and `cycle create`
+  need `--id` for that.
+- Making many calls: `serve --stdio` answers them from one process, about 80 ms
+  less each.
+- From the npm package, run the native binary directly (see Install) to skip
+  Node.
 
 ## Speed
 

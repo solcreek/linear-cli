@@ -26,6 +26,18 @@ use std::time::{Duration, Instant};
 
 /// Known ids at start: up to 2,500 issues.
 const SNAPSHOT_PAGES: u64 = 10;
+/// A connection that stayed up this long was healthy: its loss starts the
+/// backoff over. One that drops sooner keeps the backoff growing, so a
+/// server that closes every connection is not asked again every second.
+const HEALTHY: Duration = Duration::from_secs(60);
+/// Linear closes a connection with 4003 when the account holds more
+/// subscriptions than it allows (one, since 2026-10-26); it comes within a
+/// second of subscribing.
+const TOO_MANY: u16 = 4003;
+const TOO_MANY_WITHIN: Duration = Duration::from_secs(10);
+/// With only issue updates subscribed, creates and archives arrive by
+/// catching up at most this often.
+const ONE_SUBSCRIPTION_RECONCILE: i64 = 60 * SECOND;
 const RECONCILE_SKEW: i64 = 5 * SECOND;
 
 pub fn command() -> Cmd {
@@ -44,6 +56,8 @@ usual exit codes (5 auth, 6 rate-limited, 1 failed) and a last {error} line.\n\n
 Linear's subscriptions name the changed issues; linearctl checks each batch\n\
 against the filter with one request (at most one per 2 s) and reconciles every\n\
 --reconcile seconds. --mode poll asks Linear every --poll-interval seconds instead.\n\
+When Linear allows only one subscription (it closes the rest with 4003), watch\n\
+subscribes to issue updates alone and catches up every 60 s (or --reconcile).\n\
 Removes are reported for issues known to match: up to 2,500 found at start, and\n\
 any since; beyond that (everything: true) every non-matching change is a remove.",
         )
@@ -187,12 +201,18 @@ impl Watcher {
         Ok(())
     }
 
-    /// Reports issues that no longer match, with why.
+    /// Reports issues that no longer match, with why: a request for each
+    /// 250 of them.
     fn gone(&mut self, run: &mut Run, ids: &[String]) -> R {
-        let report: Vec<&String> = ids.iter().filter(|id| self.known.contains_key(*id) || self.everything).collect();
-        if report.is_empty() {
-            return Ok(());
+        let report: Vec<String> =
+            ids.iter().filter(|id| self.known.contains_key(*id) || self.everything).cloned().collect();
+        for batch in report.chunks(PAGE_SIZE as usize) {
+            self.gone_batch(run, batch)?;
         }
+        Ok(())
+    }
+
+    fn gone_batch(&mut self, run: &mut Run, report: &[String]) -> R {
         let data = self.cl.query(run, queries::WATCH_GONE, json!({"ids": report}))?;
         let found = nodes(&data["issues"]);
         for id in report {
@@ -239,7 +259,7 @@ impl Watcher {
         let gte = json!({"updatedAt": {"gte": time::rfc3339(from)}});
         let filter = self.and(gte.clone());
         let cl = self.cl.clone();
-        let (items, _) = collect(PAGE_SIZE * SNAPSHOT_PAGES, String::new(), |first, after| {
+        let (items, more_items) = collect(PAGE_SIZE * SNAPSHOT_PAGES, String::new(), |first, after| {
             let mut data = cl.query(
                 run,
                 queries::ISSUE_LIST,
@@ -252,9 +272,23 @@ impl Watcher {
             matched.insert(str_at(it, "id"));
             self.upsert(run, it)?;
         }
-        let changed = self.cl.query(run, queries::WATCH_CHANGED, json!({"filter": gte}))?;
-        let rest: Vec<String> =
-            nodes(&changed["issues"]).iter().map(|n| str_at(n, "id")).filter(|id| !matched.contains(id)).collect();
+        // Every page up to 2,500, as the upserts: with issue updates alone
+        // subscribed, this is how archives arrive.
+        let (changed, more) = collect(PAGE_SIZE * SNAPSHOT_PAGES, String::new(), |first, after| {
+            let mut data = cl.query(
+                run,
+                queries::WATCH_CHANGED,
+                json!({"filter": gte, "first": first, "after": optional(after)}),
+            )?;
+            Ok(Page::take(&mut data["issues"]))
+        })?;
+        if !more_items.is_empty() || !more.is_empty() {
+            let n = PAGE_SIZE * SNAPSHOT_PAGES;
+            run.eprint(&format!(
+                "linearctl: over {n} issues changed since the last catch-up; changes past them are missed\n"
+            ));
+        }
+        let rest: Vec<String> = changed.iter().map(|n| str_at(n, "id")).filter(|id| !matched.contains(id)).collect();
         self.gone(run, &rest)?;
         self.since = started - RECONCILE_SKEW;
         Ok(())
@@ -281,8 +315,10 @@ impl Watcher {
     ) -> R {
         let start = time::now();
         let mut sub = None;
+        // Updates only, once Linear has refused more than one subscription.
+        let mut single = false;
         if mode != "poll" {
-            match subscribe(run, &self.cl.key) {
+            match subscribe(run, &self.cl.key, single) {
                 Ok(s) => sub = Some(s),
                 Err(e) if mode == "subscription" => return Err(failed(e)),
                 Err(e) => run.eprint(&format!(
@@ -315,7 +351,7 @@ impl Watcher {
         let mut backoff = SECOND;
         loop {
             let event = if let Some(e) = failed_now.take() {
-                Some(Event::Failed(e))
+                Some(Event::Failed(e, None, Instant::now()))
             } else {
                 let mut deadline = next_beat.min(next_catch_up);
                 if let Some(f) = flush {
@@ -326,7 +362,9 @@ impl Watcher {
                     Some(s) => match s.events.recv_timeout(wait) {
                         Ok(e) => Some(e),
                         Err(RecvTimeoutError::Timeout) => None,
-                        Err(RecvTimeoutError::Disconnected) => Some(Event::Failed("the stream ended".into())),
+                        Err(RecvTimeoutError::Disconnected) => {
+                            Some(Event::Failed("the stream ended".into(), None, Instant::now()))
+                        }
                     },
                     None => {
                         std::thread::sleep(wait);
@@ -347,17 +385,35 @@ impl Watcher {
                     }
                     continue;
                 }
-                Some(Event::Failed(e)) => {
+                Some(Event::Failed(e, code, ended)) => {
                     // The stream is down: reconnect, then replay the gap.
                     let down = time::now();
-                    run.eprint(&format!("linearctl: subscription lost ({e}); reconnecting\n"));
+                    let lived = sub.as_ref().map_or(Duration::ZERO, |s| ended.saturating_duration_since(s.opened));
                     if let Some(s) = sub.take() {
                         s.close();
                     }
-                    for _ in 0..5 {
-                        std::thread::sleep(dur(backoff));
-                        backoff = (2 * backoff).min(30 * SECOND);
-                        if let Ok(s) = subscribe(run, &self.cl.key) {
+                    let limited = code == Some(TOO_MANY) && lived < TOO_MANY_WITHIN && !single;
+                    if limited {
+                        single = true;
+                        every = reconcile.min(ONE_SUBSCRIPTION_RECONCILE);
+                        next_catch_up = Instant::now() + dur(every);
+                        run.eprint(&format!(
+                            "linearctl: Linear allows one subscription at a time; watching issue updates, catching up every {}\n",
+                            time::duration(every)
+                        ));
+                    } else {
+                        run.eprint(&format!("linearctl: subscription lost ({e}); reconnecting\n"));
+                    }
+                    if lived >= HEALTHY {
+                        backoff = SECOND;
+                    }
+                    for attempt in 0..5 {
+                        // Straight back after switching to one subscription.
+                        if !(limited && attempt == 0) {
+                            std::thread::sleep(dur(backoff));
+                            backoff = (2 * backoff).min(30 * SECOND);
+                        }
+                        if let Ok(s) = subscribe(run, &self.cl.key, single) {
                             sub = Some(s);
                             break;
                         }
@@ -368,7 +424,6 @@ impl Watcher {
                         next_catch_up = Instant::now() + dur(every);
                         "fallback"
                     } else {
-                        backoff = SECOND;
                         "reconnect"
                     };
                     let to = time::now();
@@ -427,7 +482,9 @@ fn tick(prev: Instant, every: i64) -> Instant {
 enum Event {
     /// The id of an issue that changed.
     Id(String),
-    Failed(String),
+    /// The connection ended: why, the close code if Linear sent one, and
+    /// when. The loop may see it much later, after a snapshot or a catch-up.
+    Failed(String, Option<u16>, Instant),
 }
 
 enum Command {
@@ -441,6 +498,8 @@ struct Subscription {
     commands: Sender<Command>,
     /// When a message last came, in Unix ns.
     last_seen: Arc<AtomicI64>,
+    /// When it connected.
+    opened: Instant,
 }
 
 impl Subscription {
@@ -554,10 +613,11 @@ fn send(ws: &mut Socket, v: &Value) -> Result<(), String> {
     ws.send(tungstenite::Message::text(json::marshal(v))).map_err(|e| e.to_string())
 }
 
-/// Opens a subscription to issue changes. The key goes in the
+/// Opens a subscription to issue changes: created, updated, archived and
+/// unarchived, or updated alone when single. The key goes in the
 /// Authorization header of the upgrade: Linear rejects it in
 /// connection_init.
-fn subscribe(run: &Run, key: &str) -> Result<Subscription, String> {
+fn subscribe(run: &Run, key: &str, single: bool) -> Result<Subscription, String> {
     if run.demo {
         return Err("demo mode has no live changes".into());
     }
@@ -590,12 +650,13 @@ fn subscribe(run: &Run, key: &str) -> Result<Subscription, String> {
     if !acked {
         return Err(format!("no connection_ack from {url}"));
     }
-    for (id, doc) in [
+    let all = [
         ("created", queries::WATCH_CREATED),
         ("updated", queries::WATCH_UPDATED),
         ("archived", queries::WATCH_ARCHIVED),
         ("unarchived", queries::WATCH_UNARCHIVED),
-    ] {
+    ];
+    for (id, doc) in all.iter().filter(|(id, _)| !single || *id == "updated") {
         send(&mut ws, &json!({"id": id, "type": "subscribe", "payload": {"query": doc}}))?;
     }
     // Reads time out often, so the reader can also send.
@@ -605,7 +666,7 @@ fn subscribe(run: &Run, key: &str) -> Result<Subscription, String> {
     let last_seen = Arc::new(AtomicI64::new(time::now()));
     let seen = last_seen.clone();
     std::thread::spawn(move || read(ws, events_tx, commands_rx, seen));
-    Ok(Subscription { events, commands, last_seen })
+    Ok(Subscription { events, commands, last_seen, opened: Instant::now() })
 }
 
 fn read(mut ws: Socket, events: Sender<Event>, commands: Receiver<Command>, seen: Arc<AtomicI64>) {
@@ -629,7 +690,7 @@ fn read(mut ws: Socket, events: Sender<Event>, commands: Receiver<Command>, seen
                 continue;
             }
             Err(e) => {
-                let _ = events.send(Event::Failed(e.to_string()));
+                let _ = events.send(Event::Failed(e.to_string(), None, Instant::now()));
                 return;
             }
         };
@@ -638,9 +699,10 @@ fn read(mut ws: Socket, events: Sender<Event>, commands: Receiver<Command>, seen
             tungstenite::Message::Text(t) => t.to_string(),
             tungstenite::Message::Binary(b) => String::from_utf8_lossy(&b).into_owned(),
             tungstenite::Message::Close(f) => {
+                let code = f.as_ref().map(|f| u16::from(f.code));
                 let why =
                     f.map(|f| format!("status = {}, reason = {}", u16::from(f.code), f.reason)).unwrap_or_default();
-                let _ = events.send(Event::Failed(format!("closed: {why}")));
+                let _ = events.send(Event::Failed(format!("closed: {why}"), code, Instant::now()));
                 return;
             }
             _ => continue,
@@ -663,7 +725,11 @@ fn read(mut ws: Socket, events: Sender<Event>, commands: Receiver<Command>, seen
             Some(kind @ ("error" | "complete")) => {
                 let payload = m.get("payload").map(json::marshal).unwrap_or_default();
                 let id = str_at(&m, "id");
-                let _ = events.send(Event::Failed(format!("subscription {id} ended: {kind} {}", printable(&payload))));
+                let _ = events.send(Event::Failed(
+                    format!("subscription {id} ended: {kind} {}", printable(&payload)),
+                    None,
+                    Instant::now(),
+                ));
                 let _ = ws.get_ref().tcp().shutdown(std::net::Shutdown::Both);
                 return;
             }

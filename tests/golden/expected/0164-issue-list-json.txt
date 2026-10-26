@@ -1,6 +1,6 @@
 exit: 5
 --- stdout
-{"error":"no API key: set LINEAR_API_KEY, or pipe one to 'linearctl auth login --yes'","usage":false}
+{"code":"AUTH","error":"no API key: set LINEAR_API_KEY, or pipe one to 'linearctl auth login --yes'","usage":false}
 
 --- stderr
 linearctl: no API key: set LINEAR_API_KEY, or pipe one to 'linearctl auth login --yes'

@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--cycle must be current, next, previous, a cycle number, or its UUID; got \"x\"","usage":true}
+{"code":"USAGE","error":"--cycle must be current, next, previous, a cycle number, or its UUID; got \"x\"","usage":true}
 
 --- stderr
 linearctl: --cycle must be current, next, previous, a cycle number, or its UUID; got "x"

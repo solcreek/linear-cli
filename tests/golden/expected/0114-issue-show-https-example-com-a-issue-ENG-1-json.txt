@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"ISSUE: not a linear.app issue URL: https://example.com/a/issue/ENG-1","usage":true}
+{"code":"USAGE","error":"ISSUE: not a linear.app issue URL: https://example.com/a/issue/ENG-1","usage":true}
 
 --- stderr
 linearctl: ISSUE: not a linear.app issue URL: https://example.com/a/issue/ENG-1

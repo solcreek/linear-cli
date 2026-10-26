@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"update changes things: pass --dry-run to preview, or --yes to apply (one of them)","usage":true}
+{"code":"USAGE","error":"update changes things: pass --dry-run to preview, or --yes to apply (one of them)","usage":true}
 
 --- stderr
 linearctl: update changes things: pass --dry-run to preview, or --yes to apply (one of them)

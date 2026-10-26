@@ -1,5 +1,5 @@
 use crate::cli::{Args, Cmd, Ctx, Flag};
-use crate::fail::{self, Fail, R, failed, usage};
+use crate::fail::{self, Fail, R, ambiguous, failed, missing, usage};
 use crate::json::{marshal, quote_go};
 use crate::queries::{self, ISSUE_ROW_FIELDS};
 use crate::run::{Run, dry_run};
@@ -11,8 +11,6 @@ pub fn show_fields() -> Vec<&'static str> {
     let mut f = ISSUE_ROW_FIELDS.to_vec();
     f.extend([
         "description",
-        "dueDate",
-        "estimate",
         "branchName",
         "startedAt",
         "completedAt",
@@ -58,7 +56,9 @@ fn list_cmd() -> Cmd {
         ))
         .flag(Flag::str("query", "full-text search for `TEXT`"))
         .flag(Flag::bool("include-comments", "with --query, also match the text of comments"))
-        .flag(Flag::str("sort", "order by `FIELD`: updated (default), created, priority"))
+        .flag(Flag::str("view", "only issues in Linear's saved custom view `VIEW` (a name or its id)"))
+        .flag(Flag::str("sort", "`FIELD`: updated (default), created, priority, due-date, title, state"))
+        .flag(Flag::bool("reverse", "reverse the order of --sort"))
         .flag(limit_flag(25))
         .flag(cursor_flag());
     c = fields_flag_spec(c, ISSUE_ROW_FIELDS);
@@ -78,12 +78,15 @@ pub fn filter_flags(c: Cmd) -> Cmd {
         .flag(Flag::strs("label", "only issues with label `NAME` (repeatable; all of)"))
         .flag(Flag::strs("any-label", "only issues with label `NAME` (repeatable; any of)"))
         .flag(Flag::strs("without-label", "only issues without label `NAME` (repeatable; none of)"))
-        .flag(Flag::str("project", "only issues in project `NAME`"))
+        .flag(Flag::str("project", "only issues in project `NAME` (none: in no project)"))
         .flag(Flag::str("milestone", "only issues in project milestone `NAME` (none: in no milestone)"))
-        .flag(Flag::str("delegate", "only issues delegated to the agent `WHO` (name or email; any; none)"))
+        .flag(Flag::str("delegate", "only issues delegated to the agent `WHO` (name, email, me, any, none)"))
         .flag(Flag::str("attachment-url", "only issues with an attachment at `URL` (e.g. a linked pull request)"))
         .flag(Flag::str("cycle", "only issues in cycle `CYCLE`: current, next, previous, a number, a UUID"))
         .flag(Flag::str("updated-since", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h"))
+        .flag(Flag::str("creator", "only issues created by `WHO`: me, none, or an email"))
+        .flag(Flag::str("due-before", "only issues due on or before `DATE` (2026-11-30)"))
+        .flag(Flag::str("due-after", "only issues due on or after `DATE`"))
 }
 
 fn list(run: &mut Run, ctx: &Ctx) -> R {
@@ -92,26 +95,62 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
     let cursor = cursor_value(ctx)?;
     let query = ctx.str("query");
     let sort = ctx.str("sort");
+    let reverse = ctx.bool("reverse");
+    // Each --sort as Linear's IssueSortInput field and its natural order.
+    // Descending priority is urgent first with no priority last; Ascending
+    // puts no priority (0) first (verified 2026-10-26).
+    let (field, natural) = match sort.as_str() {
+        "" | "updated" => ("updatedAt", "Descending"),
+        "created" => ("createdAt", "Descending"),
+        "priority" => ("priority", "Descending"),
+        "due-date" => ("dueDate", "Ascending"),
+        "title" => ("title", "Ascending"),
+        "state" => ("workflowState", "Ascending"),
+        _ => {
+            return Err(usage(format!(
+                "--sort must be updated, created, priority, due-date, title or state; got {}",
+                quote_go(&sort)
+            )));
+        }
+    };
+    let plain_order = matches!(sort.as_str(), "" | "updated" | "created") && !reverse;
     if !query.is_empty() {
         plain("--query", &query)?;
-        if sort == "priority" {
-            return Err(usage("--sort priority does not work with --query; use updated or created"));
+        if !plain_order {
+            return Err(usage("--query sorts only by updated or created, newest first; drop --sort or --reverse"));
         }
     }
     let mut vars = Map::new();
-    match sort.as_str() {
-        "" | "updated" => {
-            if query.is_empty() || !sort.is_empty() {
-                vars.insert("orderBy".into(), json!("updatedAt"));
-            }
+    if plain_order {
+        // As before: orderBy, newest first; a search without --sort ranks by
+        // relevance.
+        if query.is_empty() || !sort.is_empty() {
+            vars.insert("orderBy".into(), json!(field));
         }
-        "created" => _ = vars.insert("orderBy".into(), json!("createdAt")),
-        // Descending is Linear's urgent-first order, with no priority last;
-        // Ascending puts no priority (0) first (verified 2026-10-26).
-        "priority" => _ = vars.insert("sort".into(), json!([{"priority": {"order": "Descending"}}])),
-        _ => return Err(usage(format!("--sort must be updated, created or priority; got {}", quote_go(&sort)))),
+    } else {
+        let order = match (natural, reverse) {
+            ("Descending", false) | ("Ascending", true) => "Descending",
+            _ => "Ascending",
+        };
+        // Issues without a due date come last either way.
+        let spec = if field == "dueDate" { json!({"order": order, "nulls": "last"}) } else { json!({"order": order}) };
+        vars.insert("sort".into(), json!([{ field: spec }]));
     }
     let (mut doc, mut conn) = (queries::ISSUE_LIST, "issues");
+    let view = ctx.str("view");
+    if ctx.changed("view") {
+        plain("--view", &view)?;
+        if !query.is_empty() {
+            return Err(usage("--view lists a saved view's issues; it does not search: drop --query"));
+        }
+        let by = if is_uuid(&view) {
+            json!({"id": {"eq": view.to_lowercase()}})
+        } else {
+            json!({"name": {"eqIgnoreCase": view}})
+        };
+        vars.insert("view".into(), by);
+        doc = queries::ISSUE_LIST_VIEW;
+    }
     let with_comments = ctx.bool("include-comments");
     if with_comments && query.is_empty() {
         return Err(usage("--include-comments searches comments too, so it needs --query"));
@@ -137,6 +176,27 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
         vars.insert("first".into(), json!(first));
         vars.insert("after".into(), optional(after));
         let mut data = cl.query(run, doc, Value::Object(vars.clone()))?;
+        if doc == queries::ISSUE_LIST_VIEW {
+            let found = nodes(&data["matches"]);
+            match found.as_slice() {
+                [] => return Err(missing(format!("no saved view {}; see 'linearctl view list'", quote_go(&view)))),
+                [v] if str_at(v, "modelName") != "Issue" => {
+                    return Err(usage(format!(
+                        "view {} lists {}s, not issues",
+                        quote_go(&str_at(v, "name")),
+                        str_at(v, "modelName").to_lowercase()
+                    )));
+                }
+                [_] => {}
+                _ => {
+                    return Err(ambiguous(format!(
+                        "more than one saved view is named {}; pass its id",
+                        quote_go(&view)
+                    )));
+                }
+            }
+            return Ok(Page::take(&mut data["customViews"]["nodes"][0]["issues"]));
+        }
         Ok(Page::take(&mut data[conn]))
     })?;
     // Asked-for issues that did not come back: partial, never silent.
@@ -242,7 +302,8 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
     let p = ctx.str("project");
     if !p.is_empty() {
         plain("--project", &p)?;
-        filter.insert("project".into(), json!({"name": {"eqIgnoreCase": p}}));
+        let f = if p == "none" { json!({"null": true}) } else { json!({"name": {"eqIgnoreCase": p}}) };
+        filter.insert("project".into(), f);
     }
     let u = ctx.str("attachment-url");
     if !u.is_empty() {
@@ -258,6 +319,7 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
         let f = match d.as_str() {
             "none" => json!({"null": true}),
             "any" => json!({"null": false}),
+            "me" => json!({"isMe": {"eq": true}}),
             _ => {
                 json!({"or": [{"name": {"eqIgnoreCase": d}}, {"displayName": {"eqIgnoreCase": d}}, {"email": {"eqIgnoreCase": d}}]})
             }
@@ -273,6 +335,23 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
     let cy = ctx.str("cycle");
     if !cy.is_empty() {
         filter.insert("cycle".into(), super::cycle::cycle_ref("--cycle", &cy)?);
+    }
+    let creator = ctx.str("creator");
+    if !creator.is_empty() {
+        filter.insert("creator".into(), user_filter("--creator", &creator)?);
+    }
+    let mut due = Map::new();
+    for (flag, op) in [("due-before", "lte"), ("due-after", "gte")] {
+        let d = ctx.str(flag);
+        if ctx.changed(flag) && (d.len() != 10 || crate::time::parse_date(&d).is_none()) {
+            return Err(usage(format!("--{flag} must be a date (2026-11-30); got {}", quote_go(&d))));
+        }
+        if !d.is_empty() {
+            due.insert(op.into(), json!(d));
+        }
+    }
+    if !due.is_empty() {
+        filter.insert("dueDate".into(), Value::Object(due));
     }
     let since = ctx.str("updated-since");
     if !since.is_empty() {
@@ -400,13 +479,17 @@ fn issue_fields(c: Cmd) -> Cmd {
         .flag(Flag::str("description-file", "read the description from `PATH` (- for stdin)"))
         .flag(Flag::str("assignee", "assign to `WHO`: me, none, or an email"))
         .flag(Flag::str("state", "workflow state `NAME` (see 'linearctl state list')"))
+        .flag(Flag::str("state-type", "the team's first workflow state of `TYPE` (e.g. started)"))
+        .flag(Flag::str("estimate", "the estimate, `POINTS` (a whole number), or none"))
+        .flag(Flag::str("due-date", "the due date, `DATE` (2026-11-30), or none"))
+        .flag(Flag::str("cycle", "cycle `CYCLE` (current, next, previous, N, a UUID), or none"))
         .flag(Flag::str("priority", "`PRIORITY`: 0-4 or none, urgent, high, medium, low"))
-        .flag(Flag::str("project", "project `NAME`"))
+        .flag(Flag::str("project", "project `NAME`, or none to clear it"))
         .flag(Flag::str(
             "milestone",
             "project milestone `NAME`, or none to clear; it sets the project\nwhen the issue has none",
         ))
-        .flag(Flag::str("delegate", "delegate to the agent (app user) `WHO`: its name or email, or none"))
+        .flag(Flag::str("delegate", "delegate to the agent (app user) `WHO`: its name or email, me, or none"))
         .flag(Flag::str("parent", "make it a sub-issue of `ISSUE` (none: of no issue)"))
         .flag(Flag::str("json-input", "read Linear's input object from `PATH` (- for stdin); flags win"))
 }
@@ -453,8 +536,13 @@ pub struct Wanted {
     parent: String,
     /// A name, or none.
     milestone: String,
-    /// An agent user's name or email, or none.
+    /// An agent user's name or email, me, or none.
     delegate: String,
+    /// A state type (started, …): the team's first state of it.
+    state_type: String,
+    /// --cycle as a cycle filter, found among the issue's team's cycles.
+    cycle: Option<Value>,
+    cycle_word: String,
 }
 
 fn read_wanted(ctx: &Ctx) -> R<Wanted> {
@@ -502,6 +590,54 @@ fn read_wanted(ctx: &Ctx) -> R<Wanted> {
         user_filter("--assignee", &a)?;
         w.assignee = a;
     }
+    let st = ctx.str("state-type");
+    if !st.is_empty() {
+        if !STATE_TYPES.contains(&st.as_str()) {
+            return Err(usage(format!(
+                "--state-type must be one of {}; got {}",
+                STATE_TYPES.join(", "),
+                quote_go(&st)
+            )));
+        }
+        if !w.state.is_empty() {
+            return Err(usage("pass --state or --state-type, not both"));
+        }
+        w.state_type = st;
+    }
+    let est = ctx.str("estimate");
+    if ctx.changed("estimate") {
+        let v = match est.as_str() {
+            "none" => Value::Null,
+            n if !n.is_empty() && n.len() <= 6 && n.bytes().all(|c| c.is_ascii_digit()) => {
+                json!(n.parse::<i64>().unwrap_or(0))
+            }
+            _ => {
+                return Err(usage(format!(
+                    "--estimate must be a whole number of points, or none; got {}",
+                    quote_go(&est)
+                )));
+            }
+        };
+        w.input.insert("estimate".into(), v);
+    }
+    let due = ctx.str("due-date");
+    if ctx.changed("due-date") {
+        let v = match due.as_str() {
+            "none" => Value::Null,
+            d if d.len() == 10 && crate::time::parse_date(d).is_some() => json!(d),
+            _ => return Err(usage(format!("--due-date must be a date (2026-11-30), or none; got {}", quote_go(&due)))),
+        };
+        w.input.insert("dueDate".into(), v);
+    }
+    let cy = ctx.str("cycle");
+    if ctx.changed("cycle") {
+        if cy == "none" {
+            w.input.insert("cycleId".into(), Value::Null);
+        } else {
+            w.cycle = Some(super::cycle::cycle_ref("--cycle", &cy)?);
+            w.cycle_word = cy;
+        }
+    }
     let p = ctx.str("parent");
     if p == "none" {
         w.input.insert("parentId".into(), Value::Null);
@@ -532,12 +668,14 @@ impl Wanted {
         let email = if is_email(&self.assignee) { self.assignee.clone() } else { String::new() };
         let v = json!({
             "state": self.state, "withState": !self.state.is_empty(),
-            "email": email, "withUser": !email.is_empty(), "me": self.assignee == "me",
+            "email": email, "withUser": !email.is_empty(), "me": self.assignee == "me" || self.delegate == "me",
             "labels": label_filter(&labels), "withLabels": !labels.is_empty(),
-            "project": self.project, "withProject": !self.project.is_empty(),
+            "project": self.project, "withProject": !self.project.is_empty() && self.project != "none",
             "parent": parent, "withParent": !self.parent.is_empty(),
             "milestone": self.milestone, "withMilestone": !self.milestone.is_empty() && self.milestone != "none",
-            "delegate": self.delegate, "withDelegate": !self.delegate.is_empty() && self.delegate != "none",
+            "delegate": self.delegate, "withDelegate": !matches!(self.delegate.as_str(), "" | "none" | "me"),
+            "stateType": self.state_type, "withStateType": !self.state_type.is_empty(),
+            "cycle": self.cycle.clone().unwrap_or(json!({})), "withCycle": self.cycle.is_some(),
         });
         match v {
             Value::Object(m) => m,
@@ -549,10 +687,43 @@ impl Wanted {
     /// labels over another team's label of the same name; project_id is the
     /// issue's project now ("" for a new issue): it picks the milestone
     /// when several projects have one of that name.
-    fn apply(&mut self, r: &Value, states: &[Value], team_id: &str, project_id: &str) -> R {
+    /// typed are the team's states of --state-type: the one with the lowest
+    /// position is the first, as Linear's agent guide picks "started".
+    /// cycles are the team's cycles --cycle names.
+    fn apply(
+        &mut self,
+        r: &Value,
+        states: &[Value],
+        typed: &[Value],
+        cycles: &[Value],
+        team_id: &str,
+        project_id: &str,
+    ) -> R {
+        if self.cycle.is_some() {
+            match cycles {
+                [one] => _ = self.input.insert("cycleId".into(), json!(str_at(one, "id"))),
+                [] => {
+                    return Err(missing(format!(
+                        "no cycle {} in the issue's team; see 'linearctl cycle list'",
+                        quote_go(&self.cycle_word)
+                    )));
+                }
+                _ => return Err(ambiguous(format!("more than one cycle is {}", quote_go(&self.cycle_word)))),
+            }
+        }
         if !self.state.is_empty() {
             let id = one("workflow state", &self.state, states, "'linearctl state list'")?;
             self.input.insert("stateId".into(), json!(id));
+        }
+        if !self.state_type.is_empty() {
+            let pos = |v: &Value| v["position"].as_f64().unwrap_or(f64::MAX);
+            let Some(first) = typed.iter().min_by(|a, b| pos(a).total_cmp(&pos(b))) else {
+                return Err(missing(format!(
+                    "the team has no workflow state of type {}; see 'linearctl state list'",
+                    self.state_type
+                )));
+            };
+            self.input.insert("stateId".into(), json!(str_at(first, "id")));
         }
         match self.assignee.as_str() {
             "" => {}
@@ -563,20 +734,31 @@ impl Wanted {
                 self.input.insert("assigneeId".into(), json!(id));
             }
         }
-        if !self.project.is_empty() {
+        if self.project == "none" {
+            self.input.insert("projectId".into(), Value::Null);
+        } else if !self.project.is_empty() {
             let id = one("project", &self.project, &nodes(&r["projects"]), "'linearctl project list'")?;
             self.input.insert("projectId".into(), json!(id));
         }
         if !self.parent.is_empty() {
             let found = nodes(&r["parent"]);
             let Some(p) = found.first() else {
-                return Err(failed(format!("not found: parent issue {}", self.parent)).hint(fail::FIND_ISSUE));
+                return Err(missing(format!("not found: parent issue {}", self.parent)).hint(fail::FIND_ISSUE));
             };
             self.input.insert("parentId".into(), json!(str_at(p, "id")));
         }
         match self.delegate.as_str() {
             "" => {}
             "none" => _ = self.input.insert("delegateId".into(), Value::Null),
+            "me" => {
+                if r["viewer"]["app"] != json!(true) {
+                    return Err(failed(format!(
+                        "--delegate me needs an app (agent) token; this key is {}'s, a person: delegate to an agent by name",
+                        str_at(&r["viewer"], "name")
+                    )));
+                }
+                self.input.insert("delegateId".into(), json!(str_at(&r["viewer"], "id")));
+            }
             d => {
                 let id = one("agent user", d, &nodes(&r["delegates"]), "'linearctl user list --app'")?;
                 self.input.insert("delegateId".into(), json!(id));
@@ -603,14 +785,14 @@ impl Wanted {
                 }
                 match matched.len() {
                     0 => {
-                        return Err(failed(format!(
+                        return Err(missing(format!(
                             "no milestone named {} in the issue's project; see 'linearctl milestone list'",
                             quote_go(name)
                         )));
                     }
                     1 => {}
                     n => {
-                        return Err(failed(format!(
+                        return Err(ambiguous(format!(
                             "{n} milestones are named {} (projects: {}); pass --project",
                             quote_go(name),
                             projects.join(", ")
@@ -640,9 +822,9 @@ pub fn nodes(v: &Value) -> Vec<Value> {
 /// The single match for name, or an error naming what was looked for.
 fn one(kind: &str, name: &str, nodes: &[Value], hint: &str) -> R<String> {
     match nodes.len() {
-        0 => Err(failed(format!("no {kind} named {}; see {hint}", quote_go(name)))),
+        0 => Err(missing(format!("no {kind} named {}; see {hint}", quote_go(name)))),
         1 => Ok(str_at(&nodes[0], "id")),
-        n => Err(failed(format!(
+        n => Err(ambiguous(format!(
             "{n} {kind}s are named {}; rename one in Linear, or pass its id in --json-input",
             quote_go(name)
         ))),
@@ -713,16 +895,28 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     let dry = dry_run(ctx)?;
     let id = chosen_id(ctx, dry, "create a second issue")?;
     let mut w = read_wanted(ctx)?;
+    // The team: --team (or its fallbacks), else Linear's own teamId in
+    // --json-input; flags win, as they do over every input field.
     let team = team_flag(ctx)?;
-    if team.is_empty() {
-        return Err(usage("pass --team KEY (or set LINEARCTL_TEAM, or default-team with 'linearctl config set')"));
-    }
+    let input_team = w.input.get("teamId").and_then(Value::as_str).unwrap_or("").to_string();
+    let team_filter = if !team.is_empty() {
+        json!({"key": {"eqIgnoreCase": team}})
+    } else if is_uuid(&input_team) {
+        json!({"id": {"eq": input_team.to_lowercase()}})
+    } else if !input_team.is_empty() {
+        return Err(usage(format!("teamId in --json-input must be a team's UUID; got {}", quote_go(&input_team))));
+    } else {
+        return Err(usage(
+            "pass --team KEY, or teamId in --json-input (or set LINEARCTL_TEAM, or default-team with 'linearctl config set')",
+        ));
+    };
+    let team = if team.is_empty() { input_team } else { team };
     if w.input.get("title").and_then(Value::as_str).unwrap_or("").is_empty() {
         return Err(usage("pass --title (or title in --json-input)"));
     }
     let cl = run.client()?;
     let mut vars = w.resolve_vars(&[]);
-    vars.insert("team".into(), json!(team));
+    vars.insert("team".into(), team_filter);
     vars.insert("id".into(), json!(id));
     vars.insert("withID".into(), json!(true));
     let r = cl.query(run, queries::CREATE_RESOLVE, Value::Object(vars))?;
@@ -733,9 +927,10 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     }
     let teams = nodes(&r["teams"]);
     let Some(t) = teams.first() else {
-        return Err(failed(format!("no team with key {team}; see 'linearctl team list'")));
+        let by = if is_uuid(&team) { "id" } else { "key" };
+        return Err(missing(format!("no team with {by} {team}; see 'linearctl team list'")));
     };
-    w.apply(&r, &nodes(&t["states"]), &str_at(t, "id"), "")?;
+    w.apply(&r, &nodes(&t["states"]), &nodes(&t["typed"]), &nodes(&t["cycles"]), &str_at(t, "id"), "")?;
     w.input.insert("teamId".into(), json!(str_at(t, "id")));
     w.input.insert("id".into(), json!(id));
     if dry {
@@ -813,7 +1008,14 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     }
     let team_id = str_at(is, "team.id");
     let current_project = if is["project"].is_object() { str_at(is, "project.id") } else { String::new() };
-    w.apply(&res, &nodes(&is["team"]["states"]), &team_id, &current_project)?;
+    w.apply(
+        &res,
+        &nodes(&is["team"]["states"]),
+        &nodes(&is["team"]["typed"]),
+        &nodes(&is["team"]["cycles"]),
+        &team_id,
+        &current_project,
+    )?;
     let current: Vec<String> = nodes(&is["labels"]).iter().map(|l| str_at(l, "id")).collect();
     if !add.is_empty() || !remove.is_empty() {
         let labels = nodes(&res["issueLabels"]);
@@ -844,6 +1046,10 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
         ("parentId", id(&is["parent"])),
         ("projectMilestoneId", id(&is["projectMilestone"])),
         ("delegateId", id(&is["delegate"])),
+        ("cycleId", id(&is["cycle"])),
+        ("dueDate", is["dueDate"].clone()),
+        // Linear answers estimate as a float; the input is an Int.
+        ("estimate", is["estimate"].as_f64().map_or(Value::Null, |e| json!(e as i64))),
     ];
     for (k, v) in now {
         if w.input.get(k).is_some_and(|got| marshal(got) == marshal(&v)) {

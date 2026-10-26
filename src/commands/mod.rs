@@ -79,7 +79,15 @@ fn help_command() -> Cmd {
         .args(Args::Legacy)
         .run(|run, ctx| {
             let root = root();
-            let found = cli::found_at(&root, &ctx.args);
+            let (found, rest) = cli::found_with_rest(&root, &ctx.args);
+            // cobra printed the root's help for an unknown topic and exited 0.
+            if let Some(word) = rest.first() {
+                return Err(crate::fail::usage(format!(
+                    "unknown help topic {} for {}",
+                    crate::json::quote_go(word),
+                    crate::json::quote_go(&found.path())
+                )));
+            }
             let text = cli::help(&found);
             run.print(&text)
         });

@@ -1,7 +1,7 @@
 exit: 2
 --- stdout
-{"error":"--sort priority does not work with --query; use updated or created","usage":true}
+{"code":"USAGE","error":"--query sorts only by updated or created, newest first; drop --sort or --reverse","usage":true}
 
 --- stderr
-linearctl: --sort priority does not work with --query; use updated or created
+linearctl: --query sorts only by updated or created, newest first; drop --sort or --reverse
 Run 'linearctl --help' for usage.

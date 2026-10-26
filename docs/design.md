@@ -65,7 +65,11 @@ HTML comment marker.
 | 6 | rate-limited | Linear's request or complexity budget is spent; JSON has `retryAt` (RFC 3339) |
 | 7 | conflict | `--if-updated-at` no longer holds; read the issue again |
 
-Under `--json` a failure is `{"error": …, "usage": bool}` on stdout. It adds
+Under `--json` a failure is `{"error": …, "usage": bool, "code": …}` on stdout.
+`code` is a stable name for the kind of failure (`describe` lists every one
+under `errorCodes`, with its exit code): exit 1 alone covers `NOT_FOUND`,
+`AMBIGUOUS`, `LINEAR_ERROR`, `NETWORK` and `FAILED`, so a caller branches on
+`code` rather than on the words of `error`. It adds
 `"hint"` when there is a next step the message does not already name: the
 command that lists what was not found (an issue, comment, project or cycle), the read
 to make after a conflict, or, after a timeout, a lost connection or a 5xx, that

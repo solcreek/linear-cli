@@ -1,6 +1,6 @@
 exit: 1
 --- stdout
-{"error":"<TMP>/home/config/config.json is not valid JSON: invalid character 'o' in literal null (expecting 'u')","usage":false}
+{"code":"FAILED","error":"<TMP>/home/config/config.json is not valid JSON: invalid character 'o' in literal null (expecting 'u')","usage":false}
 
 --- stderr
 linearctl: <TMP>/home/config/config.json is not valid JSON: invalid character 'o' in literal null (expecting 'u')

@@ -8,7 +8,7 @@
 /// project and cycle list: names are not unique across teams.
 macro_rules! issue_row {
     () => {
-        "\n\tid identifier title priority priorityLabel url createdAt updatedAt\n\tstate { id name type color }\n\tassignee { id name email }\n\tdelegate { id name }\n\tteam { id key }\n\tproject { id name }\n\tcycle { id number }\n\tprojectMilestone { id name }\n\tlabels(first: 20) { nodes { id name color } }"
+        "\n\tid identifier title priority priorityLabel url createdAt updatedAt dueDate estimate\n\tstate { id name type color }\n\tassignee { id name email }\n\tdelegate { id name }\n\tteam { id key }\n\tproject { id name }\n\tcycle { id number }\n\tprojectMilestone { id name }\n\tlabels(first: 20) { nodes { id name color } }"
     };
 }
 
@@ -34,6 +34,8 @@ pub const ISSUE_ROW_FIELDS: &[&str] = &[
     "url",
     "createdAt",
     "updatedAt",
+    "dueDate",
+    "estimate",
     "state",
     "assignee",
     "delegate",
@@ -45,6 +47,23 @@ pub const ISSUE_ROW_FIELDS: &[&str] = &[
 ];
 
 pub const VIEWER: &str = "query Viewer { viewer { id name email } organization { name urlKey } }";
+
+/// The issues a saved custom view matches, its own filter applied by Linear
+/// and $filter on top. matches asks for two views, to catch a name two views
+/// share; the issues come from the first one only (first multiplies cost).
+pub const ISSUE_LIST_VIEW: &str = concat!(
+    "query IssueListView($view: CustomViewFilter!, $filter: IssueFilter, $first: Int!, $after: String,\n  $orderBy: PaginationOrderBy, $sort: [IssueSortInput!]) {\n  matches: customViews(filter: $view, first: 2) { nodes { id name modelName } }\n  customViews(filter: $view, first: 1) { nodes { issues(filter: $filter, first: $first, after: $after, orderBy: $orderBy, sort: $sort) { nodes {",
+    issue_row!(),
+    " } ",
+    page_info!(),
+    " } } }\n}"
+);
+
+pub const VIEWS: &str = concat!(
+    "query Views($filter: CustomViewFilter, $first: Int!, $after: String) {\n  customViews(filter: $filter, first: $first, after: $after) { nodes { id name description slugId modelName shared team { id key } owner { id name } updatedAt } ",
+    page_info!(),
+    " }\n}"
+);
 
 pub const ISSUE_LIST: &str = concat!(
     "query IssueList($filter: IssueFilter, $first: Int!, $after: String, $orderBy: PaginationOrderBy, $sort: [IssueSortInput!]) {\n  issues(filter: $filter, first: $first, after: $after, orderBy: $orderBy, sort: $sort) { nodes {",
@@ -71,9 +90,9 @@ pub const ISSUE_SHOW: &str = concat!(
 /// What issue create needs resolved, in one request: names to ids, and
 /// whether an issue with the chosen id already exists.
 pub const CREATE_RESOLVE: &str = concat!(
-    "query CreateResolve($team: String!, $id: ID!, $withID: Boolean!, $state: String!, $withState: Boolean!,\n  $email: String!, $withUser: Boolean!, $me: Boolean!, $labels: IssueLabelFilter!, $withLabels: Boolean!,\n  $project: String!, $withProject: Boolean!, $parent: IssueFilter!, $withParent: Boolean!,\n  $milestone: String!, $withMilestone: Boolean!, $delegate: String!, $withDelegate: Boolean!) {\n  teams(filter: { key: { eqIgnoreCase: $team } }) { nodes { id key\n    states(filter: { name: { eqIgnoreCase: $state } }) @include(if: $withState) { nodes { id name } } } }\n  existing: issues(filter: { id: { eq: $id } }, includeArchived: true) @include(if: $withID) { nodes {",
+    "query CreateResolve($team: TeamFilter!, $id: ID!, $withID: Boolean!, $state: String!, $withState: Boolean!,\n  $email: String!, $withUser: Boolean!, $me: Boolean!, $labels: IssueLabelFilter!, $withLabels: Boolean!,\n  $project: String!, $withProject: Boolean!, $parent: IssueFilter!, $withParent: Boolean!,\n  $milestone: String!, $withMilestone: Boolean!, $delegate: String!, $withDelegate: Boolean!,\n  $stateType: String!, $withStateType: Boolean!,\n  $cycle: CycleFilter!, $withCycle: Boolean!) {\n  teams(filter: $team) { nodes { id key\n    states(filter: { name: { eqIgnoreCase: $state } }) @include(if: $withState) { nodes { id name } }\n    typed: states(filter: { type: { eq: $stateType } }) @include(if: $withStateType) { nodes { id name position } }\n    cycles(filter: $cycle, first: 2) @include(if: $withCycle) { nodes { id number } } } }\n  existing: issues(filter: { id: { eq: $id } }, includeArchived: true) @include(if: $withID) { nodes {",
     issue_row!(),
-    " } }\n  users(filter: { email: { eqIgnoreCase: $email } }) @include(if: $withUser) { nodes { id name email } }\n  viewer @include(if: $me) { id name email }\n  issueLabels(filter: $labels) @include(if: $withLabels) { nodes { id name team { id } } }\n  projects(filter: { name: { eqIgnoreCase: $project } }) @include(if: $withProject) { nodes { id name } }\n  parent: issues(filter: $parent, first: 1) @include(if: $withParent) { nodes { id identifier } }\n  milestones: projectMilestones(filter: { name: { eqIgnoreCase: $milestone } }) @include(if: $withMilestone) { nodes { id name project { id name } } }\n  delegates: users(filter: { app: { eq: true }, or: [{ name: { eqIgnoreCase: $delegate } }, { displayName: { eqIgnoreCase: $delegate } }, { email: { eqIgnoreCase: $delegate } }] }) @include(if: $withDelegate) { nodes { id name } }\n}"
+    " } }\n  users(filter: { email: { eqIgnoreCase: $email } }) @include(if: $withUser) { nodes { id name email } }\n  viewer @include(if: $me) { id name email app }\n  issueLabels(filter: $labels) @include(if: $withLabels) { nodes { id name team { id } } }\n  projects(filter: { name: { eqIgnoreCase: $project } }) @include(if: $withProject) { nodes { id name } }\n  parent: issues(filter: $parent, first: 1) @include(if: $withParent) { nodes { id identifier } }\n  milestones: projectMilestones(filter: { name: { eqIgnoreCase: $milestone } }) @include(if: $withMilestone) { nodes { id name project { id name } } }\n  delegates: users(filter: { app: { eq: true }, or: [{ name: { eqIgnoreCase: $delegate } }, { displayName: { eqIgnoreCase: $delegate } }, { email: { eqIgnoreCase: $delegate } }] }) @include(if: $withDelegate) { nodes { id name } }\n}"
 );
 
 pub const ISSUE_CREATE: &str = concat!(
@@ -83,7 +102,7 @@ pub const ISSUE_CREATE: &str = concat!(
 );
 
 /// The issue as it is now, and what issue update needs resolved.
-pub const UPDATE_RESOLVE: &str = "query UpdateResolve($id: String!, $state: String!, $withState: Boolean!,\n  $email: String!, $withUser: Boolean!, $me: Boolean!, $labels: IssueLabelFilter!, $withLabels: Boolean!,\n  $project: String!, $withProject: Boolean!, $parent: IssueFilter!, $withParent: Boolean!,\n  $milestone: String!, $withMilestone: Boolean!, $delegate: String!, $withDelegate: Boolean!) {\n  issue(id: $id) { id identifier title description priority dueDate estimate updatedAt\n    team { id key states(filter: { name: { eqIgnoreCase: $state } }) @include(if: $withState) { nodes { id name } } }\n    state { id name } assignee { id email } project { id name } parent { id identifier }\n    projectMilestone { id } delegate { id }\n    labels(first: 100) { nodes { id name } } }\n  users(filter: { email: { eqIgnoreCase: $email } }) @include(if: $withUser) { nodes { id name email } }\n  viewer @include(if: $me) { id name email }\n  issueLabels(filter: $labels) @include(if: $withLabels) { nodes { id name team { id } } }\n  projects(filter: { name: { eqIgnoreCase: $project } }) @include(if: $withProject) { nodes { id name } }\n  parent: issues(filter: $parent, first: 1) @include(if: $withParent) { nodes { id identifier } }\n  milestones: projectMilestones(filter: { name: { eqIgnoreCase: $milestone } }) @include(if: $withMilestone) { nodes { id name project { id name } } }\n  delegates: users(filter: { app: { eq: true }, or: [{ name: { eqIgnoreCase: $delegate } }, { displayName: { eqIgnoreCase: $delegate } }, { email: { eqIgnoreCase: $delegate } }] }) @include(if: $withDelegate) { nodes { id name } }\n}";
+pub const UPDATE_RESOLVE: &str = "query UpdateResolve($id: String!, $state: String!, $withState: Boolean!,\n  $email: String!, $withUser: Boolean!, $me: Boolean!, $labels: IssueLabelFilter!, $withLabels: Boolean!,\n  $project: String!, $withProject: Boolean!, $parent: IssueFilter!, $withParent: Boolean!,\n  $milestone: String!, $withMilestone: Boolean!, $delegate: String!, $withDelegate: Boolean!,\n  $stateType: String!, $withStateType: Boolean!,\n  $cycle: CycleFilter!, $withCycle: Boolean!) {\n  issue(id: $id) { id identifier title description priority dueDate estimate updatedAt\n    team { id key states(filter: { name: { eqIgnoreCase: $state } }) @include(if: $withState) { nodes { id name } }\n    typed: states(filter: { type: { eq: $stateType } }) @include(if: $withStateType) { nodes { id name position } }\n    cycles(filter: $cycle, first: 2) @include(if: $withCycle) { nodes { id number } } }\n    state { id name } assignee { id email } project { id name } parent { id identifier }\n    projectMilestone { id } delegate { id } cycle { id }\n    labels(first: 100) { nodes { id name } } }\n  users(filter: { email: { eqIgnoreCase: $email } }) @include(if: $withUser) { nodes { id name email } }\n  viewer @include(if: $me) { id name email app }\n  issueLabels(filter: $labels) @include(if: $withLabels) { nodes { id name team { id } } }\n  projects(filter: { name: { eqIgnoreCase: $project } }) @include(if: $withProject) { nodes { id name } }\n  parent: issues(filter: $parent, first: 1) @include(if: $withParent) { nodes { id identifier } }\n  milestones: projectMilestones(filter: { name: { eqIgnoreCase: $milestone } }) @include(if: $withMilestone) { nodes { id name project { id name } } }\n  delegates: users(filter: { app: { eq: true }, or: [{ name: { eqIgnoreCase: $delegate } }, { displayName: { eqIgnoreCase: $delegate } }, { email: { eqIgnoreCase: $delegate } }] }) @include(if: $withDelegate) { nodes { id name } }\n}";
 
 pub const ISSUE_UPDATE: &str = concat!(
     "mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {\n  issueUpdate(id: $id, input: $input) { success issue {",
@@ -146,7 +165,11 @@ pub const WATCH_IDS: &str = concat!(
 
 pub const WATCH_GONE: &str = "query WatchGone($ids: [ID!]!) {\n  issues(filter: { id: { in: $ids } }, first: 250, includeArchived: true) { nodes { id identifier archivedAt trashed } }\n}";
 
-pub const WATCH_CHANGED: &str = "query WatchChanged($filter: IssueFilter!) {\n  issues(filter: $filter, first: 250, includeArchived: true, orderBy: updatedAt) { nodes { id } }\n}";
+pub const WATCH_CHANGED: &str = concat!(
+    "query WatchChanged($filter: IssueFilter!, $first: Int!, $after: String) {\n  issues(filter: $filter, first: $first, after: $after, includeArchived: true, orderBy: updatedAt) { nodes { id } ",
+    page_info!(),
+    " }\n}"
+);
 
 pub const WATCH_CREATED: &str = "subscription WatchCreated { issueCreated { id } }";
 pub const WATCH_UPDATED: &str = "subscription WatchUpdated { issueUpdated { id } }";
@@ -298,6 +321,8 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("Users", USERS),
         ("Projects", PROJECTS),
         ("Cycles", CYCLES),
+        ("IssueListView", ISSUE_LIST_VIEW),
+        ("Views", VIEWS),
         ("CycleShow", CYCLE_SHOW),
         ("CycleFind", CYCLE_FIND),
         ("CycleCreateResolve", CYCLE_CREATE_RESOLVE),

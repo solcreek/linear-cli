@@ -1720,7 +1720,14 @@ exit: 0
             },
             {
               "default": null,
-              "description": "delegate to the agent (app user) WHO: its name or email, or none",
+              "description": "cycle CYCLE (current, next, previous, N, a UUID), or none",
+              "name": "cycle",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "delegate to the agent (app user) WHO: its name or email, me, or none",
               "name": "delegate",
               "short": null,
               "type": "string"
@@ -1745,6 +1752,20 @@ exit: 0
               "name": "dry-run",
               "short": null,
               "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "the due date, DATE (<DATE>), or none",
+              "name": "due-date",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "the estimate, POINTS (a whole number), or none",
+              "name": "estimate",
+              "short": null,
+              "type": "string"
             },
             {
               "default": null,
@@ -1797,7 +1818,7 @@ exit: 0
             },
             {
               "default": null,
-              "description": "project NAME",
+              "description": "project NAME, or none to clear it",
               "name": "project",
               "short": null,
               "type": "string"
@@ -1806,6 +1827,13 @@ exit: 0
               "default": null,
               "description": "workflow state NAME (see 'linearctl state list')",
               "name": "state",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "the team's first workflow state of TYPE (e.g. started)",
+              "name": "state-type",
               "short": null,
               "type": "string"
             },
@@ -1897,6 +1925,13 @@ exit: 0
             },
             {
               "default": null,
+              "description": "only issues created by WHO: me, none, or an email",
+              "name": "creator",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
               "description": "continue after CURSOR (nextCursor from the previous page)",
               "name": "cursor",
               "short": null,
@@ -1911,8 +1946,22 @@ exit: 0
             },
             {
               "default": null,
-              "description": "only issues delegated to the agent WHO (name or email; any; none)",
+              "description": "only issues delegated to the agent WHO (name, email, me, any, none)",
               "name": "delegate",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "only issues due on or after DATE",
+              "name": "due-after",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "only issues due on or before DATE (<DATE>)",
+              "name": "due-before",
               "short": null,
               "type": "string"
             },
@@ -1974,7 +2023,7 @@ exit: 0
             },
             {
               "default": null,
-              "description": "only issues in project NAME",
+              "description": "only issues in project NAME (none: in no project)",
               "name": "project",
               "short": null,
               "type": "string"
@@ -1988,7 +2037,14 @@ exit: 0
             },
             {
               "default": null,
-              "description": "order by FIELD: updated (default), created, priority",
+              "description": "reverse the order of --sort",
+              "name": "reverse",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "FIELD: updated (default), created, priority, due-date, title, state",
               "name": "sort",
               "short": null,
               "type": "string"
@@ -2018,6 +2074,13 @@ exit: 0
               "default": null,
               "description": "only issues updated since WHEN: a date, an RFC 3339 time, 7d or 24h",
               "name": "updated-since",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "only issues in Linear's saved custom view VIEW (a name or its id)",
+              "name": "view",
               "short": null,
               "type": "string"
             },
@@ -2243,7 +2306,14 @@ exit: 0
             },
             {
               "default": null,
-              "description": "delegate to the agent (app user) WHO: its name or email, or none",
+              "description": "cycle CYCLE (current, next, previous, N, a UUID), or none",
+              "name": "cycle",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "delegate to the agent (app user) WHO: its name or email, me, or none",
               "name": "delegate",
               "short": null,
               "type": "string"
@@ -2268,6 +2338,20 @@ exit: 0
               "name": "dry-run",
               "short": null,
               "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "the due date, DATE (<DATE>), or none",
+              "name": "due-date",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "the estimate, POINTS (a whole number), or none",
+              "name": "estimate",
+              "short": null,
+              "type": "string"
             },
             {
               "default": null,
@@ -2320,7 +2404,7 @@ exit: 0
             },
             {
               "default": null,
-              "description": "project NAME",
+              "description": "project NAME, or none to clear it",
               "name": "project",
               "short": null,
               "type": "string"
@@ -2336,6 +2420,13 @@ exit: 0
               "default": null,
               "description": "workflow state NAME (see 'linearctl state list')",
               "name": "state",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "the team's first workflow state of TYPE (e.g. started)",
+              "name": "state-type",
               "short": null,
               "type": "string"
             },
@@ -3755,6 +3846,131 @@ exit: 0
     {
       "aliases": [],
       "args": [],
+      "commands": [
+        {
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "examples": [
+            "linearctl view list --json"
+          ],
+          "flags": [
+            {
+              "default": null,
+              "description": "continue after CURSOR (nextCursor from the previous page)",
+              "name": "cursor",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "return only these comma-separated FIELDS (see Fields above)",
+              "name": "fields",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "help for list",
+              "name": "help",
+              "short": "h",
+              "type": "boolean"
+            },
+            {
+              "default": "50",
+              "description": "show at most N items; 0 for all",
+              "name": "limit",
+              "short": null,
+              "type": "integer"
+            },
+            {
+              "default": null,
+              "description": "only team KEY (falls back to LINEARCTL_TEAM, then default-team)",
+              "name": "team",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1",
+              "name": "demo",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "print one JSON document on stdout",
+              "name": "json",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1",
+              "name": "meta",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": "30",
+              "description": "give up on a network request after N seconds",
+              "name": "timeout",
+              "short": null,
+              "type": "integer"
+            }
+          ],
+          "mutates": false,
+          "name": "list",
+          "summary": "List saved custom views",
+          "usage": "linearctl view list [flags]"
+        }
+      ],
+      "examples": [],
+      "flags": [
+        {
+          "default": null,
+          "description": "help for view",
+          "name": "help",
+          "short": "h",
+          "type": "boolean"
+        },
+        {
+          "default": null,
+          "description": "use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1",
+          "name": "demo",
+          "short": null,
+          "type": "boolean"
+        },
+        {
+          "default": null,
+          "description": "print one JSON document on stdout",
+          "name": "json",
+          "short": null,
+          "type": "boolean"
+        },
+        {
+          "default": null,
+          "description": "add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1",
+          "name": "meta",
+          "short": null,
+          "type": "boolean"
+        },
+        {
+          "default": "30",
+          "description": "give up on a network request after N seconds",
+          "name": "timeout",
+          "short": null,
+          "type": "integer"
+        }
+      ],
+      "mutates": false,
+      "name": "view",
+      "summary": "List saved custom views",
+      "usage": "linearctl view [flags]"
+    },
+    {
+      "aliases": [],
+      "args": [],
       "commands": [],
       "examples": [
         "linearctl watch --team ENG --json",
@@ -3784,6 +4000,13 @@ exit: 0
         },
         {
           "default": null,
+          "description": "only issues created by WHO: me, none, or an email",
+          "name": "creator",
+          "short": null,
+          "type": "string"
+        },
+        {
+          "default": null,
           "description": "only issues in cycle CYCLE: current, next, previous, a number, a UUID",
           "name": "cycle",
           "short": null,
@@ -3791,8 +4014,22 @@ exit: 0
         },
         {
           "default": null,
-          "description": "only issues delegated to the agent WHO (name or email; any; none)",
+          "description": "only issues delegated to the agent WHO (name, email, me, any, none)",
           "name": "delegate",
+          "short": null,
+          "type": "string"
+        },
+        {
+          "default": null,
+          "description": "only issues due on or after DATE",
+          "name": "due-after",
+          "short": null,
+          "type": "string"
+        },
+        {
+          "default": null,
+          "description": "only issues due on or before DATE (<DATE>)",
+          "name": "due-before",
           "short": null,
           "type": "string"
         },
@@ -3854,7 +4091,7 @@ exit: 0
         },
         {
           "default": null,
-          "description": "only issues in project NAME",
+          "description": "only issues in project NAME (none: in no project)",
           "name": "project",
           "short": null,
           "type": "string"
@@ -3941,6 +4178,58 @@ exit: 0
       "name": "watch",
       "summary": "Stream changes to the issues a filter matches, one JSON line each",
       "usage": "linearctl watch [flags]"
+    }
+  ],
+  "errorCodes": [
+    {
+      "code": "USAGE",
+      "exit": 2,
+      "meaning": "the invocation is wrong: fix it, do not retry it as is"
+    },
+    {
+      "code": "NOT_FOUND",
+      "exit": 1,
+      "meaning": "what was named is not there, or this key cannot see it: look it up with a list command"
+    },
+    {
+      "code": "AMBIGUOUS",
+      "exit": 1,
+      "meaning": "a name fits more than one thing, listed in error: name it more precisely"
+    },
+    {
+      "code": "LINEAR_ERROR",
+      "exit": 1,
+      "meaning": "Linear refused the request; error has its words"
+    },
+    {
+      "code": "NETWORK",
+      "exit": 1,
+      "meaning": "Linear could not be reached, timed out or answered 5xx: rerunning is safe"
+    },
+    {
+      "code": "FAILED",
+      "exit": 1,
+      "meaning": "anything else that failed; error says what"
+    },
+    {
+      "code": "BUSY",
+      "exit": 4,
+      "meaning": "another run holds a lock; nothing changed: retry"
+    },
+    {
+      "code": "AUTH",
+      "exit": 5,
+      "meaning": "no API key, or Linear rejected it"
+    },
+    {
+      "code": "RATE_LIMITED",
+      "exit": 6,
+      "meaning": "Linear's budget is spent: retry after retryAt"
+    },
+    {
+      "code": "CONFLICT",
+      "exit": 7,
+      "meaning": "a precondition such as --if-updated-at no longer holds: read again"
     }
   ],
   "exitCodes": {

@@ -215,8 +215,9 @@ fn finish(run: &mut Run, args: &[String], result: R) -> i32 {
     }
     // Under --json a failure is JSON too. Parsing may have stopped before
     // it saw --json, so look at the arguments themselves.
-    if run.json || args.iter().any(|a| a == "--json") {
-        let mut doc = json!({"error": e.to_string(), "usage": usage});
+    let printed = matches!(e.base(), Fail::Reported(_));
+    if !printed && (run.json || args.iter().any(|a| a == "--json")) {
+        let mut doc = json!({"error": e.to_string(), "usage": usage, "code": e.kind()});
         if let Fail::Limited(_, Some(ms)) = e.base() {
             doc["retryAt"] = json!(crate::time::rfc3339(ms * 1_000_000));
         }

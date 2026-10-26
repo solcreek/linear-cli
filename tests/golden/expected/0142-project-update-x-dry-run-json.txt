@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"pass --name, --description, or --content / --content-file","usage":true}
+{"code":"USAGE","error":"pass --name, --description, or --content / --content-file","usage":true}
 
 --- stderr
 linearctl: pass --name, --description, or --content / --content-file

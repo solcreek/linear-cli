@@ -1,6 +1,6 @@
 use crate::cli::{Args, Cmd, Ctx, Flag};
 use crate::client::Client;
-use crate::fail::{R, failed, usage};
+use crate::fail::{R, ambiguous, missing, usage};
 use crate::json::quote_go;
 use crate::queries;
 use crate::run::{Run, dry_run};
@@ -62,10 +62,10 @@ fn find_project(run: &mut Run, cl: &Client, r: &str, filter: Value, issues: u64)
         cl.query(run, queries::PROJECT_FIND, json!({"filter": filter, "issues": issues, "withIssues": issues > 0}))?;
     let n = super::issue::nodes(&data["projects"]);
     match n.len() {
-        0 => Err(failed(format!("not found: project {r} (or this API key cannot see it)"))
+        0 => Err(missing(format!("not found: project {r} (or this API key cannot see it)"))
             .hint("'linearctl project list' lists the projects this key can see")),
         1 => Ok(n[0].clone()),
-        _ => Err(failed(format!(
+        _ => Err(ambiguous(format!(
             "more than one project is named {} ({}, {}); pass its URL or slugId",
             quote_go(r),
             str_at(&n[0], "url"),

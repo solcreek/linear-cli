@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"stdin does not look like a Linear API key (letters, digits, _ and -, 16 to 256 of them)","usage":true}
+{"code":"USAGE","error":"stdin does not look like a Linear API key (letters, digits, _ and -, 16 to 256 of them)","usage":true}
 
 --- stderr
 linearctl: stdin does not look like a Linear API key (letters, digits, _ and -, 16 to 256 of them)

@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--json-input has no query","usage":true}
+{"code":"USAGE","error":"--json-input has no query","usage":true}
 
 --- stderr
 linearctl: --json-input has no query

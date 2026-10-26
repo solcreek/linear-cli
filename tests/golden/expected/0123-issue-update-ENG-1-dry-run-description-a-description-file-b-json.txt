@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"pass --description or --description-file, not both","usage":true}
+{"code":"USAGE","error":"pass --description or --description-file, not both","usage":true}
 
 --- stderr
 linearctl: pass --description or --description-file, not both

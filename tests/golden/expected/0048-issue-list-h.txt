@@ -8,8 +8,8 @@ List issues, most recently updated first. Filters combine with AND; a repeated
 --team falls back to LINEARCTL_TEAM, then to default-team in config.
 
 Fields: id, identifier, title, priority, priorityLabel, url, createdAt,
-updatedAt, state, assignee, delegate, team, project, cycle, projectMilestone,
-labels
+updatedAt, dueDate, estimate, state, assignee, delegate, team, project, cycle,
+projectMilestone, labels
 
 Usage:
   linearctl issue list [flags]
@@ -23,9 +23,12 @@ Flags:
       --any-label NAME       only issues with label NAME (repeatable; any of)
       --assignee WHO         only issues assigned to WHO: me, none, or an email
       --attachment-url URL   only issues with an attachment at URL (e.g. a linked pull request)
+      --creator WHO          only issues created by WHO: me, none, or an email
       --cursor CURSOR        continue after CURSOR (nextCursor from the previous page)
       --cycle CYCLE          only issues in cycle CYCLE: current, next, previous, a number, a UUID
-      --delegate WHO         only issues delegated to the agent WHO (name or email; any; none)
+      --delegate WHO         only issues delegated to the agent WHO (name, email, me, any, none)
+      --due-after DATE       only issues due on or after DATE
+      --due-before DATE      only issues due on or before DATE (<DATE>)
       --fields FIELDS        return only these comma-separated FIELDS (see Fields above)
   -h, --help                 help for list
       --id ISSUE             only the issue ISSUE (ENG-123 or a UUID; repeatable); one not
@@ -36,14 +39,16 @@ Flags:
       --milestone NAME       only issues in project milestone NAME (none: in no milestone)
       --priority PRIORITY    only issues of PRIORITY: 0-4 or none, urgent, high, medium, low
                              (repeatable, any of)
-      --project NAME         only issues in project NAME
+      --project NAME         only issues in project NAME (none: in no project)
       --query TEXT           full-text search for TEXT
-      --sort FIELD           order by FIELD: updated (default), created, priority
+      --reverse              reverse the order of --sort
+      --sort FIELD           FIELD: updated (default), created, priority, due-date, title, state
       --state NAME           only issues in workflow state NAME (repeatable; any of)
       --state-type TYPE      only issues whose state is of TYPE (repeatable): triage, backlog,
                              unstarted, started, completed, canceled, duplicate
       --team KEY             only issues of team KEY (e.g. ENG; repeatable, any of)
       --updated-since WHEN   only issues updated since WHEN: a date, an RFC 3339 time, 7d or 24h
+      --view VIEW            only issues in Linear's saved custom view VIEW (a name or its id)
       --without-label NAME   only issues without label NAME (repeatable; none of)
 
 Global Flags:

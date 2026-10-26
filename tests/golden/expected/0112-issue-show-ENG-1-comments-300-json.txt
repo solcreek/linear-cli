@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--comments is at most 250; page with 'linearctl comment list'","usage":true}
+{"code":"USAGE","error":"--comments is at most 250; page with 'linearctl comment list'","usage":true}
 
 --- stderr
 linearctl: --comments is at most 250; page with 'linearctl comment list'

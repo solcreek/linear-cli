@@ -9,8 +9,50 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-26
+
 ### Added
 
+- Linear's saved custom views: `view list`, and `issue list --view VIEW` (a name
+  or id) for an issue view's issues, Linear applying the view's own filter with
+  any other flags on top. A project view is refused as such.
+- `issue list --sort due-date|title|state` and `--reverse` (undated issues last
+  either way); `--creator WHO`; `--due-before` and `--due-after DATE`. Issue rows
+  carry `dueDate` and `estimate`. The default order sends the same request as
+  before.
+- `issue create` and `issue update` take `--estimate POINTS`, `--due-date DATE`
+  and `--cycle CYCLE` (current, next, previous, a number or a UUID, within the
+  issue's team), each with `none` to clear. Before, only `--json-input`
+  reached them, with raw ids.
+
+### Changed
+
+- `issue create` takes the team from Linear's own `teamId` in `--json-input`
+  when `--team` is not given (`--team` still wins). It used to demand `--team`.
+
+### Fixed
+
+- `watch` keeps working when Linear allows only one subscription per account
+  (it has since 2026-10-26, closing every further one with 4003). Watch then
+  subscribes to issue updates alone and catches creates and archives up every
+  60 s, or `--reconcile` if shorter, instead of reconnecting every second and
+  spending most of the hourly request budget on catch-ups.
+- `watch` backs off on a connection that drops at once (1, 2, 4 … 30 s), not
+  only on one that fails to open; the backoff starts over only after a
+  connection stayed up a minute.
+- `--project none`: on `issue create` and `issue update` it clears the project
+  (undo can revert setting one); on `issue list` it matches issues with no
+  project. `issue list` returned nothing for it, and update refused it.
+
+## [0.5.0] - 2026-10-26
+
+### Added
+
+- A failure under `--json` carries `code`, a stable name for its kind:
+  `USAGE`, `NOT_FOUND`, `AMBIGUOUS`, `LINEAR_ERROR`, `NETWORK`, `FAILED`,
+  `BUSY`, `AUTH`, `RATE_LIMITED`, `CONFLICT`. Exit 1 covers five of them, which
+  differed only in prose. `describe` lists them under `errorCodes` with their
+  exit codes. `error` and `usage` are unchanged.
 - A failure under `--json` carries `hint` when there is a next step: the
   command that lists what was not found (an issue, comment, project or cycle), the
   read to make after an `--if-updated-at` conflict, and, after a timeout, a lost
@@ -21,6 +63,24 @@ names are only ever added, never renamed or removed.
   (`.claude-plugin/plugin.json`). `make skill` generates it from AGENTS.md and
   the commands' `describe` and `--help`; `make test` fails when it is stale, or
   when AGENTS.md's list of mutating commands differs from `describe`.
+- `issue create` and `issue update --state-type TYPE`: the team's first
+  workflow state of that type, by position, as Linear's agent guide picks the
+  `started` state when work begins. No workspace's state names needed.
+- `--delegate me` on `issue create`, `issue update` and `issue list`: the
+  token's own user, which must be an app (an agent); a person's key is refused
+  with an explanation.
+
+### Fixed
+
+- `api query` prints Linear's answer when Linear answers with errors: `data`,
+  `errors` as received (message, path, extensions such as `code` and
+  `userPresentableMessage`) and `complexity`. Before, an answer without data
+  was reduced to `{"error", "usage"}`; it now carries those too, and the exit
+  codes are unchanged (1 without data, 3 with some).
+- An unknown command exits 2 even with `--help` (`linearctl nope --help`,
+  `linearctl issue nope -h`, `linearctl help nope`, and one argument holding
+  a space, `"api query" --help`). It printed the parent's help and exited 0, so
+  a mistyped command read as success.
 
 ## [0.4.0] - 2026-10-26
 
@@ -190,7 +250,9 @@ names are only ever added, never renamed or removed.
 - Releases for linux, darwin and windows, and the npm package
   `@solcreek/linear-cli` with one native binary per platform.
 
-[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/solcreek/linear-cli/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/solcreek/linear-cli/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/solcreek/linear-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/solcreek/linear-cli/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/solcreek/linear-cli/compare/v0.2.0...v0.2.1

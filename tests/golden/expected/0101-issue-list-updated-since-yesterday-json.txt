@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--updated-since must be a date (<DATE>), an RFC 3339 time, or 7d / 24h; got \"yesterday\"","usage":true}
+{"code":"USAGE","error":"--updated-since must be a date (<DATE>), an RFC 3339 time, or 7d / 24h; got \"yesterday\"","usage":true}
 
 --- stderr
 linearctl: --updated-since must be a date (<DATE>), an RFC 3339 time, or 7d / 24h; got "yesterday"

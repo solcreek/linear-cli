@@ -14,6 +14,8 @@ exit: 0
         "number": 24
       },
       "delegate": null,
+      "dueDate": null,
+      "estimate": 3,
       "id": "a765f1a9-b9f7-5409-b2b6-4b82d97754ab",
       "identifier": "ENG-158",
       "labels": [
@@ -61,6 +63,8 @@ exit: 0
         "number": 24
       },
       "delegate": null,
+      "dueDate": null,
+      "estimate": 2,
       "id": "0c2f9a92-0646-5558-ac78-3d2797476b00",
       "identifier": "ENG-142",
       "labels": [
@@ -108,6 +112,8 @@ exit: 0
         "number": 24
       },
       "delegate": null,
+      "dueDate": null,
+      "estimate": 1,
       "id": "34fd601d-e2b6-5e86-baa3-d1131e9bcf7f",
       "identifier": "ENG-143",
       "labels": [
@@ -150,6 +156,8 @@ exit: 0
         "number": 24
       },
       "delegate": null,
+      "dueDate": null,
+      "estimate": 3,
       "id": "ef73f3fe-e69e-5dc5-9ea2-ef87944def0a",
       "identifier": "ENG-149",
       "labels": [
@@ -197,6 +205,8 @@ exit: 0
         "number": 24
       },
       "delegate": null,
+      "dueDate": "<DATE>",
+      "estimate": 5,
       "id": "d5861061-6e71-5d15-ae1a-03393927f874",
       "identifier": "ENG-140",
       "labels": [
@@ -236,6 +246,8 @@ exit: 0
       "createdAt": "<TIME>",
       "cycle": null,
       "delegate": null,
+      "dueDate": null,
+      "estimate": null,
       "id": "492b4c72-dc3c-5d84-b1be-ac894e21ec7a",
       "identifier": "ENG-120",
       "labels": [
@@ -278,6 +290,8 @@ exit: 0
         "number": 24
       },
       "delegate": null,
+      "dueDate": null,
+      "estimate": 2,
       "id": "734efb05-0b3c-5d37-ae09-ccf97ed684ae",
       "identifier": "ENG-147",
       "labels": [
@@ -313,6 +327,8 @@ exit: 0
       "createdAt": "<TIME>",
       "cycle": null,
       "delegate": null,
+      "dueDate": null,
+      "estimate": null,
       "id": "e05b94d8-c5eb-5fac-a2b2-c4fc43164ac8",
       "identifier": "ENG-157",
       "labels": [
@@ -345,6 +361,8 @@ exit: 0
       "createdAt": "<TIME>",
       "cycle": null,
       "delegate": null,
+      "dueDate": null,
+      "estimate": null,
       "id": "0db551a8-0b0f-5769-8c4c-09ccd6ca3e85",
       "identifier": "ENG-155",
       "labels": [
@@ -377,6 +395,8 @@ exit: 0
       "createdAt": "<TIME>",
       "cycle": null,
       "delegate": null,
+      "dueDate": null,
+      "estimate": null,
       "id": "296ae5d6-e06e-55b4-a91c-bddfb8673ece",
       "identifier": "ENG-156",
       "labels": [
@@ -421,6 +441,8 @@ exit: 0
         "number": 25
       },
       "delegate": null,
+      "dueDate": null,
+      "estimate": 2,
       "id": "3927f174-24ba-551c-80c3-ec7f101f7430",
       "identifier": "ENG-151",
       "labels": [
@@ -463,6 +485,8 @@ exit: 0
         "number": 24
       },
       "delegate": null,
+      "dueDate": null,
+      "estimate": 8,
       "id": "e838be7c-91e8-599c-b2e1-3da65824c2ee",
       "identifier": "ENG-138",
       "labels": [
@@ -505,6 +529,8 @@ exit: 0
         "number": 25
       },
       "delegate": null,
+      "dueDate": null,
+      "estimate": null,
       "id": "7090241e-0d0c-554e-a135-d72bc474d532",
       "identifier": "ENG-153",
       "labels": [
@@ -547,6 +573,8 @@ exit: 0
         "number": 24
       },
       "delegate": null,
+      "dueDate": null,
+      "estimate": 1,
       "id": "46e50999-4b97-51de-a790-90dd41627882",
       "identifier": "ENG-144",
       "labels": [
@@ -586,6 +614,8 @@ exit: 0
       "createdAt": "<TIME>",
       "cycle": null,
       "delegate": null,
+      "dueDate": null,
+      "estimate": null,
       "id": "8e8354f7-547a-59a9-9d25-29f42b66a788",
       "identifier": "ENG-152",
       "labels": [
@@ -627,6 +657,8 @@ exit: 0
       "createdAt": "<TIME>",
       "cycle": null,
       "delegate": null,
+      "dueDate": null,
+      "estimate": null,
       "id": "6a7d92bb-d11e-599b-918d-72cd4ab1ff47",
       "identifier": "ENG-146",
       "labels": [
@@ -666,6 +698,8 @@ exit: 0
         "number": 23
       },
       "delegate": null,
+      "dueDate": null,
+      "estimate": 1,
       "id": "34615f14-72a8-586a-9a9b-206abb5751b9",
       "identifier": "ENG-131",
       "labels": [
