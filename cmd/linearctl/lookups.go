@@ -113,6 +113,24 @@ func addLookups(root *cobra.Command) {
 			},
 		},
 		{
+			noun: "milestone", short: "List project milestones", conn: "projectMilestones", doc: qMilestones,
+			long: "List project milestones, the names issue create and update take for --milestone.\n" +
+				"progress is Linear's, from 0 to 1.",
+			example: "  linearctl milestone list --project \"Q4 launch\" --json",
+			fields:  []string{"id", "name", "targetDate", "progress", "project"},
+			cols:    []string{"project.name", "name", "targetDate"},
+			filter: func(cmd *cobra.Command, _ string) (map[string]any, error) {
+				p, _ := cmd.Flags().GetString("project")
+				if p == "" {
+					return nil, nil
+				}
+				if _, err := plain("--project", p); err != nil {
+					return nil, err
+				}
+				return map[string]any{"project": map[string]any{"name": map[string]any{"eqIgnoreCase": p}}}, nil
+			},
+		},
+		{
 			noun: "cycle", short: "List cycles", conn: "cycles", doc: qCycles,
 			example: "  linearctl cycle list --team ENG --json",
 			fields:  []string{"id", "number", "name", "startsAt", "endsAt", "isActive", "isNext", "team"},
@@ -210,6 +228,8 @@ func (l lookup) command() *cobra.Command {
 	switch l.noun {
 	case "user":
 		list.Flags().Bool("active", false, "only active users")
+	case "milestone":
+		list.Flags().String("project", "", "only milestones of project `NAME`")
 	case "project":
 		list.Flags().StringArray("status", nil, "only projects whose status is `TYPE` (repeatable):\n"+strings.Join(projectStatuses, ", "))
 	}

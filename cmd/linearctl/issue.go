@@ -114,6 +114,7 @@ func issueList() *cobra.Command {
 	c.Flags().StringArray("any-label", nil, "only issues with label `NAME` (repeatable; any of)")
 	c.Flags().StringArray("without-label", nil, "only issues without label `NAME` (repeatable; none of)")
 	c.Flags().String("project", "", "only issues in project `NAME`")
+	c.Flags().String("milestone", "", "only issues in project milestone `NAME` (none: in no milestone)")
 	c.Flags().String("cycle", "", "only issues in cycle `CYCLE`: current, next, or a cycle number")
 	c.Flags().String("updated-since", "", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h")
 	c.Flags().String("query", "", "full-text search for `TEXT`")
@@ -221,6 +222,16 @@ func listFilter(cmd *cobra.Command) (map[string]any, error) {
 			return nil, err
 		}
 		filter["project"] = map[string]any{"name": map[string]any{"eqIgnoreCase": p}}
+	}
+	if m, _ := cmd.Flags().GetString("milestone"); m != "" {
+		if _, err := plain("--milestone", m); err != nil {
+			return nil, err
+		}
+		if m == "none" {
+			filter["projectMilestone"] = map[string]any{"null": true}
+		} else {
+			filter["projectMilestone"] = map[string]any{"name": map[string]any{"eqIgnoreCase": m}}
+		}
 	}
 	if cy, _ := cmd.Flags().GetString("cycle"); cy != "" {
 		switch {
@@ -389,6 +400,7 @@ func issueFields(c *cobra.Command) {
 	c.Flags().String("state", "", "workflow state `NAME` (see 'linearctl state list')")
 	c.Flags().String("priority", "", "`PRIORITY`: 0-4 or none, urgent, high, medium, low")
 	c.Flags().String("project", "", "project `NAME`")
+	c.Flags().String("milestone", "", "project milestone `NAME`, or none to clear; it sets the project\nwhen the issue has none")
 	c.Flags().String("parent", "", "make it a sub-issue of `ISSUE`")
 	c.Flags().String("json-input", "", "read Linear's input object from `PATH` (- for stdin); flags win")
 }
@@ -409,12 +421,13 @@ func priority(flag, p string) (int, error) {
 
 // wanted is what the shared flags ask for, before names become ids.
 type wanted struct {
-	input    map[string]any // the input object so far (from --json-input and plain flags)
-	state    string
-	assignee string // me, none or an email
-	labels   []string
-	project  string
-	parent   string // an issue ref
+	input     map[string]any // the input object so far (from --json-input and plain flags)
+	state     string
+	assignee  string // me, none or an email
+	labels    []string
+	project   string
+	parent    string // an issue ref
+	milestone string // a name, or none
 }
 
 func readWanted(cmd *cobra.Command) (*wanted, error) {
@@ -449,7 +462,7 @@ func readWanted(cmd *cobra.Command) (*wanted, error) {
 		}
 		w.input["priority"] = n
 	}
-	for flag, dst := range map[string]*string{"state": &w.state, "project": &w.project} {
+	for flag, dst := range map[string]*string{"state": &w.state, "project": &w.project, "milestone": &w.milestone} {
 		if v, _ := cmd.Flags().GetString(flag); v != "" {
 			if _, err := plain("--"+flag, v); err != nil {
 				return nil, err
@@ -496,6 +509,7 @@ func (w *wanted) resolveVars(extraLabels []string) map[string]any {
 		"labels": labels, "withLabels": len(labels) > 0,
 		"project": w.project, "withProject": w.project != "",
 		"parent": parent, "withParent": w.parent != "",
+		"milestone": w.milestone, "withMilestone": w.milestone != "" && w.milestone != "none",
 	}
 }
 
@@ -507,6 +521,7 @@ type named struct {
 	Team       *struct {
 		ID string `json:"id"`
 	} `json:"team"`
+	Project *named `json:"project"` // a milestone's
 }
 
 type resolved struct {
@@ -515,6 +530,7 @@ type resolved struct {
 	IssueLabels struct{ Nodes []named } `json:"issueLabels"`
 	Projects    struct{ Nodes []named } `json:"projects"`
 	Parent      struct{ Nodes []named } `json:"parent"`
+	Milestones  struct{ Nodes []named } `json:"milestones"`
 }
 
 // one is the single match for name, or an error naming what was looked for.
@@ -530,7 +546,9 @@ func one(kind, name string, nodes []named, hint string) (string, error) {
 
 // apply turns the resolved names into ids on input. teamID picks team labels
 // over another team's label of the same name.
-func (w *wanted) apply(r resolved, states []named, teamID string) error {
+// projectID is the issue's project now ("" for a new issue): it picks the
+// milestone when several projects have one of that name.
+func (w *wanted) apply(r resolved, states []named, teamID, projectID string) error {
 	if w.state != "" {
 		id, err := one("workflow state", w.state, states, "'linearctl state list'")
 		if err != nil {
@@ -562,6 +580,36 @@ func (w *wanted) apply(r resolved, states []named, teamID string) error {
 			return fmt.Errorf("not found: parent issue %s", w.parent)
 		}
 		w.input["parentId"] = r.Parent.Nodes[0].ID
+	}
+	switch {
+	case w.milestone == "none":
+		w.input["projectMilestoneId"] = nil
+	case w.milestone != "":
+		pid := projectID
+		if p, ok := w.input["projectId"].(string); ok {
+			pid = p
+		}
+		var match []named
+		var projects []string
+		for _, m := range r.Milestones.Nodes {
+			if strings.EqualFold(m.Name, w.milestone) && (pid == "" || (m.Project != nil && m.Project.ID == pid)) {
+				match = append(match, m)
+				if m.Project != nil {
+					projects = append(projects, m.Project.Name)
+				}
+			}
+		}
+		switch {
+		case len(match) == 0:
+			return fmt.Errorf("no milestone named %q in the issue's project; see 'linearctl milestone list'", w.milestone)
+		case len(match) > 1:
+			return fmt.Errorf("%d milestones are named %q (projects: %s); pass --project", len(match), w.milestone, strings.Join(projects, ", "))
+		}
+		w.input["projectMilestoneId"] = match[0].ID
+		// A milestone belongs to a project: an issue without one joins it.
+		if pid == "" && match[0].Project != nil {
+			w.input["projectId"] = match[0].Project.ID
+		}
 	}
 	if len(w.labels) > 0 {
 		ids, err := labelIDs(w.labels, r.IssueLabels.Nodes, teamID)
@@ -674,7 +722,7 @@ func issueCreate() *cobra.Command {
 				return fmt.Errorf("no team with key %s; see 'linearctl team list'", team)
 			}
 			t := r.Teams.Nodes[0]
-			if err := w.apply(r.resolved, t.States.Nodes, t.ID); err != nil {
+			if err := w.apply(r.resolved, t.States.Nodes, t.ID, ""); err != nil {
 				return err
 			}
 			w.input["teamId"], w.input["id"] = t.ID, id
@@ -755,18 +803,23 @@ func issueUpdate() *cobra.Command {
 						ID     string                  `json:"id"`
 						States struct{ Nodes []named } `json:"states"`
 					} `json:"team"`
-					State    *named                  `json:"state"`
-					Assignee *named                  `json:"assignee"`
-					Project  *named                  `json:"project"`
-					Parent   *named                  `json:"parent"`
-					Labels   struct{ Nodes []named } `json:"labels"`
+					State     *named                  `json:"state"`
+					Assignee  *named                  `json:"assignee"`
+					Project   *named                  `json:"project"`
+					Parent    *named                  `json:"parent"`
+					Milestone *named                  `json:"projectMilestone"`
+					Labels    struct{ Nodes []named } `json:"labels"`
 				} `json:"issue"`
 			}
 			if err := cl.query(qUpdateResolve, vars, &r); err != nil {
 				return notFound(err, "issue "+ref)
 			}
 			is := r.Issue
-			if err := w.apply(r.resolved, is.Team.States.Nodes, is.Team.ID); err != nil {
+			currentProject := ""
+			if is.Project != nil {
+				currentProject = is.Project.ID
+			}
+			if err := w.apply(r.resolved, is.Team.States.Nodes, is.Team.ID, currentProject); err != nil {
 				return err
 			}
 			current := []string{}
@@ -812,7 +865,8 @@ func issueUpdate() *cobra.Command {
 				desc = *is.Description
 			}
 			now := map[string]any{"title": is.Title, "description": desc, "priority": int(is.Priority),
-				"stateId": id(is.State), "assigneeId": id(is.Assignee), "projectId": id(is.Project), "parentId": id(is.Parent)}
+				"stateId": id(is.State), "assigneeId": id(is.Assignee), "projectId": id(is.Project), "parentId": id(is.Parent),
+				"projectMilestoneId": id(is.Milestone)}
 			for k, v := range now {
 				if got, ok := w.input[k]; ok && sameValue(got, v) {
 					delete(w.input, k)

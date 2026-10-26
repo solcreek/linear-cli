@@ -18,11 +18,12 @@ const issueRow = `
 	team { id key }
 	project { id name }
 	cycle { id number }
+	projectMilestone { id name }
 	labels(first: 20) { nodes { id name color } }`
 
 // issueRowFields are the keys of an issueRow item, for --fields.
 var issueRowFields = []string{"id", "identifier", "title", "priority", "priorityLabel", "url", "createdAt",
-	"updatedAt", "state", "assignee", "team", "project", "cycle", "labels"}
+	"updatedAt", "state", "assignee", "team", "project", "cycle", "projectMilestone", "labels"}
 
 const pageInfo = `pageInfo { hasNextPage endCursor }`
 
@@ -54,7 +55,8 @@ var (
 	// whether an issue with the chosen id already exists.
 	qCreateResolve = `query CreateResolve($team: String!, $id: ID!, $withID: Boolean!, $state: String!, $withState: Boolean!,
   $email: String!, $withUser: Boolean!, $me: Boolean!, $labels: [String!]!, $withLabels: Boolean!,
-  $project: String!, $withProject: Boolean!, $parent: IssueFilter!, $withParent: Boolean!) {
+  $project: String!, $withProject: Boolean!, $parent: IssueFilter!, $withParent: Boolean!,
+  $milestone: String!, $withMilestone: Boolean!) {
   teams(filter: { key: { eqIgnoreCase: $team } }) { nodes { id key
     states(filter: { name: { eqIgnoreCase: $state } }) @include(if: $withState) { nodes { id name } } } }
   existing: issues(filter: { id: { eq: $id } }, includeArchived: true) @include(if: $withID) { nodes {` + issueRow + ` } }
@@ -63,6 +65,7 @@ var (
   issueLabels(filter: { name: { in: $labels } }) @include(if: $withLabels) { nodes { id name team { id } } }
   projects(filter: { name: { eqIgnoreCase: $project } }) @include(if: $withProject) { nodes { id name } }
   parent: issues(filter: $parent, first: 1) @include(if: $withParent) { nodes { id identifier } }
+  milestones: projectMilestones(filter: { name: { eqIgnoreCase: $milestone } }) @include(if: $withMilestone) { nodes { id name project { id name } } }
 }`
 
 	qIssueCreate = `mutation IssueCreate($input: IssueCreateInput!) {
@@ -72,16 +75,19 @@ var (
 	// The issue as it is now, and what issue update needs resolved.
 	qUpdateResolve = `query UpdateResolve($id: String!, $state: String!, $withState: Boolean!,
   $email: String!, $withUser: Boolean!, $me: Boolean!, $labels: [String!]!, $withLabels: Boolean!,
-  $project: String!, $withProject: Boolean!, $parent: IssueFilter!, $withParent: Boolean!) {
+  $project: String!, $withProject: Boolean!, $parent: IssueFilter!, $withParent: Boolean!,
+  $milestone: String!, $withMilestone: Boolean!) {
   issue(id: $id) { id identifier title description priority dueDate estimate
     team { id key states(filter: { name: { eqIgnoreCase: $state } }) @include(if: $withState) { nodes { id name } } }
     state { id name } assignee { id email } project { id name } parent { id identifier }
+    projectMilestone { id }
     labels(first: 100) { nodes { id name } } }
   users(filter: { email: { eqIgnoreCase: $email } }) @include(if: $withUser) { nodes { id name email } }
   viewer @include(if: $me) { id name email }
   issueLabels(filter: { name: { in: $labels } }) @include(if: $withLabels) { nodes { id name team { id } } }
   projects(filter: { name: { eqIgnoreCase: $project } }) @include(if: $withProject) { nodes { id name } }
   parent: issues(filter: $parent, first: 1) @include(if: $withParent) { nodes { id identifier } }
+  milestones: projectMilestones(filter: { name: { eqIgnoreCase: $milestone } }) @include(if: $withMilestone) { nodes { id name project { id name } } }
 }`
 
 	qIssueUpdate = `mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
@@ -152,6 +158,10 @@ var (
   projects(filter: $filter, first: $first, after: $after) { nodes { id name url targetDate status { name type } lead { name email } } ` + pageInfo + ` }
 }`
 
+	qMilestones = `query Milestones($filter: ProjectMilestoneFilter, $first: Int!, $after: String) {
+  projectMilestones(filter: $filter, first: $first, after: $after) { nodes { id name targetDate progress project { id name } } ` + pageInfo + ` }
+}`
+
 	qCycles = `query Cycles($filter: CycleFilter, $first: Int!, $after: String) {
   cycles(filter: $filter, first: $first, after: $after) { nodes { id number name startsAt endsAt isActive isNext team { key } } ` + pageInfo + ` }
 }`
@@ -167,7 +177,7 @@ func documents() map[string]string {
 		"RelationResolve": qRelationResolve, "RelationCreate": qRelationCreate, "RelationDelete": qRelationDelete,
 		"Comment": qComment, "CommentUpdate": qCommentUpdate, "CommentDelete": qCommentDelete,
 		"Teams": qTeams, "States": qStates, "Labels": qLabels, "Users": qUsers, "Projects": qProjects,
-		"Cycles": qCycles,
+		"Cycles": qCycles, "Milestones": qMilestones,
 	}
 }
 
