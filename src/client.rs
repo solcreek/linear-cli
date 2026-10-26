@@ -60,6 +60,9 @@ pub struct Client {
     /// The last response's headers, for --meta and rate limits.
     header: RefCell<Option<HeaderMap>>,
     requests: Cell<u64>,
+    /// Whether the 'waiting on' note was said: once per process, but a test
+    /// has its own.
+    noted: &'static AtomicBool,
 }
 
 /// Said once per process when a request takes more than 2 s.
@@ -104,6 +107,7 @@ impl Client {
             signed_urls: Cell::new(0),
             header: RefCell::new(None),
             requests: Cell::new(0),
+            noted: &WAIT_NOTE,
         }
     }
 
@@ -216,7 +220,7 @@ impl Client {
         let result = match rx.recv_timeout(Duration::from_secs(2)) {
             Ok(r) => r,
             Err(mpsc::RecvTimeoutError::Timeout) => {
-                if !WAIT_NOTE.swap(true, Ordering::Relaxed) {
+                if !self.noted.swap(true, Ordering::Relaxed) {
                     run.eprint(&format!("linearctl: waiting on {host}\n"));
                 }
                 rx.recv().map_err(|_| failed(format!("cannot reach {host}: the request was lost")))?
@@ -503,7 +507,12 @@ mod tests {
             Response::json(200, r#"{"data":{}}"#)
         });
         let mut r = run();
-        client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null).unwrap();
+        let mut c = client(&r, &api.url);
+        // Other tests may already have waited (on Windows, a refused
+        // connection takes seconds): this one has its own once.
+        static NOTED: AtomicBool = AtomicBool::new(false);
+        c.noted = &NOTED;
+        c.query(&mut r, crate::queries::VIEWER, Value::Null).unwrap();
         let err = std::mem::replace(&mut r.err, Sink::Buf(vec![])).into_buf();
         assert_eq!(String::from_utf8(err).unwrap(), format!("linearctl: waiting on {}\n", host_of(&api.url)));
     }
