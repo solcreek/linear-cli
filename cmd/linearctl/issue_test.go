@@ -212,6 +212,7 @@ func showAnswer() map[string]any {
 	issue := issueNode("ENG-12", "Login times out")
 	issue["description"] = "Steps:\n1. log in\n![shot](https://uploads.linear.app/a/b/c)"
 	issue["children"] = nodes()
+	issue["inverseRelations"] = nodes(map[string]any{"id": "r1", "type": "blocks", "issue": map[string]any{"identifier": "ENG-3", "title": "Blocker"}})
 	issue["comments"] = nodes(map[string]any{"id": "c1", "body": "Seen it too", "createdAt": "2026-10-03T00:00:00.000Z",
 		"user": map[string]any{"name": "Bo"}})
 	return map[string]any{"issue": issue}
@@ -248,7 +249,7 @@ func TestIssueShow(t *testing.T) {
 	api := newFake(t).on("IssueShow", showAnswer())
 	r := runWith(t, opts{api: api, key: testKey}, "issue", "show", "ENG-12", "--signed-urls", "300", "--json")
 	is := decode(t, r.out)["issue"].(map[string]any)
-	if r.code != 0 || is["identifier"] != "ENG-12" || len(is["comments"].([]any)) != 1 {
+	if r.code != 0 || is["identifier"] != "ENG-12" || len(is["comments"].([]any)) != 1 || len(is["inverseRelations"].([]any)) != 1 {
 		t.Fatalf("exit %d, %q", r.code, r.out)
 	}
 	c := api.last("IssueShow")

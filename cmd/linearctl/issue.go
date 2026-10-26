@@ -14,7 +14,7 @@ import (
 )
 
 var showFields = append(slices.Clone(issueRowFields), "description", "dueDate", "estimate", "branchName", "startedAt",
-	"completedAt", "canceledAt", "archivedAt", "creator", "parent", "children", "relations", "attachments", "comments")
+	"completedAt", "canceledAt", "archivedAt", "creator", "parent", "children", "relations", "inverseRelations", "attachments", "comments")
 
 func addIssue(root *cobra.Command) {
 	issue := &cobra.Command{

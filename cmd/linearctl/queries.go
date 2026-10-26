@@ -43,7 +43,8 @@ var (
     creator { name email }
     parent { identifier title }
     children(first: 50) { nodes { identifier title state { name type } } }
-    relations(first: 50) { nodes { type relatedIssue { identifier title } } }
+    relations(first: 50) { nodes { id type relatedIssue { identifier title } } }
+    inverseRelations(first: 50) { nodes { id type issue { identifier title } } }
     attachments(first: 50) { nodes { title url } }
     comments(first: $comments) @include(if: $withComments) { nodes { id body createdAt url user { name email } parent { id } } }
   }
