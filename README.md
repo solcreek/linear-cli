@@ -120,6 +120,8 @@ flags and exit codes as JSON.
   duplicate.
 - Lists are `{items, total, shown, truncated, nextCursor}`; continue with
   `--cursor`, trim with `--fields` and `--limit`.
+- A failure is `{error, usage}`, plus `hint` when there is a next step: the
+  command that finds what was not found, or that a rerun is safe.
 
 | exit | meaning |
 |---|---|

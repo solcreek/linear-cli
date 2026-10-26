@@ -1,5 +1,5 @@
 use crate::cli::{Args, Cmd, Ctx, Flag};
-use crate::fail::{Fail, R, failed, usage};
+use crate::fail::{self, Fail, R, failed, usage};
 use crate::json::{marshal, quote_go};
 use crate::queries::{self, ISSUE_ROW_FIELDS};
 use crate::run::{Run, dry_run};
@@ -363,7 +363,7 @@ fn show(run: &mut Run, ctx: &Ctx) -> R {
     let expires = cl.signed_until();
     let data = cl
         .query(run, queries::ISSUE_SHOW, json!({"id": r, "comments": comments, "withComments": comments > 0}))
-        .map_err(|e| e.not_found(&format!("issue {r}")))?;
+        .map_err(|e| e.not_found(&format!("issue {r}"), fail::FIND_ISSUE))?;
     let mut data = data;
     let issue = flatten(data["issue"].take());
     if run.json {
@@ -576,7 +576,7 @@ impl Wanted {
         if !self.parent.is_empty() {
             let found = nodes(&r["parent"]);
             let Some(p) = found.first() else {
-                return Err(failed(format!("not found: parent issue {}", self.parent)));
+                return Err(failed(format!("not found: parent issue {}", self.parent)).hint(fail::FIND_ISSUE));
             };
             self.input.insert("parentId".into(), json!(str_at(p, "id")));
         }
@@ -800,8 +800,9 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     extra.extend(remove.iter().cloned());
     let mut vars = w.resolve_vars(&extra);
     vars.insert("id".into(), json!(r));
-    let res =
-        cl.query(run, queries::UPDATE_RESOLVE, Value::Object(vars)).map_err(|e| e.not_found(&format!("issue {r}")))?;
+    let res = cl
+        .query(run, queries::UPDATE_RESOLVE, Value::Object(vars))
+        .map_err(|e| e.not_found(&format!("issue {r}"), fail::FIND_ISSUE))?;
     let is = &res["issue"];
     let identifier = str_at(is, "identifier");
     let updated_at = str_at(is, "updatedAt");
@@ -812,7 +813,8 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
         {
             return Err(Fail::Conflict(format!(
                 "{identifier} changed at {updated_at}, not {since} as --if-updated-at expects; read it again"
-            )));
+            ))
+            .hint(format!("'linearctl issue show {identifier}' reads it; decide again from what it shows")));
         }
     }
     let team_id = str_at(is, "team.id");
@@ -904,8 +906,9 @@ fn archive_run(run: &mut Run, ctx: &Ctx, archive: bool) -> R {
     let dry = dry_run(ctx)?;
     let r = issue_ref("ISSUE", &ctx.args[0])?;
     let cl = run.client()?;
-    let res =
-        cl.query(run, queries::ISSUE_ARCHIVED, json!({"id": r})).map_err(|e| e.not_found(&format!("issue {r}")))?;
+    let res = cl
+        .query(run, queries::ISSUE_ARCHIVED, json!({"id": r}))
+        .map_err(|e| e.not_found(&format!("issue {r}"), fail::FIND_ISSUE))?;
     let is = &res["issue"];
     let changed = is["archivedAt"].is_null() == archive;
     if changed && !dry {

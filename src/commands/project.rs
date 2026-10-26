@@ -62,7 +62,8 @@ fn find_project(run: &mut Run, cl: &Client, r: &str, filter: Value, issues: u64)
         cl.query(run, queries::PROJECT_FIND, json!({"filter": filter, "issues": issues, "withIssues": issues > 0}))?;
     let n = super::issue::nodes(&data["projects"]);
     match n.len() {
-        0 => Err(failed(format!("not found: project {r} (or this API key cannot see it)"))),
+        0 => Err(failed(format!("not found: project {r} (or this API key cannot see it)"))
+            .hint("'linearctl project list' lists the projects this key can see")),
         1 => Ok(n[0].clone()),
         _ => Err(failed(format!(
             "more than one project is named {} ({}, {}); pass its URL or slugId",

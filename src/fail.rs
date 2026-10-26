@@ -31,7 +31,16 @@ pub enum Fail {
     Conflict(String),
     /// Linear's own error, in the words it offers people (exit 1).
     Linear { msg: String, not_found: bool },
+    /// Another failure, with the next step to take: a command to run, or
+    /// whether a rerun is safe. The message is the inner one's, unchanged.
+    Hinted(Box<Fail>, String),
 }
+
+/// Where to find an issue's identifier when one is not found.
+pub const FIND_ISSUE: &str = "'linearctl issue list --query TEXT' finds an issue by the words in it";
+
+/// After a request that may or may not have reached Linear.
+pub const RERUN: &str = "rerunning the same command is safe: a change that already applied reports \"changed\": false";
 
 pub type R<T = ()> = Result<T, Fail>;
 
@@ -45,15 +54,43 @@ impl Fail {
             Fail::Auth(_) => AUTH,
             Fail::Limited(..) => LIMITED,
             Fail::Conflict(_) => CONFLICT,
+            Fail::Hinted(f, _) => f.code(),
+        }
+    }
+
+    /// The same failure, with the next step to take.
+    pub fn hint(self, hint: impl Into<String>) -> Fail {
+        Fail::Hinted(Box::new(self.base_owned()), hint.into())
+    }
+
+    /// The failure without its hint.
+    pub fn base(&self) -> &Fail {
+        match self {
+            Fail::Hinted(f, _) => f.base(),
+            f => f,
+        }
+    }
+
+    fn base_owned(self) -> Fail {
+        match self {
+            Fail::Hinted(f, _) => f.base_owned(),
+            f => f,
+        }
+    }
+
+    pub fn hint_text(&self) -> Option<&str> {
+        match self {
+            Fail::Hinted(_, h) => Some(h),
+            _ => None,
         }
     }
 
     /// notFound turns Linear's "Entity not found" into an error naming what
     /// was looked for.
-    pub fn not_found(self, what: &str) -> Fail {
+    pub fn not_found(self, what: &str, hint: &str) -> Fail {
         match self {
             Fail::Linear { not_found: true, .. } => {
-                Fail::Failed(format!("not found: {what} (or this API key cannot see it)"))
+                Fail::Failed(format!("not found: {what} (or this API key cannot see it)")).hint(hint)
             }
             other => other,
         }
@@ -68,6 +105,7 @@ impl fmt::Display for Fail {
             }
             Fail::Limited(m, _) => f.write_str(m),
             Fail::Linear { msg, .. } => write!(f, "Linear: {msg}"),
+            Fail::Hinted(inner, _) => inner.fmt(f),
         }
     }
 }

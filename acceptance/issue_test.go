@@ -673,7 +673,8 @@ func TestIssueUpdateIfUpdatedAt(t *testing.T) {
 		if sent := slices.Contains(api.ops(), "IssueUpdate"); sent != (c.code == 0) {
 			t.Errorf("%s: sent %v", c.since, sent)
 		}
-		if c.code == exitConflict && !strings.Contains(decode(t, r.out)["error"].(string), "changed at 2026-10-02T08:00:00.000Z") {
+		if d := decode(t, r.out); c.code == exitConflict && (!strings.Contains(d["error"].(string), "changed at 2026-10-02T08:00:00.000Z") ||
+			!strings.HasPrefix(d["hint"].(string), "'linearctl issue show ENG-5'")) {
 			t.Errorf("%s: %q", c.since, r.out)
 		}
 	}

@@ -9,6 +9,15 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Added
+
+- A failure under `--json` carries `hint` when there is a next step: the
+  command that lists what was not found (an issue, comment or project), the
+  read to make after an `--if-updated-at` conflict, and, after a timeout, a lost
+  connection or a 5xx from Linear, that rerunning the command is safe. Without
+  `--json` it is a `hint: …` line on stderr. `error` and the exit codes are
+  unchanged.
+
 ## [0.3.0] - 2026-10-26
 
 ### Changed

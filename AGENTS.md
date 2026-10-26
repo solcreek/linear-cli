@@ -21,6 +21,9 @@ before guessing a flag. Always pass `--json`.
   `problems`), 4 busy (retry), 5 auth (set `LINEAR_API_KEY` or run
   `auth login`), 6 rate-limited (wait until `retryAt`), 7 conflict (the issue
   changed since you read it; read it and decide again).
+- A failure with `--json` is `{error, usage}` on stdout, plus `hint` when there
+  is a next step: the command that finds what was not found, or that a rerun
+  is safe after a timeout or a 5xx from Linear.
 - Lists: `{items, total: null, shown, truncated, nextCursor}`. `total` is
   always null (Linear does not count); continue with `--cursor nextCursor`.
   Keep output small with `--fields` and `--limit`.
