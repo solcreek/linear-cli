@@ -9,6 +9,8 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-26
+
 ### Added
 
 - Linear's saved custom views: `view list`, and `issue list --view VIEW` (a name
@@ -240,7 +242,8 @@ names are only ever added, never renamed or removed.
 - Releases for linux, darwin and windows, and the npm package
   `@solcreek/linear-cli` with one native binary per platform.
 
-[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/solcreek/linear-cli/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/solcreek/linear-cli/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/solcreek/linear-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/solcreek/linear-cli/compare/v0.2.1...v0.3.0
