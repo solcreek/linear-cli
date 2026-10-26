@@ -70,11 +70,14 @@ struct Watch {
 impl Watch {
     fn start(team: &str) -> Watch {
         let dir = scratch();
-        let mut child = command(&dir, &["watch", "--team", team, "--json", "--batch-ms", "200", "--heartbeat", "5"])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::inherit())
-            .spawn()
-            .unwrap();
+        let mut child = command(
+            &dir,
+            &["watch", "--team", team, "--json", "--batch-ms", "200", "--heartbeat", "5", "--reconcile", "86400"],
+        )
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .unwrap();
         let out = child.stdout.take().unwrap();
         let (tx, lines) = channel();
         std::thread::spawn(move || {
