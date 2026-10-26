@@ -74,13 +74,20 @@ func addLookups(root *cobra.Command) {
 		{
 			noun: "user", short: "List users in the workspace", conn: "users", doc: qUsers,
 			example: "  linearctl user list --active --json",
-			fields:  []string{"id", "name", "displayName", "email", "active", "admin", "guest"},
+			fields:  []string{"id", "name", "displayName", "email", "active", "admin", "guest", "app"},
 			cols:    []string{"email", "name"},
 			filter: func(cmd *cobra.Command, _ string) (map[string]any, error) {
+				f := map[string]any{}
 				if active, _ := cmd.Flags().GetBool("active"); active {
-					return map[string]any{"active": map[string]any{"eq": true}}, nil
+					f["active"] = map[string]any{"eq": true}
 				}
-				return nil, nil
+				if app, _ := cmd.Flags().GetBool("app"); app {
+					f["app"] = map[string]any{"eq": true}
+				}
+				if len(f) == 0 {
+					return nil, nil
+				}
+				return f, nil
 			},
 		},
 		{
@@ -228,6 +235,7 @@ func (l lookup) command() *cobra.Command {
 	switch l.noun {
 	case "user":
 		list.Flags().Bool("active", false, "only active users")
+		list.Flags().Bool("app", false, "only app users: the agents issues can be delegated to")
 	case "milestone":
 		list.Flags().String("project", "", "only milestones of project `NAME`")
 	case "project":

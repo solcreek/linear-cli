@@ -15,6 +15,7 @@ const issueRow = `
 	id identifier title priority priorityLabel url createdAt updatedAt
 	state { id name type color }
 	assignee { id name email }
+	delegate { id name }
 	team { id key }
 	project { id name }
 	cycle { id number }
@@ -23,7 +24,7 @@ const issueRow = `
 
 // issueRowFields are the keys of an issueRow item, for --fields.
 var issueRowFields = []string{"id", "identifier", "title", "priority", "priorityLabel", "url", "createdAt",
-	"updatedAt", "state", "assignee", "team", "project", "cycle", "projectMilestone", "labels"}
+	"updatedAt", "state", "assignee", "delegate", "team", "project", "cycle", "projectMilestone", "labels"}
 
 const pageInfo = `pageInfo { hasNextPage endCursor }`
 
@@ -56,7 +57,7 @@ var (
 	qCreateResolve = `query CreateResolve($team: String!, $id: ID!, $withID: Boolean!, $state: String!, $withState: Boolean!,
   $email: String!, $withUser: Boolean!, $me: Boolean!, $labels: [String!]!, $withLabels: Boolean!,
   $project: String!, $withProject: Boolean!, $parent: IssueFilter!, $withParent: Boolean!,
-  $milestone: String!, $withMilestone: Boolean!) {
+  $milestone: String!, $withMilestone: Boolean!, $delegate: String!, $withDelegate: Boolean!) {
   teams(filter: { key: { eqIgnoreCase: $team } }) { nodes { id key
     states(filter: { name: { eqIgnoreCase: $state } }) @include(if: $withState) { nodes { id name } } } }
   existing: issues(filter: { id: { eq: $id } }, includeArchived: true) @include(if: $withID) { nodes {` + issueRow + ` } }
@@ -66,6 +67,7 @@ var (
   projects(filter: { name: { eqIgnoreCase: $project } }) @include(if: $withProject) { nodes { id name } }
   parent: issues(filter: $parent, first: 1) @include(if: $withParent) { nodes { id identifier } }
   milestones: projectMilestones(filter: { name: { eqIgnoreCase: $milestone } }) @include(if: $withMilestone) { nodes { id name project { id name } } }
+  delegates: users(filter: { app: { eq: true }, or: [{ name: { eqIgnoreCase: $delegate } }, { displayName: { eqIgnoreCase: $delegate } }, { email: { eqIgnoreCase: $delegate } }] }) @include(if: $withDelegate) { nodes { id name } }
 }`
 
 	qIssueCreate = `mutation IssueCreate($input: IssueCreateInput!) {
@@ -76,11 +78,11 @@ var (
 	qUpdateResolve = `query UpdateResolve($id: String!, $state: String!, $withState: Boolean!,
   $email: String!, $withUser: Boolean!, $me: Boolean!, $labels: [String!]!, $withLabels: Boolean!,
   $project: String!, $withProject: Boolean!, $parent: IssueFilter!, $withParent: Boolean!,
-  $milestone: String!, $withMilestone: Boolean!) {
+  $milestone: String!, $withMilestone: Boolean!, $delegate: String!, $withDelegate: Boolean!) {
   issue(id: $id) { id identifier title description priority dueDate estimate
     team { id key states(filter: { name: { eqIgnoreCase: $state } }) @include(if: $withState) { nodes { id name } } }
     state { id name } assignee { id email } project { id name } parent { id identifier }
-    projectMilestone { id }
+    projectMilestone { id } delegate { id }
     labels(first: 100) { nodes { id name } } }
   users(filter: { email: { eqIgnoreCase: $email } }) @include(if: $withUser) { nodes { id name email } }
   viewer @include(if: $me) { id name email }
@@ -88,6 +90,7 @@ var (
   projects(filter: { name: { eqIgnoreCase: $project } }) @include(if: $withProject) { nodes { id name } }
   parent: issues(filter: $parent, first: 1) @include(if: $withParent) { nodes { id identifier } }
   milestones: projectMilestones(filter: { name: { eqIgnoreCase: $milestone } }) @include(if: $withMilestone) { nodes { id name project { id name } } }
+  delegates: users(filter: { app: { eq: true }, or: [{ name: { eqIgnoreCase: $delegate } }, { displayName: { eqIgnoreCase: $delegate } }, { email: { eqIgnoreCase: $delegate } }] }) @include(if: $withDelegate) { nodes { id name } }
 }`
 
 	qIssueUpdate = `mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
@@ -151,7 +154,7 @@ var (
 }`
 
 	qUsers = `query Users($filter: UserFilter, $first: Int!, $after: String) {
-  users(filter: $filter, first: $first, after: $after) { nodes { id name displayName email active admin guest } ` + pageInfo + ` }
+  users(filter: $filter, first: $first, after: $after) { nodes { id name displayName email active admin guest app } ` + pageInfo + ` }
 }`
 
 	qProjects = `query Projects($filter: ProjectFilter, $first: Int!, $after: String) {

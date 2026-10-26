@@ -115,6 +115,7 @@ func issueList() *cobra.Command {
 	c.Flags().StringArray("without-label", nil, "only issues without label `NAME` (repeatable; none of)")
 	c.Flags().String("project", "", "only issues in project `NAME`")
 	c.Flags().String("milestone", "", "only issues in project milestone `NAME` (none: in no milestone)")
+	c.Flags().String("delegate", "", "only issues delegated to the agent `WHO` (name or email; any; none)")
 	c.Flags().String("cycle", "", "only issues in cycle `CYCLE`: current, next, or a cycle number")
 	c.Flags().String("updated-since", "", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h")
 	c.Flags().String("query", "", "full-text search for `TEXT`")
@@ -222,6 +223,23 @@ func listFilter(cmd *cobra.Command) (map[string]any, error) {
 			return nil, err
 		}
 		filter["project"] = map[string]any{"name": map[string]any{"eqIgnoreCase": p}}
+	}
+	if d, _ := cmd.Flags().GetString("delegate"); d != "" {
+		if _, err := plain("--delegate", d); err != nil {
+			return nil, err
+		}
+		switch d {
+		case "none":
+			filter["delegate"] = map[string]any{"null": true}
+		case "any":
+			filter["delegate"] = map[string]any{"null": false}
+		default:
+			filter["delegate"] = map[string]any{"or": []any{
+				map[string]any{"name": map[string]any{"eqIgnoreCase": d}},
+				map[string]any{"displayName": map[string]any{"eqIgnoreCase": d}},
+				map[string]any{"email": map[string]any{"eqIgnoreCase": d}},
+			}}
+		}
 	}
 	if m, _ := cmd.Flags().GetString("milestone"); m != "" {
 		if _, err := plain("--milestone", m); err != nil {
@@ -401,6 +419,7 @@ func issueFields(c *cobra.Command) {
 	c.Flags().String("priority", "", "`PRIORITY`: 0-4 or none, urgent, high, medium, low")
 	c.Flags().String("project", "", "project `NAME`")
 	c.Flags().String("milestone", "", "project milestone `NAME`, or none to clear; it sets the project\nwhen the issue has none")
+	c.Flags().String("delegate", "", "delegate to the agent (app user) `WHO`: its name or email, or none")
 	c.Flags().String("parent", "", "make it a sub-issue of `ISSUE`")
 	c.Flags().String("json-input", "", "read Linear's input object from `PATH` (- for stdin); flags win")
 }
@@ -428,6 +447,7 @@ type wanted struct {
 	project   string
 	parent    string // an issue ref
 	milestone string // a name, or none
+	delegate  string // an agent user's name or email, or none
 }
 
 func readWanted(cmd *cobra.Command) (*wanted, error) {
@@ -462,7 +482,7 @@ func readWanted(cmd *cobra.Command) (*wanted, error) {
 		}
 		w.input["priority"] = n
 	}
-	for flag, dst := range map[string]*string{"state": &w.state, "project": &w.project, "milestone": &w.milestone} {
+	for flag, dst := range map[string]*string{"state": &w.state, "project": &w.project, "milestone": &w.milestone, "delegate": &w.delegate} {
 		if v, _ := cmd.Flags().GetString(flag); v != "" {
 			if _, err := plain("--"+flag, v); err != nil {
 				return nil, err
@@ -510,6 +530,7 @@ func (w *wanted) resolveVars(extraLabels []string) map[string]any {
 		"project": w.project, "withProject": w.project != "",
 		"parent": parent, "withParent": w.parent != "",
 		"milestone": w.milestone, "withMilestone": w.milestone != "" && w.milestone != "none",
+		"delegate": w.delegate, "withDelegate": w.delegate != "" && w.delegate != "none",
 	}
 }
 
@@ -531,6 +552,7 @@ type resolved struct {
 	Projects    struct{ Nodes []named } `json:"projects"`
 	Parent      struct{ Nodes []named } `json:"parent"`
 	Milestones  struct{ Nodes []named } `json:"milestones"`
+	Delegates   struct{ Nodes []named } `json:"delegates"`
 }
 
 // one is the single match for name, or an error naming what was looked for.
@@ -580,6 +602,16 @@ func (w *wanted) apply(r resolved, states []named, teamID, projectID string) err
 			return fmt.Errorf("not found: parent issue %s", w.parent)
 		}
 		w.input["parentId"] = r.Parent.Nodes[0].ID
+	}
+	switch {
+	case w.delegate == "none":
+		w.input["delegateId"] = nil
+	case w.delegate != "":
+		id, err := one("agent user", w.delegate, r.Delegates.Nodes, "'linearctl user list --app'")
+		if err != nil {
+			return err
+		}
+		w.input["delegateId"] = id
 	}
 	switch {
 	case w.milestone == "none":
@@ -808,6 +840,7 @@ func issueUpdate() *cobra.Command {
 					Project   *named                  `json:"project"`
 					Parent    *named                  `json:"parent"`
 					Milestone *named                  `json:"projectMilestone"`
+					Delegate  *named                  `json:"delegate"`
 					Labels    struct{ Nodes []named } `json:"labels"`
 				} `json:"issue"`
 			}
@@ -866,7 +899,7 @@ func issueUpdate() *cobra.Command {
 			}
 			now := map[string]any{"title": is.Title, "description": desc, "priority": int(is.Priority),
 				"stateId": id(is.State), "assigneeId": id(is.Assignee), "projectId": id(is.Project), "parentId": id(is.Parent),
-				"projectMilestoneId": id(is.Milestone)}
+				"projectMilestoneId": id(is.Milestone), "delegateId": id(is.Delegate)}
 			for k, v := range now {
 				if got, ok := w.input[k]; ok && sameValue(got, v) {
 					delete(w.input, k)
