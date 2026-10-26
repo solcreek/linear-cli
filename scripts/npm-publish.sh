@@ -8,8 +8,9 @@ set -eu
 out=${1:?usage: scripts/npm-publish.sh OUT [npm publish args]}
 shift
 for dir in "$out"/linear-cli-* "$out"/linear-cli; do
-	name=$(node -p "require('$dir/package.json').name")
-	version=$(node -p "require('$dir/package.json').version")
+	# A path, not a module name: require needs it absolute.
+	name=$(node -p 'require(require("path").resolve(process.argv[1])).name' "$dir/package.json")
+	version=$(node -p 'require(require("path").resolve(process.argv[1])).version' "$dir/package.json")
 	if npm view "$name@$version" version >/dev/null 2>&1; then
 		echo "skip $name@$version: already published"
 		continue
