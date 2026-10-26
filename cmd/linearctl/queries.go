@@ -116,6 +116,21 @@ var (
 
 	qCommentDelete = `mutation CommentDelete($id: String!) { commentDelete(id: $id) { success } }`
 
+	// Both issues by filter (a missing one is an empty list, not an error),
+	// with the relations stored from and to the first.
+	qRelationResolve = `query RelationResolve($a: IssueFilter!, $b: IssueFilter!) {
+  a: issues(filter: $a, first: 1, includeArchived: true) { nodes { id identifier
+    relations(first: 250) { nodes { id type relatedIssue { id identifier } } }
+    inverseRelations(first: 250) { nodes { id type issue { id identifier } } } } }
+  b: issues(filter: $b, first: 1, includeArchived: true) { nodes { id identifier } }
+}`
+
+	qRelationCreate = `mutation RelationCreate($input: IssueRelationCreateInput!) {
+  issueRelationCreate(input: $input) { success issueRelation { id } }
+}`
+
+	qRelationDelete = `mutation RelationDelete($id: String!) { issueRelationDelete(id: $id) { success } }`
+
 	qTeams = `query Teams($first: Int!, $after: String) {
   teams(first: $first, after: $after) { nodes { id key name description private } ` + pageInfo + ` }
 }`
@@ -148,6 +163,7 @@ func documents() map[string]string {
 		"CreateResolve": qCreateResolve, "IssueCreate": qIssueCreate, "UpdateResolve": qUpdateResolve,
 		"IssueUpdate": qIssueUpdate, "IssueArchived": qIssueArchived, "IssueArchive": qIssueArchive, "IssueUnarchive": qIssueUnarchive,
 		"CommentList": qCommentList, "CommentResolve": qCommentResolve, "CommentCreate": qCommentCreate,
+		"RelationResolve": qRelationResolve, "RelationCreate": qRelationCreate, "RelationDelete": qRelationDelete,
 		"Comment": qComment, "CommentUpdate": qCommentUpdate, "CommentDelete": qCommentDelete,
 		"Teams": qTeams, "States": qStates, "Labels": qLabels, "Users": qUsers, "Projects": qProjects,
 		"Cycles": qCycles,
