@@ -794,3 +794,21 @@ func TestIssueListCreatorAndDueDates(t *testing.T) {
 		}
 	}
 }
+
+func TestIssueCreateSkipsGroupLabels(t *testing.T) {
+	t.Parallel()
+	group := func(id, name string, team any) map[string]any {
+		return map[string]any{"id": id, "name": name, "isGroup": true, "team": team}
+	}
+	labels := conn("", group("l-bug-group", "bug", nil), map[string]any{"id": "l-bug", "name": "bug", "isGroup": false, "team": nil},
+		group("l-area", "Area", map[string]any{"id": "team-eng"}))
+	api := createFake(t, resolveAnswer(map[string]any{"issueLabels": labels}))
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "create", "--team", "ENG", "--title", "x", "--label", "bug", "--dry-run", "--json")
+	if in, _ := decode(t, r.out)["input"].(map[string]any); r.code != 0 || jsonOf(in["labelIds"]) != `["l-bug"]` {
+		t.Errorf("a group of the same name is not a match: exit %d, %q", r.code, r.out)
+	}
+	r = runWith(t, opts{api: api, key: testKey}, "issue", "create", "--team", "ENG", "--title", "x", "--label", "area", "--dry-run", "--json")
+	if e, _ := decode(t, r.out)["error"].(string); r.code != exitUsage || !strings.Contains(e, `label "area" is a group`) {
+		t.Errorf("exit %d, %q", r.code, r.out)
+	}
+}

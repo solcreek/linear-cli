@@ -15,6 +15,12 @@ names are only ever added, never renamed or removed.
   hasBlockingRelations; Linear ignores completed and canceled blockers), and
   `--completed-since WHEN`. `watch` takes them too.
 
+### Fixed
+
+- `--label`, `--add-label` and `--remove-label` never resolve to a group label,
+  which Linear cannot put on an issue: a label of the same name wins, and a name
+  only a group carries is refused as a usage error (exit 2).
+
 ## [0.6.0] - 2026-10-26
 
 ### Added
