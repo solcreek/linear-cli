@@ -1925,6 +1925,13 @@ exit: 0
             },
             {
               "default": null,
+              "description": "only issues created by WHO: me, none, or an email",
+              "name": "creator",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
               "description": "continue after CURSOR (nextCursor from the previous page)",
               "name": "cursor",
               "short": null,
@@ -1941,6 +1948,20 @@ exit: 0
               "default": null,
               "description": "only issues delegated to the agent WHO (name, email, me, any, none)",
               "name": "delegate",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "only issues due on or after DATE",
+              "name": "due-after",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "only issues due on or before DATE (<DATE>)",
+              "name": "due-before",
               "short": null,
               "type": "string"
             },
@@ -2016,7 +2037,14 @@ exit: 0
             },
             {
               "default": null,
-              "description": "order by FIELD: updated (default), created, priority",
+              "description": "reverse the order of --sort",
+              "name": "reverse",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "FIELD: updated (default), created, priority, due-date, title, state",
               "name": "sort",
               "short": null,
               "type": "string"
@@ -3840,6 +3868,13 @@ exit: 0
         },
         {
           "default": null,
+          "description": "only issues created by WHO: me, none, or an email",
+          "name": "creator",
+          "short": null,
+          "type": "string"
+        },
+        {
+          "default": null,
           "description": "only issues in cycle CYCLE: current, next, previous, a number, a UUID",
           "name": "cycle",
           "short": null,
@@ -3849,6 +3884,20 @@ exit: 0
           "default": null,
           "description": "only issues delegated to the agent WHO (name, email, me, any, none)",
           "name": "delegate",
+          "short": null,
+          "type": "string"
+        },
+        {
+          "default": null,
+          "description": "only issues due on or after DATE",
+          "name": "due-after",
+          "short": null,
+          "type": "string"
+        },
+        {
+          "default": null,
+          "description": "only issues due on or before DATE (<DATE>)",
+          "name": "due-before",
           "short": null,
           "type": "string"
         },

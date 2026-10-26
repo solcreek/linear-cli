@@ -11,8 +11,6 @@ pub fn show_fields() -> Vec<&'static str> {
     let mut f = ISSUE_ROW_FIELDS.to_vec();
     f.extend([
         "description",
-        "dueDate",
-        "estimate",
         "branchName",
         "startedAt",
         "completedAt",
@@ -58,7 +56,8 @@ fn list_cmd() -> Cmd {
         ))
         .flag(Flag::str("query", "full-text search for `TEXT`"))
         .flag(Flag::bool("include-comments", "with --query, also match the text of comments"))
-        .flag(Flag::str("sort", "order by `FIELD`: updated (default), created, priority"))
+        .flag(Flag::str("sort", "`FIELD`: updated (default), created, priority, due-date, title, state"))
+        .flag(Flag::bool("reverse", "reverse the order of --sort"))
         .flag(limit_flag(25))
         .flag(cursor_flag());
     c = fields_flag_spec(c, ISSUE_ROW_FIELDS);
@@ -84,6 +83,9 @@ pub fn filter_flags(c: Cmd) -> Cmd {
         .flag(Flag::str("attachment-url", "only issues with an attachment at `URL` (e.g. a linked pull request)"))
         .flag(Flag::str("cycle", "only issues in cycle `CYCLE`: current, next, previous, a number, a UUID"))
         .flag(Flag::str("updated-since", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h"))
+        .flag(Flag::str("creator", "only issues created by `WHO`: me, none, or an email"))
+        .flag(Flag::str("due-before", "only issues due on or before `DATE` (2026-11-30)"))
+        .flag(Flag::str("due-after", "only issues due on or after `DATE`"))
 }
 
 fn list(run: &mut Run, ctx: &Ctx) -> R {
@@ -92,24 +94,46 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
     let cursor = cursor_value(ctx)?;
     let query = ctx.str("query");
     let sort = ctx.str("sort");
+    let reverse = ctx.bool("reverse");
+    // Each --sort as Linear's IssueSortInput field and its natural order.
+    // Descending priority is urgent first with no priority last; Ascending
+    // puts no priority (0) first (verified 2026-10-26).
+    let (field, natural) = match sort.as_str() {
+        "" | "updated" => ("updatedAt", "Descending"),
+        "created" => ("createdAt", "Descending"),
+        "priority" => ("priority", "Descending"),
+        "due-date" => ("dueDate", "Ascending"),
+        "title" => ("title", "Ascending"),
+        "state" => ("workflowState", "Ascending"),
+        _ => {
+            return Err(usage(format!(
+                "--sort must be updated, created, priority, due-date, title or state; got {}",
+                quote_go(&sort)
+            )));
+        }
+    };
+    let plain_order = matches!(sort.as_str(), "" | "updated" | "created") && !reverse;
     if !query.is_empty() {
         plain("--query", &query)?;
-        if sort == "priority" {
-            return Err(usage("--sort priority does not work with --query; use updated or created"));
+        if !plain_order {
+            return Err(usage("--query sorts only by updated or created, newest first; drop --sort or --reverse"));
         }
     }
     let mut vars = Map::new();
-    match sort.as_str() {
-        "" | "updated" => {
-            if query.is_empty() || !sort.is_empty() {
-                vars.insert("orderBy".into(), json!("updatedAt"));
-            }
+    if plain_order {
+        // As before: orderBy, newest first; a search without --sort ranks by
+        // relevance.
+        if query.is_empty() || !sort.is_empty() {
+            vars.insert("orderBy".into(), json!(field));
         }
-        "created" => _ = vars.insert("orderBy".into(), json!("createdAt")),
-        // Descending is Linear's urgent-first order, with no priority last;
-        // Ascending puts no priority (0) first (verified 2026-10-26).
-        "priority" => _ = vars.insert("sort".into(), json!([{"priority": {"order": "Descending"}}])),
-        _ => return Err(usage(format!("--sort must be updated, created or priority; got {}", quote_go(&sort)))),
+    } else {
+        let order = match (natural, reverse) {
+            ("Descending", false) | ("Ascending", true) => "Descending",
+            _ => "Ascending",
+        };
+        // Issues without a due date come last either way.
+        let spec = if field == "dueDate" { json!({"order": order, "nulls": "last"}) } else { json!({"order": order}) };
+        vars.insert("sort".into(), json!([{ field: spec }]));
     }
     let (mut doc, mut conn) = (queries::ISSUE_LIST, "issues");
     let with_comments = ctx.bool("include-comments");
@@ -275,6 +299,23 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
     let cy = ctx.str("cycle");
     if !cy.is_empty() {
         filter.insert("cycle".into(), super::cycle::cycle_ref("--cycle", &cy)?);
+    }
+    let creator = ctx.str("creator");
+    if !creator.is_empty() {
+        filter.insert("creator".into(), user_filter("--creator", &creator)?);
+    }
+    let mut due = Map::new();
+    for (flag, op) in [("due-before", "lte"), ("due-after", "gte")] {
+        let d = ctx.str(flag);
+        if ctx.changed(flag) && (d.len() != 10 || crate::time::parse_date(&d).is_none()) {
+            return Err(usage(format!("--{flag} must be a date (2026-11-30); got {}", quote_go(&d))));
+        }
+        if !d.is_empty() {
+            due.insert(op.into(), json!(d));
+        }
+    }
+    if !due.is_empty() {
+        filter.insert("dueDate".into(), Value::Object(due));
     }
     let since = ctx.str("updated-since");
     if !since.is_empty() {

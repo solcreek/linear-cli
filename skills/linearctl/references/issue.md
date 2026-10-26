@@ -76,8 +76,8 @@ List issues, most recently updated first. Filters combine with AND; a repeated
 --team falls back to LINEARCTL_TEAM, then to default-team in config.
 
 Fields: id, identifier, title, priority, priorityLabel, url, createdAt,
-updatedAt, state, assignee, delegate, team, project, cycle, projectMilestone,
-labels
+updatedAt, dueDate, estimate, state, assignee, delegate, team, project, cycle,
+projectMilestone, labels
 
 Usage:
   linearctl issue list [flags]
@@ -91,9 +91,12 @@ Flags:
       --any-label NAME       only issues with label NAME (repeatable; any of)
       --assignee WHO         only issues assigned to WHO: me, none, or an email
       --attachment-url URL   only issues with an attachment at URL (e.g. a linked pull request)
+      --creator WHO          only issues created by WHO: me, none, or an email
       --cursor CURSOR        continue after CURSOR (nextCursor from the previous page)
       --cycle CYCLE          only issues in cycle CYCLE: current, next, previous, a number, a UUID
       --delegate WHO         only issues delegated to the agent WHO (name, email, me, any, none)
+      --due-after DATE       only issues due on or after DATE
+      --due-before DATE      only issues due on or before DATE (2026-11-30)
       --fields FIELDS        return only these comma-separated FIELDS (see Fields above)
   -h, --help                 help for list
       --id ISSUE             only the issue ISSUE (ENG-123 or a UUID; repeatable); one not
@@ -106,7 +109,8 @@ Flags:
                              (repeatable, any of)
       --project NAME         only issues in project NAME (none: in no project)
       --query TEXT           full-text search for TEXT
-      --sort FIELD           order by FIELD: updated (default), created, priority
+      --reverse              reverse the order of --sort
+      --sort FIELD           FIELD: updated (default), created, priority, due-date, title, state
       --state NAME           only issues in workflow state NAME (repeatable; any of)
       --state-type TYPE      only issues whose state is of TYPE (repeatable): triage, backlog,
                              unstarted, started, completed, canceled, duplicate
@@ -125,8 +129,8 @@ many seconds, so a viewer can fetch images directly; signedUrlsExpireAt says unt
 Comments are included (20 by default); give another count as --comments=N.
 
 Fields: id, identifier, title, priority, priorityLabel, url, createdAt,
-updatedAt, state, assignee, delegate, team, project, cycle, projectMilestone,
-labels, description, dueDate, estimate, branchName, startedAt, completedAt,
+updatedAt, dueDate, estimate, state, assignee, delegate, team, project, cycle,
+projectMilestone, labels, description, branchName, startedAt, completedAt,
 canceledAt, archivedAt, creator, parent, children, relations, inverseRelations,
 attachments, comments
 

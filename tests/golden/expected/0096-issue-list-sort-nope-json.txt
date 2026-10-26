@@ -1,7 +1,7 @@
 exit: 2
 --- stdout
-{"code":"USAGE","error":"--sort must be updated, created or priority; got \"nope\"","usage":true}
+{"code":"USAGE","error":"--sort must be updated, created, priority, due-date, title or state; got \"nope\"","usage":true}
 
 --- stderr
-linearctl: --sort must be updated, created or priority; got "nope"
+linearctl: --sort must be updated, created, priority, due-date, title or state; got "nope"
 Run 'linearctl --help' for usage.

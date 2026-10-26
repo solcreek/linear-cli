@@ -1,7 +1,7 @@
 exit: 2
 --- stdout
-{"code":"USAGE","error":"--fields: no field \"nope\"; known: id,identifier,title,priority,priorityLabel,url,createdAt,updatedAt,state,assignee,delegate,team,project,cycle,projectMilestone,labels","usage":true}
+{"code":"USAGE","error":"--fields: no field \"nope\"; known: id,identifier,title,priority,priorityLabel,url,createdAt,updatedAt,dueDate,estimate,state,assignee,delegate,team,project,cycle,projectMilestone,labels","usage":true}
 
 --- stderr
-linearctl: --fields: no field "nope"; known: id,identifier,title,priority,priorityLabel,url,createdAt,updatedAt,state,assignee,delegate,team,project,cycle,projectMilestone,labels
+linearctl: --fields: no field "nope"; known: id,identifier,title,priority,priorityLabel,url,createdAt,updatedAt,dueDate,estimate,state,assignee,delegate,team,project,cycle,projectMilestone,labels
 Run 'linearctl --help' for usage.

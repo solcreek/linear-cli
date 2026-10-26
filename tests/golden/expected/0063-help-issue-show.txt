@@ -7,8 +7,8 @@ many seconds, so a viewer can fetch images directly; signedUrlsExpireAt says unt
 Comments are included (20 by default); give another count as --comments=N.
 
 Fields: id, identifier, title, priority, priorityLabel, url, createdAt,
-updatedAt, state, assignee, delegate, team, project, cycle, projectMilestone,
-labels, description, dueDate, estimate, branchName, startedAt, completedAt,
+updatedAt, dueDate, estimate, state, assignee, delegate, team, project, cycle,
+projectMilestone, labels, description, branchName, startedAt, completedAt,
 canceledAt, archivedAt, creator, parent, children, relations, inverseRelations,
 attachments, comments
 

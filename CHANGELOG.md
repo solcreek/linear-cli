@@ -11,6 +11,10 @@ names are only ever added, never renamed or removed.
 
 ### Added
 
+- `issue list --sort due-date|title|state` and `--reverse` (undated issues last
+  either way); `--creator WHO`; `--due-before` and `--due-after DATE`. Issue rows
+  carry `dueDate` and `estimate`. The default order sends the same request as
+  before.
 - `issue create` and `issue update` take `--estimate POINTS`, `--due-date DATE`
   and `--cycle CYCLE` (current, next, previous, a number or a UUID, within the
   issue's team), each with `none` to clear. Before, only `--json-input`

@@ -8,7 +8,7 @@
 /// project and cycle list: names are not unique across teams.
 macro_rules! issue_row {
     () => {
-        "\n\tid identifier title priority priorityLabel url createdAt updatedAt\n\tstate { id name type color }\n\tassignee { id name email }\n\tdelegate { id name }\n\tteam { id key }\n\tproject { id name }\n\tcycle { id number }\n\tprojectMilestone { id name }\n\tlabels(first: 20) { nodes { id name color } }"
+        "\n\tid identifier title priority priorityLabel url createdAt updatedAt dueDate estimate\n\tstate { id name type color }\n\tassignee { id name email }\n\tdelegate { id name }\n\tteam { id key }\n\tproject { id name }\n\tcycle { id number }\n\tprojectMilestone { id name }\n\tlabels(first: 20) { nodes { id name color } }"
     };
 }
 
@@ -34,6 +34,8 @@ pub const ISSUE_ROW_FIELDS: &[&str] = &[
     "url",
     "createdAt",
     "updatedAt",
+    "dueDate",
+    "estimate",
     "state",
     "assignee",
     "delegate",

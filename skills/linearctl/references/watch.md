@@ -23,8 +23,8 @@ Removes are reported for issues known to match: up to 2,500 found at start, and
 any since; beyond that (everything: true) every non-matching change is a remove.
 
 Fields: id, identifier, title, priority, priorityLabel, url, createdAt,
-updatedAt, state, assignee, delegate, team, project, cycle, projectMilestone,
-labels
+updatedAt, dueDate, estimate, state, assignee, delegate, team, project, cycle,
+projectMilestone, labels
 
 Usage:
   linearctl watch [flags]
@@ -37,8 +37,11 @@ Flags:
       --any-label NAME       only issues with label NAME (repeatable; any of)
       --assignee WHO         only issues assigned to WHO: me, none, or an email
       --attachment-url URL   only issues with an attachment at URL (e.g. a linked pull request)
+      --creator WHO          only issues created by WHO: me, none, or an email
       --cycle CYCLE          only issues in cycle CYCLE: current, next, previous, a number, a UUID
       --delegate WHO         only issues delegated to the agent WHO (name, email, me, any, none)
+      --due-after DATE       only issues due on or after DATE
+      --due-before DATE      only issues due on or before DATE (2026-11-30)
       --fields FIELDS        return only these comma-separated FIELDS (see Fields above)
       --heartbeat N          print a heartbeat every N seconds (default 30)
   -h, --help                 help for watch
