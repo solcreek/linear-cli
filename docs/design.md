@@ -1,8 +1,9 @@
-# linearctl — command surface (draft, 2026-10-26)
+# linearctl — command surface (as built, 2026-10-26)
 
 Go + cobra, hand-written GraphQL over `net/http` against
-`https://api.linear.app/graphql`; queries are `.graphql` files checked against a
-vendored `schema.graphql` by genqlient at `go generate` time. No `@linear/sdk`.
+`https://api.linear.app/graphql`. Every document is in `queries.go`; the tests
+validate each against the vendored `graphql/schema.graphql` (`make schema`
+refreshes it). No `@linear/sdk`, no code generation.
 The CLI is the contract: `linear-tui` (OpenTUI) spawns `linearctl … --json` and
 never holds the API key.
 
@@ -26,7 +27,7 @@ Naming follows our other tools (`crispctl`, `discordctl`). State moves with
 | 1 | failed | network error, Linear error, not found (message names what) |
 | 2 | usage | bad invocation; mutating command without exactly one of `--dry-run`/`--yes` |
 | 3 | partial | results plus `problems` (e.g. some ids in a batch not found) |
-| 4 | busy | config or cache lock held; nothing changed |
+| 4 | busy | the config or credentials lock is held; nothing changed |
 | 5 | auth | no API key, or Linear rejected it. Fix: `linearctl auth login --yes` |
 | 6 | rate-limited | Linear's request or complexity budget is spent; JSON has `retryAt` (RFC 3339) |
 
@@ -36,10 +37,10 @@ Naming follows our other tools (`crispctl`, `discordctl`). State moves with
   URL. Anything else, or control characters, `?`, `#`, `%`: usage (2).
 - `--team KEY`: team key (`ENG`); falls back to `LINEARCTL_TEAM`, then
   `default-team` in config.
-- Names (`--state "In Progress"`, `--label bug`, `--assignee me|EMAIL`) resolve to
-  ids through a cache of teams, states, labels and users (`home("cache")`, 1 h
-  TTL; `--refresh` on any command bypasses it). Ambiguous name: failed (1),
-  listing the candidates.
+- Names (`--state "In Progress"`, `--label bug`, `--assignee me|EMAIL`) go to
+  Linear as names: `issue list` filters by name, and `issue create`/`update`
+  resolve every name to an id in the same single request that checks the
+  issue. No local cache is needed. Ambiguous name: failed (1), with a count.
 - Long text (`--description`, `--body`) also comes as `--description-file PATH`
   or `-` for stdin.
 
