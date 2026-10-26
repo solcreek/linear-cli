@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  github:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # the GitHub release
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the changelog reads the history
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false # never use caching in release builds
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: binaries
+          path: dist/linearctl_*/
+          if-no-files-found: error
+
+  # Trusted publishing (OIDC): each package's trust is set with `npm trust
+  # github`, which needs the package to exist. The repository variable
+  # NPM_TRUSTED_PUBLISHING turns this on once it is.
+  npm:
+    needs: github
+    if: vars.NPM_TRUSTED_PUBLISHING == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: binaries
+          path: dist
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+      - run: node scripts/npm-packages.mjs "${GITHUB_REF_NAME#v}" dist npm-out
+      - run: scripts/npm-publish.sh npm-out
