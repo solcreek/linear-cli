@@ -19,10 +19,18 @@ import (
 
 var bin string
 
+// coverDir, when LINEARCTL_COVER_DIR is set (make cover), is where the
+// binary's runs write coverage, so it counts with the in-process tests.
+var coverDir = os.Getenv("LINEARCTL_COVER_DIR")
+
 func TestMain(m *testing.M) {
 	dir, _ := os.MkdirTemp("", "linearctl")
 	bin = filepath.Join(dir, "linearctl")
-	if out, err := exec.Command("go", "build", "-o", bin, ".").CombinedOutput(); err != nil {
+	build := []string{"build", "-o", bin}
+	if coverDir != "" {
+		build = append(build, "-cover")
+	}
+	if out, err := exec.Command("go", append(build, ".")...).CombinedOutput(); err != nil {
 		panic(string(out))
 	}
 	code := m.Run()
@@ -71,6 +79,9 @@ func runWith(t *testing.T, o opts, args ...string) result {
 	env = append(env, "NO_COLOR=1", "LINEARCTL_HOME="+o.home, "LINEARCTL_API_URL="+api)
 	if o.key != "" {
 		env = append(env, "LINEAR_API_KEY="+o.key)
+	}
+	if coverDir != "" {
+		env = append(env, "GOCOVERDIR="+coverDir)
 	}
 	cmd.Env = append(env, o.env...)
 	cmd.Stdin = strings.NewReader(o.stdin)
