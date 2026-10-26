@@ -268,13 +268,19 @@ func apiKey() (key, source string, err error) {
 	return storedKey()
 }
 
+// The Keychain's command-line tool; tests replace both.
+var (
+	hasKeychain = runtime.GOOS == "darwin"
+	securityBin = "/usr/bin/security"
+)
+
 // useKeychain: the macOS Keychain, unless LINEARCTL_HOME isolates this run
 // (tests, experiments) or there is no `security`.
 func useKeychain() bool {
-	if runtime.GOOS != "darwin" || os.Getenv("LINEARCTL_HOME") != "" {
+	if !hasKeychain || os.Getenv("LINEARCTL_HOME") != "" {
 		return false
 	}
-	_, err := os.Stat("/usr/bin/security")
+	_, err := os.Stat(securityBin)
 	return err == nil
 }
 
@@ -290,7 +296,7 @@ func credentialsFile() (dir, name string, err error) {
 
 func storedKey() (string, string, error) {
 	if useKeychain() {
-		out, err := exec.Command("/usr/bin/security", "find-generic-password",
+		out, err := exec.Command(securityBin, "find-generic-password",
 			"-s", keychainService, "-a", keychainAccount, "-w").Output()
 		if err != nil {
 			var exit *exec.ExitError
@@ -328,7 +334,7 @@ func storeKey(key string) error {
 		return errors.New("refusing to store a key with unexpected characters")
 	}
 	if useKeychain() {
-		cmd := exec.Command("/usr/bin/security", "-i")
+		cmd := exec.Command(securityBin, "-i")
 		cmd.Stdin = strings.NewReader(fmt.Sprintf("add-generic-password -U -s %s -a %s -w %s\n", keychainService, keychainAccount, key))
 		if out, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("cannot write the Keychain: %s", strings.TrimSpace(strings.ReplaceAll(string(out), key, "…")))
@@ -353,7 +359,7 @@ func storeKey(key string) error {
 // forgetKey removes the stored key; false when there was none.
 func forgetKey() (bool, error) {
 	if useKeychain() {
-		out, err := exec.Command("/usr/bin/security", "delete-generic-password",
+		out, err := exec.Command(securityBin, "delete-generic-password",
 			"-s", keychainService, "-a", keychainAccount).CombinedOutput()
 		var exit *exec.ExitError
 		if errors.As(err, &exit) && exit.ExitCode() == 44 {
