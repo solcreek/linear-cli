@@ -3,8 +3,8 @@ package main
 import "strings"
 
 // Every GraphQL document linearctl sends. queries_test.go validates each
-// against graphql/schema.graphql, so a field Linear renames fails the tests
-// rather than a user. Update the schema with `make schema`.
+// against the repository's graphql/schema.graphql, so a field Linear renames
+// fails the tests rather than a user. Update the schema with `make schema`.
 
 // issueRow is what a list shows for an issue. Search results are a different
 // type with the same fields, so it is a field list, not a fragment.

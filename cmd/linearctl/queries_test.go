@@ -11,7 +11,7 @@ import (
 // TestDocumentsMatchSchema validates every document linearctl sends against
 // Linear's published schema (graphql/schema.graphql).
 func TestDocumentsMatchSchema(t *testing.T) {
-	data, err := os.ReadFile("graphql/schema.graphql")
+	data, err := os.ReadFile("../../graphql/schema.graphql")
 	if err != nil {
 		t.Fatal(err)
 	}

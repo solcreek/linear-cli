@@ -1,7 +1,7 @@
 .PHONY: build test cover schema
 
 build:
-	go build -o linearctl .
+	go build -o linearctl ./cmd/linearctl
 
 test:
 	go test ./...
@@ -9,7 +9,7 @@ test:
 # Coverage of the in-process tests and of every binary run, merged.
 cover:
 	rm -rf .cover && mkdir -p .cover/bin .cover/unit
-	LINEARCTL_COVER_DIR=$(CURDIR)/.cover/bin go test -count=1 -cover . -args -test.gocoverdir=$(CURDIR)/.cover/unit
+	LINEARCTL_COVER_DIR=$(CURDIR)/.cover/bin go test -count=1 -cover ./cmd/linearctl -args -test.gocoverdir=$(CURDIR)/.cover/unit
 	go tool covdata textfmt -i=$$(ls -d .cover/bin/run* .cover/unit | paste -sd, -) -o .cover/profile.txt
 	go tool cover -func=.cover/profile.txt | tail -1
 
