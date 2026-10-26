@@ -14,6 +14,8 @@ usual exit codes (5 auth, 6 rate-limited, 1 failed) and a last {error} line.
 Linear's subscriptions name the changed issues; linearctl checks each batch
 against the filter with one request (at most one per 2 s) and reconciles every
 --reconcile seconds. --mode poll asks Linear every --poll-interval seconds instead.
+When Linear allows only one subscription (it closes the rest with 4003), watch
+subscribes to issue updates alone and catches up every 60 s (or --reconcile).
 Removes are reported for issues known to match: up to 2,500 found at start, and
 any since; beyond that (everything: true) every non-matching change is a remove.
 
