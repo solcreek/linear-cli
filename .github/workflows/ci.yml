@@ -18,34 +18,54 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets --locked -- -D warnings
       - name: gofmt
-        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+        run: test -z "$(gofmt -l acceptance bench)" || { gofmt -l acceptance bench; exit 1; }
       - run: go vet ./...
-      - run: go test -count=1 ./...
-      - name: Build for every release target
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
-            GOOS=${target%/*} GOARCH=${target#*/} go build -o /dev/null ./cmd/linearctl
-          done
+      # Unit tests, then the acceptance suite and the golden cases against
+      # the binary: the behavior linearctl promises.
+      - run: make test
+
+  # The acceptance suite drives processes with Unix signals; on Windows the
+  # unit tests and a release build show it still builds and holds.
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --locked
+      - run: cargo build --release --locked
 
   # The release's npm packaging, without publishing: assemble, pack and
-  # install the packages from a snapshot build, and dry-run the publish.
+  # install the packages from a build, and dry-run the publish. Only the
+  # linux-x64 binary is built here (the release builds each platform on its
+  # own); it stands in for the others, which are packed but not run.
   package:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          go-version-file: go.mod
-      - uses: goreleaser/goreleaser-action@v7
-        with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --snapshot --clean
+          targets: x86_64-unknown-linux-musl
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - name: Build and package
+        run: |
+          cargo build --release --locked --target x86_64-unknown-linux-musl
+          scripts/package.sh x86_64-unknown-linux-musl linux amd64 0.0.0-ci dist
+          for p in linux_arm64 darwin_amd64 darwin_arm64; do
+            mkdir -p "dist/linearctl_$p" && cp dist/linearctl_linux_amd64/linearctl "dist/linearctl_$p/"
+          done
+          mkdir -p dist/linearctl_windows_amd64 && cp dist/linearctl_linux_amd64/linearctl dist/linearctl_windows_amd64/linearctl.exe
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
