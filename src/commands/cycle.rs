@@ -120,6 +120,23 @@ fn nested_list(conn: &Value, paged: bool) -> Value {
     json!({"items": items, "total": null, "shown": items.len(), "truncated": more, "nextCursor": next})
 }
 
+/// --all-issues: reads the cycle's issues after the first page, 250 at a
+/// time, into c's issues, which then has no more to read.
+fn rest_of_issues(run: &mut Run, cl: &Client, c: &mut Value) -> R {
+    let id = str_at(c, "id");
+    while c["issues"]["pageInfo"]["hasNextPage"] == json!(true) {
+        let after = c["issues"]["pageInfo"]["endCursor"].clone();
+        let mut page = cl.query(run, queries::CYCLE_ISSUES, json!({"id": id, "after": after}))?;
+        let got = &mut page["cycle"]["issues"];
+        let nodes = got["nodes"].as_array_mut().map(std::mem::take).unwrap_or_default();
+        if let Some(have) = c["issues"]["nodes"].as_array_mut() {
+            have.extend(nodes);
+        }
+        c["issues"]["pageInfo"] = got["pageInfo"].take();
+    }
+    Ok(())
+}
+
 fn show_cmd() -> Cmd {
     let c = Cmd::new("show CYCLE", "Show a cycle: its progress, histories and issues, as Linear computes them")
         .long(
@@ -129,15 +146,17 @@ day-by-day histories behind Linear's burndown charts. Nothing is computed here.\
 CYCLE is current, next, previous, a cycle number, or its UUID; all but a UUID are\n\
 per team, so --team (or LINEARCTL_TEAM, or default-team) picks it, and a word that\n\
 fits cycles in two teams is an error naming both.\n\
-issues and uncompletedIssuesUponClose come as lists: --cursor continues issues.",
+issues and uncompletedIssuesUponClose come as lists: --cursor continues issues,\n\
+and --all-issues reads every one, 250 a request.",
         )
         .example(
-            "  linearctl cycle show current --team ENG --json\n  linearctl cycle show 23 --team ENG --issues 250 --fields number,progress,issues --json",
+            "  linearctl cycle show current --team ENG --json\n  linearctl cycle show 23 --team ENG --issues 250 --fields number,progress,issues --json\n  linearctl cycle show current --team ENG --all-issues --fields number,issues --json",
         )
         .args(Args::Exact(1))
         .run(show)
         .flag(Flag::str("team", "the cycle's team `KEY` (falls back to LINEARCTL_TEAM, then default-team)"))
         .flag(Flag::whole("issues", 50, "include the first `N` issues; 0 for none"))
+        .flag(Flag::bool("all-issues", "include every issue, however many (overrides --issues)"))
         .flag(Flag::whole("uncompleted", 50, "include the first `N` issues left open at close; 0 for none"))
         .flag(cursor_flag());
     fields_flag_spec(c, SHOW_FIELDS)
@@ -148,14 +167,23 @@ fn show(run: &mut Run, ctx: &Ctx) -> R {
     let filter = cycle_filter(ctx, &word)?;
     let fields = fields_flag(ctx, SHOW_FIELDS)?;
     let cursor = cursor_value(ctx)?;
-    let (issues, uncompleted) = (ctx.whole("issues"), ctx.whole("uncompleted"));
-    if issues > 250 || uncompleted > 250 {
-        return Err(usage("--issues and --uncompleted are at most 250; page issues with --cursor"));
+    let (mut issues, uncompleted) = (ctx.whole("issues"), ctx.whole("uncompleted"));
+    let all = ctx.bool("all-issues");
+    if (issues > 250 && !all) || uncompleted > 250 {
+        return Err(usage(
+            "--issues and --uncompleted are at most 250; page issues with --cursor, or pass --all-issues",
+        ));
+    }
+    if all {
+        issues = 250;
     }
     let cl = run.client()?;
     let vars = json!({"filter": filter, "issues": issues, "withIssues": issues > 0, "after": optional(&cursor),
         "uncompleted": uncompleted, "withUncompleted": uncompleted > 0});
     let mut c = find_cycle(run, &cl, &word, vars)?;
+    if all {
+        rest_of_issues(run, &cl, &mut c)?;
+    }
     for (k, paged) in [("issues", true), ("uncompletedIssuesUponClose", false)] {
         if c.get(k).is_some_and(|v| !v.is_null()) {
             c[k] = nested_list(&c[k], paged);

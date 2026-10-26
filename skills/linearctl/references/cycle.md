@@ -92,7 +92,8 @@ day-by-day histories behind Linear's burndown charts. Nothing is computed here.
 CYCLE is current, next, previous, a cycle number, or its UUID; all but a UUID are
 per team, so --team (or LINEARCTL_TEAM, or default-team) picks it, and a word that
 fits cycles in two teams is an error naming both.
-issues and uncompletedIssuesUponClose come as lists: --cursor continues issues.
+issues and uncompletedIssuesUponClose come as lists: --cursor continues issues,
+and --all-issues reads every one, 250 a request.
 
 Fields: id, number, name, description, startsAt, endsAt, completedAt, isActive,
 isNext, isPrevious, isPast, isFuture, progress, team, createdAt, updatedAt,
@@ -106,8 +107,10 @@ Usage:
 Examples:
   linearctl cycle show current --team ENG --json
   linearctl cycle show 23 --team ENG --issues 250 --fields number,progress,issues --json
+  linearctl cycle show current --team ENG --all-issues --fields number,issues --json
 
 Flags:
+      --all-issues      include every issue, however many (overrides --issues)
       --cursor CURSOR   continue after CURSOR (nextCursor from the previous page)
       --fields FIELDS   return only these comma-separated FIELDS (see Fields above)
   -h, --help            help for show

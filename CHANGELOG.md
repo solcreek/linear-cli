@@ -22,6 +22,9 @@ names are only ever added, never renamed or removed.
 - `relation delete ISSUE OTHER`, without TYPE, deletes every relation between the
   two issues in either direction and lists each in `relations`. One that fails
   to delete is a partial result (exit 3) with `problems`.
+- `cycle show --all-issues` returns every issue in the cycle, however many,
+  250 a request; each issue row carries its state type, assignee and delegate.
+  `--issues 0` still means none, as on `project show`.
 
 ### Changed
 

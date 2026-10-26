@@ -321,6 +321,15 @@ pub const CYCLE_ARCHIVE: &str = "mutation CycleArchive($id: String!) { cycleArch
 /// as ambiguous; the detail asks for one, since first multiplies the cost of
 /// everything nested (two at 250 issues each was 14,027 points of 10,000).
 /// Archived cycles count: a UUID may name one.
+/// cycle show --all-issues: the cycle's issues after the first page.
+pub const CYCLE_ISSUES: &str = concat!(
+    "query CycleIssues($id: String!, $after: String) {\n  cycle(id: $id) { issues(first: 250, after: $after) { nodes {",
+    issue_row!(),
+    " } ",
+    page_info!(),
+    " } }\n}"
+);
+
 pub const CYCLE_SHOW: &str = concat!(
     "query CycleShow($filter: CycleFilter!, $issues: Int!, $withIssues: Boolean!, $after: String,\n  $uncompleted: Int!, $withUncompleted: Boolean!) {\n  matches: cycles(filter: $filter, first: 2, includeArchived: true) { nodes { id team { key } } }\n  cycles(filter: $filter, first: 1, includeArchived: true) { nodes {\n    ",
     cycle_row!(),
@@ -370,6 +379,7 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("IssueListView", ISSUE_LIST_VIEW),
         ("Views", VIEWS),
         ("CycleShow", CYCLE_SHOW),
+        ("CycleIssues", CYCLE_ISSUES),
         ("CycleFind", CYCLE_FIND),
         ("CycleCreateResolve", CYCLE_CREATE_RESOLVE),
         ("CycleCreate", CYCLE_CREATE),

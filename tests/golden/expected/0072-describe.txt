@@ -1219,9 +1219,17 @@ exit: 0
           "commands": [],
           "examples": [
             "linearctl cycle show current --team ENG --json",
-            "linearctl cycle show 23 --team ENG --issues 250 --fields number,progress,issues --json"
+            "linearctl cycle show 23 --team ENG --issues 250 --fields number,progress,issues --json",
+            "linearctl cycle show current --team ENG --all-issues --fields number,issues --json"
           ],
           "flags": [
+            {
+              "default": null,
+              "description": "include every issue, however many (overrides --issues)",
+              "name": "all-issues",
+              "short": null,
+              "type": "boolean"
+            },
             {
               "default": null,
               "description": "continue after CURSOR (nextCursor from the previous page)",

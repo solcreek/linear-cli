@@ -275,3 +275,27 @@ func TestCycleUpdateAndArchive(t *testing.T) {
 		t.Errorf("already archived: exit %d, %q", r.code, r.out)
 	}
 }
+
+func TestCycleShowAllIssues(t *testing.T) {
+	t.Parallel()
+	var after []any
+	api := cycleFake(t, cycleNode(23, "ENG")).onFunc("CycleIssues", func(v map[string]any) (int, any, map[string]string) {
+		after = append(after, v["after"])
+		page := conn("c-2", issueNode("ENG-2", "Two"))
+		if len(after) == 2 {
+			page = conn("", issueNode("ENG-3", "Three"))
+		}
+		return 200, map[string]any{"data": map[string]any{"cycle": map[string]any{"issues": page}}}, nil
+	})
+	r := runWith(t, opts{api: api, key: testKey}, "cycle", "show", "current", "--team", "ENG", "--all-issues", "--json")
+	is, _ := decode(t, r.out)["cycle"].(map[string]any)["issues"].(map[string]any)
+	if r.code != 0 || is["shown"] != 3.0 || is["truncated"] != false || is["nextCursor"] != nil || r.err != "" {
+		t.Fatalf("exit %d, issues %v, stderr %q", r.code, is, r.err)
+	}
+	if v := api.last("CycleShow").Vars; v["issues"] != 250.0 || v["withIssues"] != true {
+		t.Errorf("first page vars %v", v)
+	}
+	if jsonOf(after) != `["c-issues","c-2"]` || api.last("CycleIssues").Vars["id"] != "cy-ENG" {
+		t.Errorf("follow-ups after %v, vars %v", after, api.last("CycleIssues").Vars)
+	}
+}
