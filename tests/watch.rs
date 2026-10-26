@@ -39,6 +39,11 @@ struct Fake {
 
 impl Fake {
     fn start(behavior: Behavior) -> Fake {
+        Fake::start_slow(behavior, Duration::ZERO)
+    }
+
+    /// One whose snapshot query (WatchIDs) takes snapshot to answer.
+    fn start_slow(behavior: Behavior, snapshot: Duration) -> Fake {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let url = format!("http://{}/graphql", listener.local_addr().unwrap());
         let seen = Arc::new(Mutex::new(Seen::default()));
@@ -47,7 +52,7 @@ impl Fake {
         std::thread::spawn(move || {
             for stream in listener.incoming().flatten() {
                 let (s, o) = (s.clone(), o.clone());
-                std::thread::spawn(move || serve(stream, behavior, s, o));
+                std::thread::spawn(move || serve(stream, behavior, snapshot, s, o));
             }
         });
         Fake { url, seen, open }
@@ -69,6 +74,7 @@ impl Fake {
 fn serve(
     stream: TcpStream,
     behavior: Behavior,
+    snapshot: Duration,
     seen: Arc<Mutex<Seen>>,
     open: Arc<Mutex<Vec<tungstenite::WebSocket<TcpStream>>>>,
 ) {
@@ -77,7 +83,7 @@ fn serve(
     if String::from_utf8_lossy(&head[..n]).to_ascii_lowercase().contains("upgrade: websocket") {
         websocket(stream, behavior, seen, open);
     } else {
-        graphql(stream);
+        graphql(stream, snapshot);
     }
 }
 
@@ -152,8 +158,8 @@ fn websocket(
 }
 
 /// Answers watch's queries: no issues match at start; an issue asked for by
-/// id is there and matches.
-fn graphql(stream: TcpStream) {
+/// id is there and matches. The snapshot's answer waits snapshot.
+fn graphql(stream: TcpStream, snapshot: Duration) {
     let mut reader = BufReader::new(stream.try_clone().unwrap());
     let mut stream = stream;
     loop {
@@ -178,6 +184,9 @@ fn graphql(stream: TcpStream) {
         let req: Value = serde_json::from_slice(&body).unwrap();
         let query = req["query"].as_str().unwrap_or("");
         let op = query.split_whitespace().nth(1).unwrap_or("").split('(').next().unwrap_or("");
+        if op == "WatchIDs" {
+            std::thread::sleep(snapshot);
+        }
         let nodes: Vec<Value> = match op {
             "IssueList" => {
                 let ids = &req["variables"]["filter"]["and"][1]["id"]["in"];
@@ -290,9 +299,20 @@ fn reconnects_back_off_when_every_connection_drops() {
 /// straight away, stays connected, and still sees an update.
 #[test]
 fn one_subscription_falls_back_to_updates() {
-    let fake = Fake::start(Behavior::OneSubscription);
+    falls_back(Fake::start(Behavior::OneSubscription));
+}
+
+/// The 4003 comes while watch is still taking its snapshot, and waits for
+/// it: how long the connection lived is when it closed, not when watch got
+/// to it, so watch still falls back.
+#[test]
+fn one_subscription_falls_back_after_a_slow_snapshot() {
+    falls_back(Fake::start_slow(Behavior::OneSubscription, Duration::from_secs(11)));
+}
+
+fn falls_back(fake: Fake) {
     let w = Watch::start(&fake);
-    w.next("ready", Duration::from_secs(10));
+    w.next("ready", Duration::from_secs(20));
     let gap = w.next("gap", Duration::from_secs(5));
     assert_eq!(gap["reason"], "reconnect", "{gap}");
     // The second connection subscribes to updates only, and stays.

@@ -331,7 +331,7 @@ impl Watcher {
         let mut backoff = SECOND;
         loop {
             let event = if let Some(e) = failed_now.take() {
-                Some(Event::Failed(e, None))
+                Some(Event::Failed(e, None, Instant::now()))
             } else {
                 let mut deadline = next_beat.min(next_catch_up);
                 if let Some(f) = flush {
@@ -342,7 +342,9 @@ impl Watcher {
                     Some(s) => match s.events.recv_timeout(wait) {
                         Ok(e) => Some(e),
                         Err(RecvTimeoutError::Timeout) => None,
-                        Err(RecvTimeoutError::Disconnected) => Some(Event::Failed("the stream ended".into(), None)),
+                        Err(RecvTimeoutError::Disconnected) => {
+                            Some(Event::Failed("the stream ended".into(), None, Instant::now()))
+                        }
                     },
                     None => {
                         std::thread::sleep(wait);
@@ -363,10 +365,10 @@ impl Watcher {
                     }
                     continue;
                 }
-                Some(Event::Failed(e, code)) => {
+                Some(Event::Failed(e, code, ended)) => {
                     // The stream is down: reconnect, then replay the gap.
                     let down = time::now();
-                    let lived = sub.as_ref().map_or(Duration::ZERO, |s| s.opened.elapsed());
+                    let lived = sub.as_ref().map_or(Duration::ZERO, |s| ended.saturating_duration_since(s.opened));
                     if let Some(s) = sub.take() {
                         s.close();
                     }
@@ -460,8 +462,9 @@ fn tick(prev: Instant, every: i64) -> Instant {
 enum Event {
     /// The id of an issue that changed.
     Id(String),
-    /// The connection ended: why, and the close code if Linear sent one.
-    Failed(String, Option<u16>),
+    /// The connection ended: why, the close code if Linear sent one, and
+    /// when. The loop may see it much later, after a snapshot or a catch-up.
+    Failed(String, Option<u16>, Instant),
 }
 
 enum Command {
@@ -667,7 +670,7 @@ fn read(mut ws: Socket, events: Sender<Event>, commands: Receiver<Command>, seen
                 continue;
             }
             Err(e) => {
-                let _ = events.send(Event::Failed(e.to_string(), None));
+                let _ = events.send(Event::Failed(e.to_string(), None, Instant::now()));
                 return;
             }
         };
@@ -679,7 +682,7 @@ fn read(mut ws: Socket, events: Sender<Event>, commands: Receiver<Command>, seen
                 let code = f.as_ref().map(|f| u16::from(f.code));
                 let why =
                     f.map(|f| format!("status = {}, reason = {}", u16::from(f.code), f.reason)).unwrap_or_default();
-                let _ = events.send(Event::Failed(format!("closed: {why}"), code));
+                let _ = events.send(Event::Failed(format!("closed: {why}"), code, Instant::now()));
                 return;
             }
             _ => continue,
@@ -702,8 +705,11 @@ fn read(mut ws: Socket, events: Sender<Event>, commands: Receiver<Command>, seen
             Some(kind @ ("error" | "complete")) => {
                 let payload = m.get("payload").map(json::marshal).unwrap_or_default();
                 let id = str_at(&m, "id");
-                let _ = events
-                    .send(Event::Failed(format!("subscription {id} ended: {kind} {}", printable(&payload)), None));
+                let _ = events.send(Event::Failed(
+                    format!("subscription {id} ended: {kind} {}", printable(&payload)),
+                    None,
+                    Instant::now(),
+                ));
                 let _ = ws.get_ref().tcp().shutdown(std::net::Shutdown::Both);
                 return;
             }
