@@ -1,4 +1,4 @@
-.PHONY: build release test check cover schema
+.PHONY: build release test check cover live schema
 
 build:
 	cargo build
@@ -24,6 +24,11 @@ check:
 # Coverage of every test above, merged, on one instrumented binary.
 cover:
 	scripts/cover.sh
+
+# Against the real API, changing a real team: LINEARCTL_LIVE_TEAM names a
+# sandbox team, LINEAR_API_KEY a key for it. Never part of test or check.
+live: build
+	LINEARCTL_BIN=target/debug/linearctl go test -count=1 -v -run Live ./acceptance
 
 # Refresh Linear's schema; the tests then check every query against it.
 schema:

@@ -147,6 +147,7 @@ Linear are Go.
 make test     # unit tests, then acceptance/ and tests/golden against the binary
 make check    # what CI runs: rustfmt, clippy, gofmt, go vet, then make test
 make cover    # coverage of all of the above, merged
+make live     # against the real API: LINEARCTL_LIVE_TEAM=SANDBOX LINEAR_API_KEY=…
 make schema   # refresh graphql/schema.graphql from Linear
 ```
 
