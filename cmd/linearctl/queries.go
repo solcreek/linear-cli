@@ -80,7 +80,7 @@ var (
   $email: String!, $withUser: Boolean!, $me: Boolean!, $labels: [String!]!, $withLabels: Boolean!,
   $project: String!, $withProject: Boolean!, $parent: IssueFilter!, $withParent: Boolean!,
   $milestone: String!, $withMilestone: Boolean!, $delegate: String!, $withDelegate: Boolean!) {
-  issue(id: $id) { id identifier title description priority dueDate estimate
+  issue(id: $id) { id identifier title description priority dueDate estimate updatedAt
     team { id key states(filter: { name: { eqIgnoreCase: $state } }) @include(if: $withState) { nodes { id name } } }
     state { id name } assignee { id email } project { id name } parent { id identifier }
     projectMilestone { id } delegate { id }

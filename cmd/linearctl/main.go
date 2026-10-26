@@ -28,17 +28,19 @@ var version = "0.1.0" // set by -ldflags "-X main.version=..." at release
 
 // Every exit code, in help and in `describe`. Add to it; never reuse one.
 const (
-	exitOK      = 0
-	exitFailed  = 1
-	exitUsage   = 2
-	exitPartial = 3
-	exitBusy    = 4
-	exitAuth    = 5
-	exitLimited = 6
+	exitOK       = 0
+	exitFailed   = 1
+	exitUsage    = 2
+	exitPartial  = 3
+	exitBusy     = 4
+	exitAuth     = 5
+	exitLimited  = 6
+	exitConflict = 7
 )
 
 const exitHelp = "Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or\n" +
-	"Linear rejected it), 6 rate-limited (retry after retryAt)"
+	"Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since\n" +
+	"you read it; read it again)"
 
 // usageError marks a mistake in the invocation: exit 2, a short message.
 type usageError struct{ error }
@@ -52,6 +54,10 @@ type busyError struct{ error }
 
 // authError: no API key, or Linear rejected it (exit 5).
 type authError struct{ error }
+
+// conflictError: a precondition such as --if-updated-at no longer holds;
+// nothing changed (exit 7).
+type conflictError struct{ error }
 
 // limitError: Linear's request or complexity budget is spent (exit 6).
 // retryAt is when it resets, zero when Linear did not say.
@@ -406,7 +412,7 @@ func describe(c *cobra.Command) map[string]any {
 	if !c.HasParent() {
 		d["version"] = version
 		d["exitCodes"] = map[string]int{"ok": exitOK, "failed": exitFailed, "usage": exitUsage, "partial": exitPartial,
-			"busy": exitBusy, "auth": exitAuth, "rateLimited": exitLimited}
+			"busy": exitBusy, "auth": exitAuth, "rateLimited": exitLimited, "conflict": exitConflict}
 		return d
 	}
 	// Positionals from Use ("files [DIR]"): [X] is optional.
@@ -487,6 +493,8 @@ func main() {
 		os.Exit(exitAuth)
 	case isLimited:
 		os.Exit(exitLimited)
+	case errors.As(err, new(conflictError)):
+		os.Exit(exitConflict)
 	}
 	os.Exit(exitFailed)
 }

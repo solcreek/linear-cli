@@ -119,6 +119,7 @@ flags and exit codes as JSON.
 | 4 | busy: a config lock is held; retry |
 | 5 | auth: no API key, or Linear rejected it |
 | 6 | rate-limited: retry after `retryAt` |
+| 7 | conflict: `--if-updated-at` no longer holds; read it again |
 
 ## Speed
 

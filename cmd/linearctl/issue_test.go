@@ -458,6 +458,7 @@ func TestIssueCreateRefusals(t *testing.T) {
 func currentIssue() map[string]any {
 	return map[string]any{
 		"id": "id-ENG-5", "identifier": "ENG-5", "title": "Old title", "description": nil, "priority": 3,
+		"updatedAt": "2026-10-02T08:00:00.000Z",
 		"team":     map[string]any{"id": "team-eng", "key": "ENG", "states": conn("", map[string]any{"id": "st-doing", "name": "In Progress"})},
 		"state":    map[string]any{"id": "st-doing", "name": "In Progress"},
 		"assignee": map[string]any{"id": "u-ada", "email": "ada@example.com"},
@@ -644,5 +645,30 @@ func TestIssueUpdateDetachesFromItsParent(t *testing.T) {
 	r := runWith(t, opts{api: api, key: testKey}, "issue", "update", "ENG-5", "--parent", "none", "--dry-run", "--json")
 	if d := decode(t, r.out); r.code != 0 || jsonOf(d["input"]) != `{"parentId":null}` || api.last("UpdateResolve").Vars["withParent"] != false {
 		t.Errorf("exit %d, %q", r.code, r.out)
+	}
+}
+
+func TestIssueUpdateIfUpdatedAt(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		since string
+		code  int
+	}{
+		{"2026-10-02T08:00:00Z", 0},
+		{"2026-10-02T16:00:00+08:00", 0}, // the same instant
+		{"2026-10-01T00:00:00Z", exitConflict},
+		{"yesterday", exitUsage},
+	} {
+		api := updateFake(t)
+		r := runWith(t, opts{api: api, key: testKey}, "issue", "update", "ENG-5", "--title", "New title", "--if-updated-at", c.since, "--yes", "--json")
+		if r.code != c.code {
+			t.Errorf("%s: exit %d, %q", c.since, r.code, r.out)
+		}
+		if sent := slices.Contains(api.ops(), "IssueUpdate"); sent != (c.code == 0) {
+			t.Errorf("%s: sent %v", c.since, sent)
+		}
+		if c.code == exitConflict && !strings.Contains(decode(t, r.out)["error"].(string), "changed at 2026-10-02T08:00:00.000Z") {
+			t.Errorf("%s: %q", c.since, r.out)
+		}
 	}
 }

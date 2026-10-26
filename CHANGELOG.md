@@ -33,6 +33,8 @@ names are only ever added, never renamed or removed.
   `comment delete` (a comment that is not there is `changed: false`,
   `found: false`).
 - `issue list --priority`, repeatable.
+- `issue update --if-updated-at TIME` changes the issue only if its `updatedAt`
+  is still TIME, and otherwise exits with the new code 7 (conflict).
 - `--meta` (or `LINEARCTL_META=1`) adds `meta` to any `--json` result: the
   requests the command sent, the rate limit left after them, and the last
   query's complexity. It costs no extra request.

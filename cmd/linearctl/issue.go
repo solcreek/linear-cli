@@ -877,7 +877,7 @@ func issueUpdate() *cobra.Command {
 		Long: "Change an issue's fields. Only fields that differ from the issue as it is are\n" +
 			"sent; when none differ, nothing is sent and the result is changed: false.\n" +
 			"--label replaces all labels; --add-label and --remove-label adjust them.\n" +
-			"State names resolve within the issue's own team.\n" +
+			"State names resolve within the issue's own team.\n" + "--if-updated-at TIME refuses (exit 7, conflict) if the issue changed since you\nread it.\n" +
 			"Changes things: pass --dry-run to preview, --yes to apply.",
 		Example: "  linearctl issue update ENG-123 --state \"In Progress\" --assignee me --dry-run --json\n" +
 			"  linearctl issue update ENG-123 --add-label blocked --priority high --yes",
@@ -903,6 +903,12 @@ func issueUpdate() *cobra.Command {
 			if cmd.Flags().Changed("label") && (len(add) > 0 || len(remove) > 0) {
 				return usageError{errors.New("pass --label, or --add-label/--remove-label, not both")}
 			}
+			since, _ := cmd.Flags().GetString("if-updated-at")
+			if since != "" {
+				if _, err := time.Parse(time.RFC3339, since); err != nil {
+					return usageError{fmt.Errorf("--if-updated-at must be the issue's updatedAt, an RFC 3339 time; got %q", since)}
+				}
+			}
 			cl, err := newClient()
 			if err != nil {
 				return err
@@ -914,6 +920,7 @@ func issueUpdate() *cobra.Command {
 				Issue struct {
 					ID          string  `json:"id"`
 					Identifier  string  `json:"identifier"`
+					UpdatedAt   string  `json:"updatedAt"`
 					Title       string  `json:"title"`
 					Description *string `json:"description"`
 					Priority    float64 `json:"priority"`
@@ -934,6 +941,13 @@ func issueUpdate() *cobra.Command {
 				return notFound(err, "issue "+ref)
 			}
 			is := r.Issue
+			if since != "" && is.UpdatedAt != "" {
+				then, _ := time.Parse(time.RFC3339, since)
+				now, err := time.Parse(time.RFC3339, is.UpdatedAt)
+				if err == nil && !now.Equal(then) {
+					return conflictError{fmt.Errorf("%s changed at %s, not %s as --if-updated-at expects; read it again", is.Identifier, is.UpdatedAt, since)}
+				}
+			}
 			currentProject := ""
 			if is.Project != nil {
 				currentProject = is.Project.ID
@@ -1022,6 +1036,7 @@ func issueUpdate() *cobra.Command {
 	issueFields(c)
 	c.Flags().StringArray("label", nil, "set the labels to `NAME`s, replacing the rest (repeatable)")
 	c.Flags().StringArray("add-label", nil, "add label `NAME` (repeatable)")
+	c.Flags().String("if-updated-at", "", "change it only if its updatedAt is still `TIME` (else exit 7)")
 	c.Flags().StringArray("remove-label", nil, "remove label `NAME` (repeatable)")
 	mutating(c)
 	return c

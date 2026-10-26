@@ -19,7 +19,8 @@ before guessing a flag. Always pass `--json`.
 - Exit codes: 0 ok, 1 failed (read `error`; "not found: …" names what), 2 usage
   (fix the invocation; do not retry as is), 3 partial (`api query`: data plus
   `problems`), 4 busy (retry), 5 auth (set `LINEAR_API_KEY` or run
-  `auth login`), 6 rate-limited (wait until `retryAt`).
+  `auth login`), 6 rate-limited (wait until `retryAt`), 7 conflict (the issue
+  changed since you read it; read it and decide again).
 - Lists: `{items, total: null, shown, truncated, nextCursor}`. `total` is
   always null (Linear does not count); continue with `--cursor nextCursor`.
   Keep output small with `--fields` and `--limit`.

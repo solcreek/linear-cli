@@ -258,7 +258,7 @@ func TestDescribe(t *testing.T) {
 	if r.code != 0 || json.Unmarshal([]byte(r.out), &d) != nil {
 		t.Fatalf("exit %d, stdout %q", r.code, r.out)
 	}
-	want := map[string]int{"ok": 0, "failed": 1, "usage": 2, "partial": 3, "busy": 4, "auth": 5, "rateLimited": 6}
+	want := map[string]int{"ok": 0, "failed": 1, "usage": 2, "partial": 3, "busy": 4, "auth": 5, "rateLimited": 6, "conflict": 7}
 	for k, v := range want {
 		if d.ExitCodes[k] != v {
 			t.Errorf("exitCodes[%s] = %d, want %d", k, d.ExitCodes[k], v)
