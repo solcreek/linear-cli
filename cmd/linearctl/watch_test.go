@@ -140,6 +140,17 @@ func newWatchFake(t *testing.T) *watchFake {
 	return w
 }
 
+// subscribedAtLeast waits until the fake has accepted n subscriptions: they
+// reach it asynchronously, so a push or a drop before then hits nothing.
+func (w *watchFake) subscribedAtLeast(t *testing.T, n int) {
+	t.Helper()
+	for deadline := time.Now().Add(5 * time.Second); w.subscribed() < n; time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("%d subscriptions, want %d", w.subscribed(), n)
+		}
+	}
+}
+
 func (w *watchFake) set(f func()) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -154,8 +165,9 @@ func TestWatchStreamsUpsertsAndRemoves(t *testing.T) {
 	if ready["mode"] != "subscription" || ready["known"] != 1.0 || ready["everything"] != false {
 		t.Fatalf("ready %v", ready)
 	}
+	api.subscribedAtLeast(t, 4) // created, updated, archived, unarchived
 	if n := api.subscribed(); n != 4 {
-		t.Errorf("%d subscriptions, want 4 (created, updated, archived, unarchived)", n)
+		t.Errorf("%d subscriptions, want 4", n)
 	}
 	// A new issue starts matching.
 	api.set(func() { api.matching["id-ENG-2"] = true })
@@ -206,17 +218,14 @@ func TestWatchReplaysSinceAndReconnects(t *testing.T) {
 	}
 	s.next("ready")
 	api.set(func() { api.replay = nil; api.changed = nil })
+	api.subscribedAtLeast(t, 4)
 	api.dropWS()
 	gap := s.next("gap")
 	if gap["reason"] != "reconnect" || gap["mode"] != "subscription" {
 		t.Errorf("gap %v", gap)
 	}
 	// The new subscriptions reach the fake after the gap line: wait for them.
-	for deadline := time.Now().Add(5 * time.Second); api.subscribed() < 8; time.Sleep(10 * time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatalf("resubscribed %d times, want 8", api.subscribed())
-		}
-	}
+	api.subscribedAtLeast(t, 8)
 	api.set(func() { api.matching["id-ENG-4"] = true })
 	api.push("id-ENG-4")
 	if up := s.next("upsert"); up["issue"].(map[string]any)["identifier"] != "ENG-4" {
