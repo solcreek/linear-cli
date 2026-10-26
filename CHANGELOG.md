@@ -1,0 +1,66 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Until 1.0.0, a minor version may change the command surface; `--json` field
+names are only ever added, never renamed or removed.
+
+## [Unreleased]
+
+### Added
+
+- `relation create` and `relation delete ISSUE TYPE OTHER` for blocks,
+  blocked-by, duplicate, related and similar. Creating a relation that exists,
+  or deleting one that does not, is `changed: false`.
+- `issue show` lists incoming relations as `inverseRelations`; relations carry
+  their id.
+- Project milestones: `--milestone NAME|none` on `issue create` and
+  `issue update`, `issue list --milestone`, `milestone list --project`, and
+  `projectMilestone` in issue rows.
+- Agent delegation: `--delegate NAME|EMAIL|none` on `issue create` and
+  `issue update` (app users only), `issue list --delegate` (also `any`,
+  `none`), `delegate` in issue rows, and `user list --app`.
+- `issue unarchive`.
+- `comment create --parent COMMENT` to reply in a thread; `comment update` and
+  `comment delete` (a comment that is not there is `changed: false`,
+  `found: false`).
+- `issue list --priority`, repeatable.
+- Nested objects in issue rows (`state`, `assignee`, `team`, `project`,
+  `cycle`, `labels`) carry their `id`, and states and labels their `color`.
+- "What belongs in linearctl" in docs/design.md, and a test that keeps
+  workspace conventions out of the source.
+
+### Changed
+
+- `issue list --team` may be repeated, matching any of the teams.
+
+## [0.1.0] - 2026-10-26
+
+### Added
+
+- First release. Issues: `issue list` (filters by team, assignee, state, state
+  type, label, project, cycle and update time; `--query` search; `--sort`),
+  `issue show` (also `issue view`), `issue create`, `issue update` and
+  `issue archive`.
+- Label filters: `--label` (all of), `--any-label` (any of) and
+  `--without-label` (none of).
+- `comment list` and `comment create`.
+- Lookups: `team list`, `state list`, `label list`, `user list`,
+  `project list`, `cycle list`.
+- `file download` for images and attachments on uploads.linear.app, and
+  `issue show --signed-urls` for URLs that open without the API key.
+- `auth login`, `auth status`, `auth logout`; `LINEAR_API_KEY` wins over a key
+  stored in the macOS Keychain or `credentials.json`.
+- `config show` and `config set default-team`.
+- `api query` for read-only GraphQL; mutations are refused.
+- `describe`: every command, flag, alias and exit code as JSON.
+- `--json` on every command, compact into a pipe; `--dry-run`/`--yes` on every
+  change; `--id` makes `issue create` and `comment create` safe to retry; exit
+  codes 5 (auth) and 6 (rate-limited, with `retryAt`).
+- Releases for linux, darwin and windows, and the npm package
+  `@solcreek/linear-cli` with one native binary per platform.
+
+[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/solcreek/linear-cli/releases/tag/v0.1.0
