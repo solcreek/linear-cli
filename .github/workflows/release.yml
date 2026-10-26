@@ -58,5 +58,39 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
+      - name: npm new enough for trusted publishing (11.5.1 or later)
+        run: npm install -g npm@11 && npm --version
       - run: node scripts/npm-packages.mjs "${GITHUB_REF_NAME#v}" dist npm-out
       - run: scripts/npm-publish.sh npm-out
+
+  # Install what was just published, as a user would, on each platform.
+  verify:
+    needs: npm
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Install from npm and run it
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          version=${VERSION#v}
+          for _ in 1 2 3 4 5 6 7 8 9 10; do
+            rm -rf "$RUNNER_TEMP/g"
+            if npm install -g --prefix "$RUNNER_TEMP/g" --prefer-online --allow-scripts=@solcreek/linear-cli \
+                "@solcreek/linear-cli@$version" && "$RUNNER_TEMP/g/bin/linearctl" --version; then
+              break
+            fi
+            sleep 30
+          done
+          bin="$RUNNER_TEMP/g/bin/linearctl"
+          test "$("$bin" --version)" = "linearctl $version"
+          # The native binary, not the Node shim: install.js replaced it.
+          if head -c 2 "$bin" | grep -q '#!'; then echo "bin is still the Node shim"; exit 1; fi
+          "$bin" --demo issue list --limit 1 --json
