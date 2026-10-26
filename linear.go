@@ -117,7 +117,12 @@ var waitNote sync.Once
 // raw sends doc and returns Linear's answer, errors included. Transport, auth
 // and rate-limit failures are errors; GraphQL errors are left to the caller.
 func (c *client) raw(doc string, vars map[string]any) (*gqlResponse, error) {
-	body, _ := json.Marshal(map[string]any{"query": doc, "variables": vars})
+	return c.send(map[string]any{"query": doc, "variables": vars})
+}
+
+// send posts a whole GraphQL request body ({query, variables, operationName}).
+func (c *client) send(request map[string]any) (*gqlResponse, error) {
+	body, _ := json.Marshal(request)
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, endpoint(), bytes.NewReader(body))
 	if err != nil {
 		return nil, err
