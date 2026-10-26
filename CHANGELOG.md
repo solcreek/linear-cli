@@ -9,6 +9,18 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-26
+
+### Fixed
+
+- Releases publish to npm by themselves again (trusted publishing). 0.2.0's
+  npm job failed on a path bug in the publish script, and 0.2.0 was published
+  by hand.
+- The main npm package is published only after the registry serves every
+  platform package; with 0.2.0, installing in the first minute could leave out
+  the binary.
+- Prereleases go to npm under the `next` tag, never `latest`.
+
 ## [0.2.0] - 2026-10-26
 
 ### Added
@@ -102,6 +114,7 @@ names are only ever added, never renamed or removed.
 - Releases for linux, darwin and windows, and the npm package
   `@solcreek/linear-cli` with one native binary per platform.
 
-[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/solcreek/linear-cli/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/solcreek/linear-cli/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/solcreek/linear-cli/releases/tag/v0.1.0

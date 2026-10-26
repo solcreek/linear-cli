@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-var version = "0.2.0" // set by -ldflags "-X main.version=..." at release
+var version = "0.2.1" // set by -ldflags "-X main.version=..." at release
 
 // Every exit code, in help and in `describe`. Add to it; never reuse one.
 const (
