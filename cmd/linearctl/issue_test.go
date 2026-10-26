@@ -53,6 +53,8 @@ func TestIssueListFilters(t *testing.T) {
 		want string // the filter, as JSON
 	}{
 		{[]string{"--team", "eng"}, `{"team":{"key":{"eq":"ENG"}}}`},
+		{[]string{"--team", "eng", "--team", "Web"}, `{"team":{"key":{"in":["ENG","WEB"]}}}`},
+		{[]string{"--priority", "urgent", "--priority", "2"}, `{"priority":{"in":[1,2]}}`},
 		{[]string{"--assignee", "me"}, `{"assignee":{"isMe":{"eq":true}}}`},
 		{[]string{"--assignee", "none"}, `{"assignee":{"null":true}}`},
 		{[]string{"--assignee", "ada@example.com"}, `{"assignee":{"email":{"eqIgnoreCase":"ada@example.com"}}}`},
@@ -99,7 +101,7 @@ func TestIssueListRefusesBadFilters(t *testing.T) {
 	cases := [][]string{
 		{"--assignee", "ada"}, {"--state-type", "done"}, {"--cycle", "last"}, {"--updated-since", "yesterday"},
 		{"--sort", "title"}, {"--query", "x", "--sort", "priority"}, {"--fields", "identifier,nope"},
-		{"--team", "E N G"}, {"--state", "a\x07"}, {"--limit", "-1"}, {"--any-label", ""}, {"--without-label", "a\x07"},
+		{"--team", "E N G"}, {"--priority", "soon"}, {"--priority", "5"}, {"--state", "a\x07"}, {"--limit", "-1"}, {"--any-label", ""}, {"--without-label", "a\x07"},
 	}
 	api := newFake(t)
 	for _, args := range cases {

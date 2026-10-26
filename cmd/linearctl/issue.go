@@ -105,7 +105,8 @@ func issueList() *cobra.Command {
 			return nil
 		},
 	}
-	c.Flags().String("team", "", "only issues of team `KEY` (e.g. ENG)")
+	c.Flags().StringArray("team", nil, "only issues of team `KEY` (e.g. ENG; repeatable, any of)")
+	c.Flags().StringArray("priority", nil, "only issues of `PRIORITY`: 0-4 or none, urgent, high, medium, low\n(repeatable, any of)")
 	c.Flags().String("assignee", "", "only issues assigned to `WHO`: me, none, or an email")
 	c.Flags().StringArray("state", nil, "only issues in workflow state `NAME` (repeatable; any of)")
 	c.Flags().StringArray("state-type", nil, "only issues whose state is of `TYPE` (repeatable): triage, backlog,\nunstarted, started, completed, canceled, duplicate")
@@ -130,12 +131,31 @@ var stateTypes = []string{"triage", "backlog", "unstarted", "started", "complete
 func listFilter(cmd *cobra.Command) (map[string]any, error) {
 	filter := map[string]any{}
 	var and []any
-	team, err := teamFlag(cmd)
+	teams, err := teamsFlag(cmd)
 	if err != nil {
 		return nil, err
 	}
-	if team != "" {
-		filter["team"] = map[string]any{"key": map[string]any{"eq": team}}
+	switch len(teams) {
+	case 0:
+	case 1:
+		filter["team"] = map[string]any{"key": map[string]any{"eq": teams[0]}}
+	default:
+		filter["team"] = map[string]any{"key": map[string]any{"in": teams}}
+	}
+	prios, err := values(cmd, "priority")
+	if err != nil {
+		return nil, err
+	}
+	if len(prios) > 0 {
+		ns := []int{}
+		for _, p := range prios {
+			n, err := priority("--priority", p)
+			if err != nil {
+				return nil, err
+			}
+			ns = append(ns, n)
+		}
+		filter["priority"] = map[string]any{"in": ns}
 	}
 	if who, _ := cmd.Flags().GetString("assignee"); who != "" {
 		f, err := userFilter("--assignee", who)
@@ -375,6 +395,18 @@ func issueFields(c *cobra.Command) {
 
 var priorities = map[string]int{"none": 0, "urgent": 1, "high": 2, "medium": 3, "low": 4}
 
+// priority is a priority as Linear numbers it: 0-4 or its name.
+func priority(flag, p string) (int, error) {
+	if n, ok := priorities[strings.ToLower(p)]; ok {
+		return n, nil
+	}
+	n, err := strconv.Atoi(p)
+	if err != nil || n < 0 || n > 4 {
+		return 0, usageError{fmt.Errorf("%s must be 0-4 or none, urgent, high, medium, low; got %q", flag, p)}
+	}
+	return n, nil
+}
+
 // wanted is what the shared flags ask for, before names become ids.
 type wanted struct {
 	input    map[string]any // the input object so far (from --json-input and plain flags)
@@ -411,12 +443,9 @@ func readWanted(cmd *cobra.Command) (*wanted, error) {
 		w.input["description"] = d
 	}
 	if p, _ := cmd.Flags().GetString("priority"); p != "" {
-		n, ok := priorities[strings.ToLower(p)]
-		if !ok {
-			var err error
-			if n, err = strconv.Atoi(p); err != nil || n < 0 || n > 4 {
-				return nil, usageError{fmt.Errorf("--priority must be 0-4 or none, urgent, high, medium, low; got %q", p)}
-			}
+		n, err := priority("--priority", p)
+		if err != nil {
+			return nil, err
 		}
 		w.input["priority"] = n
 	}

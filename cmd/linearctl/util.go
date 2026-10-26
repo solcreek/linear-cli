@@ -72,11 +72,44 @@ func newID() string {
 // teamFlag is --team, else LINEARCTL_TEAM, else default-team in config; ""
 // when none is set.
 func teamFlag(cmd *cobra.Command) (string, error) {
-	team, _ := cmd.Flags().GetString("team")
-	from := "--team"
-	if team == "" {
-		team, from = os.Getenv("LINEARCTL_TEAM"), "LINEARCTL_TEAM"
+	teams, err := teamsFlag(cmd)
+	if len(teams) == 0 || err != nil {
+		return "", err
 	}
+	return teams[0], nil
+}
+
+// teamsFlag is --team, which issue list takes repeatedly, else the single
+// default from LINEARCTL_TEAM or config; none when nothing is set.
+func teamsFlag(cmd *cobra.Command) ([]string, error) {
+	var given []string
+	if f := cmd.Flags().Lookup("team"); f != nil && f.Value.Type() == "stringArray" {
+		var err error
+		if given, err = values(cmd, "team"); err != nil {
+			return nil, err
+		}
+	} else if t, _ := cmd.Flags().GetString("team"); t != "" {
+		given = []string{t}
+	}
+	for i, t := range given {
+		if !teamPattern.MatchString(t) {
+			return nil, usageError{fmt.Errorf("--team must be a team key like ENG; got %q", t)}
+		}
+		given[i] = strings.ToUpper(t)
+	}
+	if len(given) > 0 {
+		return given, nil
+	}
+	team, err := defaultTeam()
+	if team == "" || err != nil {
+		return nil, err
+	}
+	return []string{team}, nil
+}
+
+// defaultTeam is LINEARCTL_TEAM, else default-team in config.
+func defaultTeam() (string, error) {
+	team, from := os.Getenv("LINEARCTL_TEAM"), "LINEARCTL_TEAM"
 	if team == "" {
 		cfg, err := readConfig()
 		if err != nil {
