@@ -395,3 +395,6 @@
 {"args": ["issue", "list", "--state", "Todo", "--state=", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["issue", "update", "ENG-142", "--add-label", "bug", "--add-label", "", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["project", "list", "--status", "started", "--status", "", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["view", "list", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--view", "checkout bugs", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--view", "Mobile 3.0 open", "--sort", "title"], "env": {"LINEARCTL_DEMO": "1"}}

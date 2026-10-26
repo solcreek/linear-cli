@@ -444,10 +444,65 @@ fn build() -> World {
         }
     }
     cycle_issues(&mut w);
+    views(&mut w, &seed, &users, now);
     for k in ["projectMilestones", "notifications", "attachments", "comments", "cycles", "projects", "customViews"] {
         w.root.entry(k.into()).or_default();
     }
     w
+}
+
+/// The seed's saved views. Each one's filter is issue list flags, read by
+/// issue list itself into Linear's IssueFilter, so a view lists what the
+/// same flags would; its issues are found once, here, as Linear keeps a
+/// view's own filter apart from the one a request adds.
+fn views(w: &mut World, seed: &Value, users: &HashMap<String, usize>, now: i64) {
+    let root = crate::commands::root();
+    let mut made = vec![];
+    for v in seed["views"].as_array().into_iter().flatten() {
+        let name = v["name"].as_str().unwrap_or("").to_string();
+        let flags: Vec<String> =
+            v["filter"].as_array().into_iter().flatten().filter_map(|f| f.as_str().map(String::from)).collect();
+        let mut args = vec!["issue".to_string(), "list".to_string()];
+        args.extend(flags.iter().cloned());
+        let crate::cli::Outcome::Run(ctx) = crate::cli::parse(&root, &args) else {
+            panic!("demo/workspace.json: view {name}: bad filter {flags:?}");
+        };
+        let mut filter = crate::commands::issue::list_filter(&ctx)
+            .unwrap_or_else(|e| panic!("demo/workspace.json: view {name}: {e}"))
+            .unwrap_or_default();
+        if !flags.iter().any(|f| f == "--team" || f.starts_with("--team=")) {
+            filter.remove("team"); // LINEARCTL_TEAM or default-team, not the view's
+        }
+        let vars = json!({});
+        let r = Resolver { w, vars: &vars };
+        let issues: Vec<V> =
+            w.root.get("issues").into_iter().flatten().filter(|n| r.matches(Some(n), &filter)).cloned().collect();
+        made.push((
+            name,
+            v["owner"].as_str().unwrap_or("").to_string(),
+            v["shared"].as_bool().unwrap_or(false),
+            issues,
+        ));
+    }
+    for (name, owner, shared, issues) in made {
+        let mut n: Node = HashMap::from([
+            ("id".into(), s(&demo_id("view", &name))),
+            ("name".into(), s(&name)),
+            ("description".into(), NULL),
+            ("slugId".into(), s(&demo_id("view-slug", &name).replace('-', "")[..12])),
+            ("modelName".into(), s("Issue")),
+            ("shared".into(), V::S(json!(shared))),
+            ("team".into(), NULL),
+            ("updatedAt".into(), V::S(json!(time::rfc3339_ms(now)))),
+            ("issues".into(), V::L(issues)),
+        ]);
+        if let Some(u) = users.get(&owner) {
+            n.insert("owner".into(), V::N(*u));
+        }
+        w.nodes.push(n);
+        let id = w.nodes.len() - 1;
+        w.root.entry("customViews".into()).or_default().push(V::N(id));
+    }
 }
 
 /// Each cycle's issues, and its progress as Linear documents it: completed

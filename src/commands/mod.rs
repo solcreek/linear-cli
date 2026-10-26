@@ -7,7 +7,7 @@ mod completion;
 mod config;
 mod cycle;
 mod file;
-mod issue;
+pub mod issue;
 mod lookups;
 mod project;
 mod relation;

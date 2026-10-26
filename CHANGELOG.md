@@ -25,6 +25,9 @@ names are only ever added, never renamed or removed.
 - `cycle show --all-issues` returns every issue in the cycle, however many,
   250 a request; each issue row carries its state type, assignee and delegate.
   `--issues 0` still means none, as on `project show`.
+- Demo mode has saved views: the seed's two, so `view list` and
+  `issue list --view` work there. A view's filter in the seed is issue list
+  flags, applied as issue list reads them.
 
 ### Changed
 

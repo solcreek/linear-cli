@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"items":[{"description":null,"id":"73328b4b-d456-521f-ba9f-d6023b0691cc","modelName":"Issue","name":"Checkout bugs","owner":{"id":"af30a989-2809-5e5d-a29c-d755f04fc468","name":"Maya Patel"},"shared":true,"slugId":"cdfd843f9add","team":null,"updatedAt":"<TIME>"},{"description":null,"id":"0f29ee00-7673-5496-8146-6b160d4acdb3","modelName":"Issue","name":"Mobile 3.0 open","owner":{"id":"1ec2b7af-c657-55ea-b932-2759709ab15c","name":"Sofia Romero"},"shared":true,"slugId":"5562a8411c6c","team":null,"updatedAt":"<TIME>"}],"nextCursor":null,"shown":2,"total":null,"truncated":false}
+
+--- stderr
