@@ -1,6 +1,8 @@
 //! The command tree, as `linearctl describe` lists it.
 
+mod comment;
 mod issue;
+mod relation;
 
 use crate::cli::{self, Args, Cmd, Ctx, Flag};
 use crate::fail::R;
@@ -30,7 +32,7 @@ LINEARCTL_HOME moves config and credentials under one directory.",
         Flag::bool("meta", "add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1")
             .default_to(env_on("LINEARCTL_META")),
     ];
-    let mut subs: Vec<Cmd> = vec![issue::command()];
+    let mut subs: Vec<Cmd> = vec![issue::command(), comment::command(), relation::command()];
     subs.push(
         Cmd::new("describe", "Print every command, flag and exit code as JSON")
             .example("  linearctl describe")
