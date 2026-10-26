@@ -9,7 +9,7 @@ import (
 
 func TestAPIQuery(t *testing.T) {
 	t.Parallel()
-	api := newFake(t).onFunc("Me", func(vars map[string]any) (int, any, map[string]string) {
+	api := rawFake(t).onFunc("Me", func(vars map[string]any) (int, any, map[string]string) {
 		return 200, map[string]any{"data": map[string]any{"viewer": map[string]any{"name": "Ada"}}}, map[string]string{"X-Complexity": "2"}
 	})
 	req := `{"query":"query Me($n: Int) { viewer { name } }","variables":{"n":1},"operationName":"Me"}`
@@ -26,7 +26,7 @@ func TestAPIQuery(t *testing.T) {
 
 func TestAPIQueryPartialAndFailed(t *testing.T) {
 	t.Parallel()
-	api := newFake(t).onFunc("Two", func(map[string]any) (int, any, map[string]string) {
+	api := rawFake(t).onFunc("Two", func(map[string]any) (int, any, map[string]string) {
 		return 200, map[string]any{"data": map[string]any{"viewer": map[string]any{"name": "Ada"}, "issue": nil},
 			"errors": []any{map[string]any{"message": "Entity not found: Issue", "path": []any{"issue"}}}}, nil
 	}).onFunc("Bad", linearErr("Cannot query field \"nope\"", "GRAPHQL_VALIDATION_FAILED"))
@@ -45,7 +45,7 @@ func TestAPIQueryRefusesChangesAndBadInput(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	must(t, os.WriteFile(filepath.Join(dir, "m.json"), []byte(`{"query":"mutation M { issueArchive(id: \"x\") { success } }"}`), 0o644))
-	api := newFake(t)
+	api := rawFake(t)
 	cases := []struct {
 		args  []string
 		stdin string
@@ -66,4 +66,11 @@ func TestAPIQueryRefusesChangesAndBadInput(t *testing.T) {
 	if len(api.calls()) != 0 {
 		t.Errorf("sent a refused request: %v", api.ops())
 	}
+}
+
+// rawFake is a fake for api query, whose documents the caller writes.
+func rawFake(t *testing.T) *fake {
+	f := newFake(t)
+	f.raw = true
+	return f
 }

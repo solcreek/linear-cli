@@ -5,9 +5,40 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync"
 	"testing"
+
+	"github.com/vektah/gqlparser/v2"
+	"github.com/vektah/gqlparser/v2/ast"
+	"github.com/vektah/gqlparser/v2/validator"
 )
+
+// linearSchema is Linear's published schema, loaded once for the fake.
+var linearSchema = sync.OnceValue(func() *ast.Schema {
+	data, err := os.ReadFile("../../graphql/schema.graphql")
+	if err != nil {
+		panic(err)
+	}
+	return gqlparser.MustLoadSchema(&ast.Source{Name: "schema.graphql", Input: string(data)})
+})
+
+// checkRequest validates a request as Linear would: the document against
+// the schema, and the variables (filters, inputs, enums) against the
+// document. queries_test.go checks the documents alone; this checks what
+// each test actually sends.
+func checkRequest(query string, vars map[string]any) error {
+	doc, errs := gqlparser.LoadQuery(linearSchema(), query)
+	if errs != nil {
+		return errs
+	}
+	for _, op := range doc.Operations {
+		if _, err := validator.VariableValues(linearSchema(), op, vars); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // testKey is the only key the fake accepts.
 const testKey = "lin_api_test0000000000000000"
@@ -28,6 +59,7 @@ type fake struct {
 	mu      sync.Mutex
 	log     []call
 	answers map[string]func(vars map[string]any) (int, any, map[string]string)
+	raw     bool // documents come from the caller (api query): not checked
 }
 
 func newFake(t *testing.T) *fake {
@@ -93,6 +125,9 @@ func (f *fake) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	op := opName(req.Query)
+	if err := checkRequest(req.Query, req.Variables); err != nil && !f.raw {
+		f.t.Errorf("%s: Linear would reject this request: %v", op, err)
+	}
 	f.mu.Lock()
 	f.log = append(f.log, call{op, req.Variables, r.Header.Clone()})
 	answer := f.answers[op]
