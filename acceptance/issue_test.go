@@ -361,7 +361,7 @@ func TestIssueCreateDryRunResolvesEverything(t *testing.T) {
 	if got := jsonOf(v["labels"]); got != `{"or":[{"name":{"eqIgnoreCase":"bug"}},{"name":{"eqIgnoreCase":"p1"}}]}` {
 		t.Errorf("labels are found ignoring case, as issue list's: %s", got)
 	}
-	if v["team"] != "ENG" || v["withID"] != true || v["email"] != "ada@example.com" || v["me"] != false ||
+	if jsonOf(v["team"]) != `{"key":{"eqIgnoreCase":"ENG"}}` || v["withID"] != true || v["email"] != "ada@example.com" || v["me"] != false ||
 		jsonOf(v["parent"]) != `{"number":{"eq":1},"team":{"key":{"eqIgnoreCase":"ENG"}}}` {
 		t.Errorf("resolve vars %v", v)
 	}
@@ -677,6 +677,40 @@ func TestIssueUpdateIfUpdatedAt(t *testing.T) {
 		}
 		if c.code == exitConflict && !strings.Contains(decode(t, r.out)["error"].(string), "changed at 2026-10-02T08:00:00.000Z") {
 			t.Errorf("%s: %q", c.since, r.out)
+		}
+	}
+}
+
+// Linear's own teamId in --json-input names the team when --team is not
+// given; --team wins when both are.
+func TestIssueCreateTeamFromJSONInput(t *testing.T) {
+	t.Parallel()
+	const teamID = "7e1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
+	for _, c := range []struct {
+		input string
+		args  []string
+		want  string
+		code  int
+	}{
+		{`{"title":"x","teamId":"` + teamID + `"}`, nil, `{"id":{"eq":"` + teamID + `"}}`, 0},
+		{`{"title":"x","teamId":"` + teamID + `"}`, []string{"--team", "WEB"}, `{"key":{"eqIgnoreCase":"WEB"}}`, 0},
+		{`{"title":"x","teamId":"ENG"}`, nil, "", exitUsage},
+		{`{"title":"x"}`, nil, "", exitUsage},
+	} {
+		api := createFake(t, resolveAnswer(nil))
+		r := runWith(t, opts{api: api, key: testKey, stdin: c.input},
+			append([]string{"issue", "create", "--json-input", "-", "--dry-run", "--json"}, c.args...)...)
+		if r.code != c.code {
+			t.Errorf("%s %v: exit %d, %q", c.input, c.args, r.code, r.out)
+			continue
+		}
+		if c.code == 0 {
+			if got := jsonOf(api.last("CreateResolve").Vars["team"]); got != c.want {
+				t.Errorf("%s %v: team filter %s", c.input, c.args, got)
+			}
+			if in := decode(t, r.out)["input"].(map[string]any); in["teamId"] != "team-eng" {
+				t.Errorf("teamId is the resolved team's: %v", in["teamId"])
+			}
 		}
 	}
 }
