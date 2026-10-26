@@ -247,15 +247,24 @@ func optional(s string) any {
 
 func issueShow() *cobra.Command {
 	c := &cobra.Command{
-		Use:   "show ISSUE",
-		Short: "Show one issue with its description, comments, sub-issues and relations",
+		Use:     "show ISSUE",
+		Aliases: []string{"view"}, // gh's word, which agents reach for first
+		Short:   "Show one issue with its description, comments, sub-issues and relations",
 		Long: "Show one issue with its description, comments, sub-issues and relations.\n" +
 			"ISSUE is an identifier (ENG-123), a UUID, or a linear.app issue URL.\n" +
 			"--signed-urls makes file URLs in the result open without the API key for that\n" +
-			"many seconds, so a viewer can fetch images directly.",
-		Example: "  linearctl issue show ENG-123\n  linearctl issue show ENG-123 --signed-urls 300 --json\n" +
-			"  linearctl issue show ENG-123 --comments 0 --fields identifier,title,description --json",
-		Args: usageArgs(cobra.ExactArgs(1)),
+			"many seconds, so a viewer can fetch images directly.\n" +
+			"Comments are included (20 by default); give another count as --comments=N.",
+		Example: "  linearctl issue show ENG-123\n  linearctl issue view ENG-123 --signed-urls 300 --json\n" +
+			"  linearctl issue show ENG-123 --comments=0 --fields identifier,title,description --json",
+		Args: usageArgs(func(cmd *cobra.Command, args []string) error {
+			// --comments takes its count with =, so "--comments 5" leaves 5 as
+			// an argument; say how to write it rather than "accepts 1 arg".
+			if len(args) == 2 && cmd.Flags().Changed("comments") && args[1] != "" && strings.Trim(args[1], "0123456789") == "" {
+				return fmt.Errorf("give the count as --comments=%s", args[1])
+			}
+			return cobra.ExactArgs(1)(cmd, args)
+		}),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ref, err := issueRef("ISSUE", args[0])
 			if err != nil {
@@ -303,7 +312,8 @@ func issueShow() *cobra.Command {
 			return nil
 		},
 	}
-	c.Flags().Var(&wholeNumber{n: 20}, "comments", "include the first `N` comments; 0 for none")
+	c.Flags().Var(&wholeNumber{n: 20}, "comments", "include the first `N` comments (--comments=N); 0 for none")
+	c.Flags().Lookup("comments").NoOptDefVal = "20"
 	c.Flags().Var(&wholeNumber{}, "signed-urls", "sign file URLs for `SECONDS` so they open without the key")
 	addFieldsFlag(c, showFields)
 	return c

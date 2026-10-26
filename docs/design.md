@@ -71,7 +71,7 @@ Example: `pbpaste | linearctl auth login --yes`
                            [--query TEXT] [--updated-since DATE]
                            [--sort updated|created|priority] [--limit N] [--cursor C]
                            [--fields LIST]
-    linearctl issue show   ISSUE [--comments N] [--signed-urls SECONDS] [--fields LIST]
+    linearctl issue show   ISSUE [--comments[=N]] [--signed-urls SECONDS] [--fields LIST]   (alias: view)
     linearctl issue create --team KEY --title TEXT [--description TEXT|--description-file PATH|-]
                            [--assignee …] [--state NAME] [--priority 0-4] [--label NAME]...
                            [--project NAME] [--parent ISSUE] --id UUID

@@ -250,7 +250,7 @@ func TestIssueShow(t *testing.T) {
 	if c.Vars["comments"] != 20.0 || c.Vars["withComments"] != true || c.Header.Get("public-file-urls-expire-in") != "300" {
 		t.Errorf("vars %v, signed %q", c.Vars, c.Header.Get("public-file-urls-expire-in"))
 	}
-	runWith(t, opts{api: api, key: testKey}, "issue", "show", "ENG-12", "--comments", "0")
+	runWith(t, opts{api: api, key: testKey}, "issue", "show", "ENG-12", "--comments=0")
 	if c := api.last("IssueShow"); c.Vars["withComments"] != false || c.Header.Get("public-file-urls-expire-in") != "" {
 		t.Errorf("--comments 0: %v", c.Vars)
 	}
@@ -264,7 +264,7 @@ func TestIssueShow(t *testing.T) {
 			t.Errorf("text has no %q: %q", want, r.out)
 		}
 	}
-	if r := runWith(t, opts{api: api, key: testKey}, "issue", "show", "ENG-12", "--comments", "251"); r.code != exitUsage {
+	if r := runWith(t, opts{api: api, key: testKey}, "issue", "show", "ENG-12", "--comments=251"); r.code != exitUsage {
 		t.Errorf("--comments 251: exit %d", r.code)
 	}
 }
@@ -522,5 +522,41 @@ func TestIssueArchive(t *testing.T) {
 	r = runWith(t, opts{api: api, key: testKey}, "issue", "archive", "ENG-5", "--yes", "--json")
 	if d := decode(t, r.out); r.code != 0 || d["changed"] != false || slices.Contains(api.ops(), "IssueArchive") {
 		t.Errorf("rerun: exit %d, %q", r.code, r.out)
+	}
+}
+
+// Agents write gh's "issue view ENG-123 --comments" first; both work.
+func TestIssueViewAndBareComments(t *testing.T) {
+	t.Parallel()
+	api := newFake(t).on("IssueShow", showAnswer())
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "view", "ENG-12", "--comments", "--json")
+	if r.code != 0 || api.last("IssueShow").Vars["comments"] != 20.0 {
+		t.Fatalf("view --comments: exit %d, %q %q", r.code, r.out, r.err)
+	}
+	runWith(t, opts{api: api, key: testKey}, "issue", "view", "ENG-12", "--comments=5")
+	if v := api.last("IssueShow").Vars; v["comments"] != 5.0 {
+		t.Errorf("--comments=5: %v", v)
+	}
+	n := len(api.calls())
+	r = runWith(t, opts{api: api, key: testKey}, "issue", "show", "ENG-12", "--comments", "5", "--json")
+	if e, _ := decode(t, r.out)["error"].(string); r.code != exitUsage || !strings.Contains(e, "--comments=5") || len(api.calls()) != n {
+		t.Errorf("--comments 5: exit %d, %q", r.code, r.out)
+	}
+	var d struct {
+		Commands []struct {
+			Name     string
+			Commands []struct {
+				Name    string
+				Aliases []string
+			}
+		}
+	}
+	must(t, json.Unmarshal([]byte(run(t, "describe").out), &d))
+	for _, c := range d.Commands {
+		for _, s := range c.Commands {
+			if want := c.Name == "issue" && s.Name == "show"; want != slices.Contains(s.Aliases, "view") {
+				t.Errorf("%s %s: aliases %v", c.Name, s.Name, s.Aliases)
+			}
+		}
 	}
 }
