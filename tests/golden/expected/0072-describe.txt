@@ -901,8 +901,22 @@ exit: 0
           "flags": [
             {
               "default": null,
+              "description": "only the active cycle (Linear's isActive; CYCLE current elsewhere)",
+              "name": "active",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
               "description": "continue after CURSOR (nextCursor from the previous page)",
               "name": "cursor",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "only cycles ending at or before WHEN",
+              "name": "ends-before",
               "short": null,
               "type": "string"
             },
@@ -912,6 +926,13 @@ exit: 0
               "name": "fields",
               "short": null,
               "type": "string"
+            },
+            {
+              "default": null,
+              "description": "only cycles yet to start (isFuture)",
+              "name": "future",
+              "short": null,
+              "type": "boolean"
             },
             {
               "default": null,
@@ -926,6 +947,34 @@ exit: 0
               "name": "limit",
               "short": null,
               "type": "integer"
+            },
+            {
+              "default": null,
+              "description": "only the next cycle (isNext)",
+              "name": "next",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "only cycles that have ended (isPast)",
+              "name": "past",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "only the previous cycle (isPrevious)",
+              "name": "previous",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "only cycles starting at or after WHEN (a date, RFC 3339, 7d, 24h)",
+              "name": "starts-since",
+              "short": null,
+              "type": "string"
             },
             {
               "default": null,

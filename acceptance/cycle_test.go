@@ -147,3 +147,29 @@ func TestCycleShowInDemo(t *testing.T) {
 		t.Errorf("%d fields in demo: %v", len(keys), keys)
 	}
 }
+
+func TestCycleListFilters(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--team", "eng"}, `{"team":{"key":{"eqIgnoreCase":"ENG"}}}`},
+		{[]string{"--active"}, `{"isActive":{"eq":true}}`},
+		{[]string{"--past", "--future"}, `{"or":[{"isPast":{"eq":true}},{"isFuture":{"eq":true}}]}`},
+		{[]string{"--team", "ENG", "--previous", "--starts-since", "2026-10-01", "--ends-before", "2026-11-01T00:00:00Z"},
+			`{"and":[{"team":{"key":{"eqIgnoreCase":"ENG"}}},{"isPrevious":{"eq":true}},{"startsAt":{"gte":"2026-10-01T00:00:00Z"}},{"endsAt":{"lte":"2026-11-01T00:00:00Z"}}]}`},
+	}
+	for _, c := range cases {
+		api := newFake(t).on("Cycles", map[string]any{"cycles": conn("")})
+		r := runWith(t, opts{api: api, key: testKey}, append([]string{"cycle", "list", "--json"}, c.args...)...)
+		if got := jsonOf(api.last("Cycles").Vars["filter"]); r.code != 0 || got != c.want {
+			t.Errorf("%v: exit %d, filter %s", c.args, r.code, got)
+		}
+	}
+	for _, args := range [][]string{{"--starts-since", "soon"}, {"--ends-before", ""}, {"--fields", "velocity"}} {
+		if r := runWith(t, opts{key: testKey}, append([]string{"cycle", "list"}, args...)...); r.code != exitUsage {
+			t.Errorf("%v: exit %d", args, r.code)
+		}
+	}
+}

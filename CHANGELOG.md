@@ -21,6 +21,9 @@ names are only ever added, never renamed or removed.
 - `cycle list` rows carry the same fields as `cycle show`'s top level:
   `description`, `completedAt`, `isPrevious`, `isPast`, `isFuture`, `progress`,
   and `team.id`.
+- `cycle list --active`, `--next`, `--previous`, `--past`, `--future` (Linear's
+  `is*` states; several match any of them), `--starts-since` and
+  `--ends-before`.
 
 ### Changed
 
