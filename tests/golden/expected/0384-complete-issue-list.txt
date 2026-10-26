@@ -9,7 +9,7 @@ exit: 0
 --attachment-url	only issues with an attachment at `URL` (e.g. a linked pull request)
 --cursor	continue after `CURSOR` (nextCursor from the previous page)
 --cycle	only issues in cycle `CYCLE`: current, next, previous, a number, a UUID
---delegate	only issues delegated to the agent `WHO` (name or email; any; none)
+--delegate	only issues delegated to the agent `WHO` (name, email, me, any, none)
 --fields	return only these comma-separated `FIELDS` (see Fields above)
 --help	help for list
 --id	only the issue `ISSUE` (ENG-123 or a UUID; repeatable); one not

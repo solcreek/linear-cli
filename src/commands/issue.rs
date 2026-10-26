@@ -80,7 +80,7 @@ pub fn filter_flags(c: Cmd) -> Cmd {
         .flag(Flag::strs("without-label", "only issues without label `NAME` (repeatable; none of)"))
         .flag(Flag::str("project", "only issues in project `NAME`"))
         .flag(Flag::str("milestone", "only issues in project milestone `NAME` (none: in no milestone)"))
-        .flag(Flag::str("delegate", "only issues delegated to the agent `WHO` (name or email; any; none)"))
+        .flag(Flag::str("delegate", "only issues delegated to the agent `WHO` (name, email, me, any, none)"))
         .flag(Flag::str("attachment-url", "only issues with an attachment at `URL` (e.g. a linked pull request)"))
         .flag(Flag::str("cycle", "only issues in cycle `CYCLE`: current, next, previous, a number, a UUID"))
         .flag(Flag::str("updated-since", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h"))
@@ -258,6 +258,7 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
         let f = match d.as_str() {
             "none" => json!({"null": true}),
             "any" => json!({"null": false}),
+            "me" => json!({"isMe": {"eq": true}}),
             _ => {
                 json!({"or": [{"name": {"eqIgnoreCase": d}}, {"displayName": {"eqIgnoreCase": d}}, {"email": {"eqIgnoreCase": d}}]})
             }
@@ -400,13 +401,14 @@ fn issue_fields(c: Cmd) -> Cmd {
         .flag(Flag::str("description-file", "read the description from `PATH` (- for stdin)"))
         .flag(Flag::str("assignee", "assign to `WHO`: me, none, or an email"))
         .flag(Flag::str("state", "workflow state `NAME` (see 'linearctl state list')"))
+        .flag(Flag::str("state-type", "the team's first workflow state of `TYPE` (e.g. started)"))
         .flag(Flag::str("priority", "`PRIORITY`: 0-4 or none, urgent, high, medium, low"))
         .flag(Flag::str("project", "project `NAME`"))
         .flag(Flag::str(
             "milestone",
             "project milestone `NAME`, or none to clear; it sets the project\nwhen the issue has none",
         ))
-        .flag(Flag::str("delegate", "delegate to the agent (app user) `WHO`: its name or email, or none"))
+        .flag(Flag::str("delegate", "delegate to the agent (app user) `WHO`: its name or email, me, or none"))
         .flag(Flag::str("parent", "make it a sub-issue of `ISSUE` (none: of no issue)"))
         .flag(Flag::str("json-input", "read Linear's input object from `PATH` (- for stdin); flags win"))
 }
@@ -453,8 +455,10 @@ pub struct Wanted {
     parent: String,
     /// A name, or none.
     milestone: String,
-    /// An agent user's name or email, or none.
+    /// An agent user's name or email, me, or none.
     delegate: String,
+    /// A state type (started, …): the team's first state of it.
+    state_type: String,
 }
 
 fn read_wanted(ctx: &Ctx) -> R<Wanted> {
@@ -502,6 +506,20 @@ fn read_wanted(ctx: &Ctx) -> R<Wanted> {
         user_filter("--assignee", &a)?;
         w.assignee = a;
     }
+    let st = ctx.str("state-type");
+    if !st.is_empty() {
+        if !STATE_TYPES.contains(&st.as_str()) {
+            return Err(usage(format!(
+                "--state-type must be one of {}; got {}",
+                STATE_TYPES.join(", "),
+                quote_go(&st)
+            )));
+        }
+        if !w.state.is_empty() {
+            return Err(usage("pass --state or --state-type, not both"));
+        }
+        w.state_type = st;
+    }
     let p = ctx.str("parent");
     if p == "none" {
         w.input.insert("parentId".into(), Value::Null);
@@ -532,12 +550,13 @@ impl Wanted {
         let email = if is_email(&self.assignee) { self.assignee.clone() } else { String::new() };
         let v = json!({
             "state": self.state, "withState": !self.state.is_empty(),
-            "email": email, "withUser": !email.is_empty(), "me": self.assignee == "me",
+            "email": email, "withUser": !email.is_empty(), "me": self.assignee == "me" || self.delegate == "me",
             "labels": label_filter(&labels), "withLabels": !labels.is_empty(),
             "project": self.project, "withProject": !self.project.is_empty(),
             "parent": parent, "withParent": !self.parent.is_empty(),
             "milestone": self.milestone, "withMilestone": !self.milestone.is_empty() && self.milestone != "none",
-            "delegate": self.delegate, "withDelegate": !self.delegate.is_empty() && self.delegate != "none",
+            "delegate": self.delegate, "withDelegate": !matches!(self.delegate.as_str(), "" | "none" | "me"),
+            "stateType": self.state_type, "withStateType": !self.state_type.is_empty(),
         });
         match v {
             Value::Object(m) => m,
@@ -549,10 +568,22 @@ impl Wanted {
     /// labels over another team's label of the same name; project_id is the
     /// issue's project now ("" for a new issue): it picks the milestone
     /// when several projects have one of that name.
-    fn apply(&mut self, r: &Value, states: &[Value], team_id: &str, project_id: &str) -> R {
+    /// typed are the team's states of --state-type: the one with the lowest
+    /// position is the first, as Linear's agent guide picks "started".
+    fn apply(&mut self, r: &Value, states: &[Value], typed: &[Value], team_id: &str, project_id: &str) -> R {
         if !self.state.is_empty() {
             let id = one("workflow state", &self.state, states, "'linearctl state list'")?;
             self.input.insert("stateId".into(), json!(id));
+        }
+        if !self.state_type.is_empty() {
+            let pos = |v: &Value| v["position"].as_f64().unwrap_or(f64::MAX);
+            let Some(first) = typed.iter().min_by(|a, b| pos(a).total_cmp(&pos(b))) else {
+                return Err(failed(format!(
+                    "the team has no workflow state of type {}; see 'linearctl state list'",
+                    self.state_type
+                )));
+            };
+            self.input.insert("stateId".into(), json!(str_at(first, "id")));
         }
         match self.assignee.as_str() {
             "" => {}
@@ -577,6 +608,15 @@ impl Wanted {
         match self.delegate.as_str() {
             "" => {}
             "none" => _ = self.input.insert("delegateId".into(), Value::Null),
+            "me" => {
+                if r["viewer"]["app"] != json!(true) {
+                    return Err(failed(format!(
+                        "--delegate me needs an app (agent) token; this key is {}'s, a person: delegate to an agent by name",
+                        str_at(&r["viewer"], "name")
+                    )));
+                }
+                self.input.insert("delegateId".into(), json!(str_at(&r["viewer"], "id")));
+            }
             d => {
                 let id = one("agent user", d, &nodes(&r["delegates"]), "'linearctl user list --app'")?;
                 self.input.insert("delegateId".into(), json!(id));
@@ -735,7 +775,7 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     let Some(t) = teams.first() else {
         return Err(failed(format!("no team with key {team}; see 'linearctl team list'")));
     };
-    w.apply(&r, &nodes(&t["states"]), &str_at(t, "id"), "")?;
+    w.apply(&r, &nodes(&t["states"]), &nodes(&t["typed"]), &str_at(t, "id"), "")?;
     w.input.insert("teamId".into(), json!(str_at(t, "id")));
     w.input.insert("id".into(), json!(id));
     if dry {
@@ -813,7 +853,7 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     }
     let team_id = str_at(is, "team.id");
     let current_project = if is["project"].is_object() { str_at(is, "project.id") } else { String::new() };
-    w.apply(&res, &nodes(&is["team"]["states"]), &team_id, &current_project)?;
+    w.apply(&res, &nodes(&is["team"]["states"]), &nodes(&is["team"]["typed"]), &team_id, &current_project)?;
     let current: Vec<String> = nodes(&is["labels"]).iter().map(|l| str_at(l, "id")).collect();
     if !add.is_empty() || !remove.is_empty() {
         let labels = nodes(&res["issueLabels"]);

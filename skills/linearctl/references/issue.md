@@ -42,7 +42,7 @@ Examples:
 
 Flags:
       --assignee WHO            assign to WHO: me, none, or an email
-      --delegate WHO            delegate to the agent (app user) WHO: its name or email, or none
+      --delegate WHO            delegate to the agent (app user) WHO: its name or email, me, or none
       --description TEXT        the description, Markdown TEXT
       --description-file PATH   read the description from PATH (- for stdin)
       --dry-run                 show what would change; change nothing
@@ -56,6 +56,7 @@ Flags:
       --priority PRIORITY       PRIORITY: 0-4 or none, urgent, high, medium, low
       --project NAME            project NAME
       --state NAME              workflow state NAME (see 'linearctl state list')
+      --state-type TYPE         the team's first workflow state of TYPE (e.g. started)
       --team KEY                create in team KEY (e.g. ENG)
       --title TEXT              the title, TEXT
       --yes                     apply the change
@@ -89,7 +90,7 @@ Flags:
       --attachment-url URL   only issues with an attachment at URL (e.g. a linked pull request)
       --cursor CURSOR        continue after CURSOR (nextCursor from the previous page)
       --cycle CYCLE          only issues in cycle CYCLE: current, next, previous, a number, a UUID
-      --delegate WHO         only issues delegated to the agent WHO (name or email; any; none)
+      --delegate WHO         only issues delegated to the agent WHO (name, email, me, any, none)
       --fields FIELDS        return only these comma-separated FIELDS (see Fields above)
   -h, --help                 help for list
       --id ISSUE             only the issue ISSUE (ENG-123 or a UUID; repeatable); one not
@@ -184,7 +185,7 @@ Examples:
 Flags:
       --add-label NAME          add label NAME (repeatable)
       --assignee WHO            assign to WHO: me, none, or an email
-      --delegate WHO            delegate to the agent (app user) WHO: its name or email, or none
+      --delegate WHO            delegate to the agent (app user) WHO: its name or email, me, or none
       --description TEXT        the description, Markdown TEXT
       --description-file PATH   read the description from PATH (- for stdin)
       --dry-run                 show what would change; change nothing
@@ -199,6 +200,7 @@ Flags:
       --project NAME            project NAME
       --remove-label NAME       remove label NAME (repeatable)
       --state NAME              workflow state NAME (see 'linearctl state list')
+      --state-type TYPE         the team's first workflow state of TYPE (e.g. started)
       --title TEXT              the title, TEXT
       --yes                     apply the change
 ```

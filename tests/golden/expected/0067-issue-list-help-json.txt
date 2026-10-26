@@ -25,7 +25,7 @@ Flags:
       --attachment-url URL   only issues with an attachment at URL (e.g. a linked pull request)
       --cursor CURSOR        continue after CURSOR (nextCursor from the previous page)
       --cycle CYCLE          only issues in cycle CYCLE: current, next, previous, a number, a UUID
-      --delegate WHO         only issues delegated to the agent WHO (name or email; any; none)
+      --delegate WHO         only issues delegated to the agent WHO (name, email, me, any, none)
       --fields FIELDS        return only these comma-separated FIELDS (see Fields above)
   -h, --help                 help for list
       --id ISSUE             only the issue ISSUE (ENG-123 or a UUID; repeatable); one not

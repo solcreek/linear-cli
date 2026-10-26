@@ -21,6 +21,12 @@ names are only ever added, never renamed or removed.
   (`.claude-plugin/plugin.json`). `make skill` generates it from AGENTS.md and
   the commands' `describe` and `--help`; `make test` fails when it is stale, or
   when AGENTS.md's list of mutating commands differs from `describe`.
+- `issue create` and `issue update --state-type TYPE`: the team's first
+  workflow state of that type, by position, as Linear's agent guide picks the
+  `started` state when work begins. No workspace's state names needed.
+- `--delegate me` on `issue create`, `issue update` and `issue list`: the
+  token's own user, which must be an app (an agent); a person's key is refused
+  with an explanation.
 
 ## [0.4.0] - 2026-10-26
 

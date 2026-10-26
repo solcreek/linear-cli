@@ -18,7 +18,7 @@ Examples:
 Flags:
       --add-label NAME          add label NAME (repeatable)
       --assignee WHO            assign to WHO: me, none, or an email
-      --delegate WHO            delegate to the agent (app user) WHO: its name or email, or none
+      --delegate WHO            delegate to the agent (app user) WHO: its name or email, me, or none
       --description TEXT        the description, Markdown TEXT
       --description-file PATH   read the description from PATH (- for stdin)
       --dry-run                 show what would change; change nothing
@@ -33,6 +33,7 @@ Flags:
       --project NAME            project NAME
       --remove-label NAME       remove label NAME (repeatable)
       --state NAME              workflow state NAME (see 'linearctl state list')
+      --state-type TYPE         the team's first workflow state of TYPE (e.g. started)
       --title TEXT              the title, TEXT
       --yes                     apply the change
 
