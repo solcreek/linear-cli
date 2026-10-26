@@ -259,7 +259,7 @@ impl Watcher {
         let gte = json!({"updatedAt": {"gte": time::rfc3339(from)}});
         let filter = self.and(gte.clone());
         let cl = self.cl.clone();
-        let (items, _) = collect(PAGE_SIZE * SNAPSHOT_PAGES, String::new(), |first, after| {
+        let (items, more_items) = collect(PAGE_SIZE * SNAPSHOT_PAGES, String::new(), |first, after| {
             let mut data = cl.query(
                 run,
                 queries::ISSUE_LIST,
@@ -272,9 +272,9 @@ impl Watcher {
             matched.insert(str_at(it, "id"));
             self.upsert(run, it)?;
         }
-        // Every page: with issue updates alone subscribed, this is how
-        // archives arrive.
-        let (changed, _) = collect(PAGE_SIZE * SNAPSHOT_PAGES, String::new(), |first, after| {
+        // Every page up to 2,500, as the upserts: with issue updates alone
+        // subscribed, this is how archives arrive.
+        let (changed, more) = collect(PAGE_SIZE * SNAPSHOT_PAGES, String::new(), |first, after| {
             let mut data = cl.query(
                 run,
                 queries::WATCH_CHANGED,
@@ -282,6 +282,12 @@ impl Watcher {
             )?;
             Ok(Page::take(&mut data["issues"]))
         })?;
+        if !more_items.is_empty() || !more.is_empty() {
+            let n = PAGE_SIZE * SNAPSHOT_PAGES;
+            run.eprint(&format!(
+                "linearctl: over {n} issues changed since the last catch-up; changes past them are missed\n"
+            ));
+        }
         let rest: Vec<String> = changed.iter().map(|n| str_at(n, "id")).filter(|id| !matched.contains(id)).collect();
         self.gone(run, &rest)?;
         self.since = started - RECONCILE_SKEW;
