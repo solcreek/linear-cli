@@ -31,3 +31,34 @@ jobs:
           for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
             GOOS=${target%/*} GOARCH=${target#*/} go build -o /dev/null ./cmd/linearctl
           done
+
+  # The release's npm packaging, without publishing: assemble, pack and
+  # install the packages from a snapshot build, and dry-run the publish.
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --snapshot --clean
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - run: node scripts/npm-packages.mjs 0.0.0-ci dist npm-out
+      - name: Pack and install like a user
+        run: |
+          mkdir tgz
+          for d in npm-out/*; do (cd "$d" && npm pack --pack-destination ../../tgz); done
+          npm install -g --prefix "$RUNNER_TEMP/g" --allow-scripts=@solcreek/linear-cli \
+            tgz/solcreek-linear-cli-linux-x64-0.0.0-ci.tgz tgz/solcreek-linear-cli-0.0.0-ci.tgz
+          bin="$RUNNER_TEMP/g/bin/linearctl"
+          "$bin" --version
+          if head -c 2 "$bin" | grep -q '#!'; then echo "bin is still the Node shim"; exit 1; fi
+          "$bin" --demo issue list --limit 1 --json
+      - run: scripts/npm-publish.sh npm-out --dry-run
