@@ -323,16 +323,21 @@ pub fn read_input(what: &str, path: &str) -> R<Vec<u8>> {
 
 /// Replaces every {"nodes": [...]} with its list, so a connection reads as
 /// an array in our JSON.
-pub fn flatten(v: Value) -> Value {
+pub fn flatten(mut v: Value) -> Value {
+    flatten_in(&mut v);
+    v
+}
+
+/// flatten, in place: nothing is copied.
+fn flatten_in(v: &mut Value) {
     match v {
-        Value::Object(mut m) => {
-            if m.len() == 1 && m.contains_key("nodes") {
-                return flatten(m.remove("nodes").unwrap());
-            }
-            Value::Object(m.into_iter().map(|(k, x)| (k, flatten(x))).collect())
+        Value::Object(m) if m.len() == 1 && m.contains_key("nodes") => {
+            *v = m.shift_remove("nodes").unwrap_or(Value::Null);
+            flatten_in(v);
         }
-        Value::Array(a) => Value::Array(a.into_iter().map(flatten).collect()),
-        v => v,
+        Value::Object(m) => m.values_mut().for_each(flatten_in),
+        Value::Array(a) => a.iter_mut().for_each(flatten_in),
+        _ => {}
     }
 }
 
@@ -420,13 +425,23 @@ pub struct Page {
 }
 
 impl Page {
-    pub fn from(v: &Value) -> Page {
+    /// The page in v, taken out of it rather than copied.
+    pub fn take(v: &mut Value) -> Page {
+        let nodes = match v.get_mut("nodes").map(Value::take) {
+            Some(Value::Array(a)) => a,
+            _ => vec![],
+        };
         Page {
-            nodes: v["nodes"].as_array().cloned().unwrap_or_default(),
+            nodes,
             has_next: v["pageInfo"]["hasNextPage"].as_bool().unwrap_or(false),
             end_cursor: v["pageInfo"]["endCursor"].as_str().unwrap_or("").to_string(),
         }
     }
+}
+
+/// An object from these fields, moved in: json!() would copy each value.
+pub fn object<const N: usize>(fields: [(&str, Value); N]) -> Value {
+    Value::Object(fields.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
 }
 
 /// Pages through a connection until limit items (0: all). fetch gets one
@@ -453,15 +468,24 @@ pub fn collect(limit: u64, mut cursor: String, mut fetch: impl FnMut(u64, &str) 
 /// The list shape: Linear connections have no count, so total is null;
 /// truncated says whether more remain, and nextCursor is where --cursor
 /// continues.
-pub fn list_doc(run: &mut Run, items: &[Value], next: &str, fields: &[String]) -> Value {
-    let out: Vec<Value> = items.iter().map(|it| pick(flatten(it.clone()), fields)).collect();
+pub fn list_doc(run: &mut Run, items: Vec<Value>, next: &str, fields: &[String]) -> Value {
+    more_note(run, items.len(), next);
+    let out: Vec<Value> = items.into_iter().map(|it| pick(flatten(it), fields)).collect();
+    let shown = out.len();
+    object([
+        ("items", Value::Array(out)),
+        ("total", Value::Null),
+        ("shown", json!(shown)),
+        ("truncated", json!(!next.is_empty())),
+        ("nextCursor", optional(next)),
+    ])
+}
+
+/// Says on stderr where the next page starts, when there is one.
+pub fn more_note(run: &mut Run, shown: usize, next: &str) {
     if !next.is_empty() {
-        run.eprint(&format!(
-            "{} shown, more remain; --cursor {next} for the next page, --limit 0 for all\n",
-            items.len()
-        ));
+        run.eprint(&format!("{shown} shown, more remain; --cursor {next} for the next page, --limit 0 for all\n"));
     }
-    json!({"items": out, "total": null, "shown": out.len(), "truncated": !next.is_empty(), "nextCursor": optional(next)})
 }
 
 /// A nested field of a decoded item ("state.name") as text, "" if absent.

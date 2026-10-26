@@ -249,15 +249,16 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
         if let Some(f) = &filter {
             vars["filter"] = f.clone();
         }
-        let data = cl.query(run, l.doc, vars)?;
-        Ok(Page::from(&data[l.conn]))
+        let mut data = cl.query(run, l.doc, vars)?;
+        Ok(Page::take(&mut data[l.conn]))
     })?;
     if let Some(sort) = l.sort {
         items.sort_by(sort);
     }
-    let doc = list_doc(run, &items, &next, &fields);
     if run.json {
+        let doc = list_doc(run, items, &next, &fields);
         return run.print_json(doc);
     }
+    more_note(run, items.len(), &next);
     rows(run, &items, l.cols)
 }

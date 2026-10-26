@@ -173,8 +173,8 @@ impl Watcher {
         let mut cursor = String::new();
         for _ in 0..SNAPSHOT_PAGES {
             let vars = json!({"filter": self.filter, "first": PAGE_SIZE, "after": optional(&cursor)});
-            let data = self.cl.query(run, queries::WATCH_IDS, vars)?;
-            let p = Page::from(&data["issues"]);
+            let mut data = self.cl.query(run, queries::WATCH_IDS, vars)?;
+            let p = Page::take(&mut data["issues"]);
             for n in &p.nodes {
                 self.known.insert(str_at(n, "id"), str_at(n, "identifier"));
             }
@@ -240,12 +240,12 @@ impl Watcher {
         let filter = self.and(gte.clone());
         let cl = self.cl.clone();
         let (items, _) = collect(PAGE_SIZE * SNAPSHOT_PAGES, String::new(), |first, after| {
-            let data = cl.query(
+            let mut data = cl.query(
                 run,
                 queries::ISSUE_LIST,
                 json!({"filter": filter, "first": first, "after": optional(after)}),
             )?;
-            Ok(Page::from(&data["issues"]))
+            Ok(Page::take(&mut data["issues"]))
         })?;
         let mut matched = std::collections::HashSet::new();
         for it in &items {

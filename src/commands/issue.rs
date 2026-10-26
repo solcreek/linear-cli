@@ -136,22 +136,23 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
     let (items, next) = collect(limit, cursor, |first, after| {
         vars.insert("first".into(), json!(first));
         vars.insert("after".into(), optional(after));
-        let data = cl.query(run, doc, Value::Object(vars.clone()))?;
-        Ok(Page::from(&data[conn]))
+        let mut data = cl.query(run, doc, Value::Object(vars.clone()))?;
+        Ok(Page::take(&mut data[conn]))
     })?;
-    let mut out = list_doc(run, &items, &next, &fields);
     // Asked-for issues that did not come back: partial, never silent.
     let problems: Vec<Value> = ids
         .iter()
         .filter(|r| !items.iter().any(|it| str_at(it, "identifier") == **r || str_at(it, "id") == **r))
         .map(|r| json!({"input": r, "error": "not found (or this API key cannot see it)"}))
         .collect();
-    if !problems.is_empty() {
-        out["problems"] = json!(problems);
-    }
     if run.json {
+        let mut out = list_doc(run, items, &next, &fields);
+        if !problems.is_empty() {
+            out["problems"] = json!(problems);
+        }
         run.print_json(out)?;
     } else {
+        more_note(run, items.len(), &next);
         rows(run, &items, &["identifier", "state.name", "assignee.name", "title"])?;
     }
     for p in &problems {
@@ -363,9 +364,10 @@ fn show(run: &mut Run, ctx: &Ctx) -> R {
     let data = cl
         .query(run, queries::ISSUE_SHOW, json!({"id": r, "comments": comments, "withComments": comments > 0}))
         .map_err(|e| e.not_found(&format!("issue {r}")))?;
-    let issue = flatten(data["issue"].clone());
+    let mut data = data;
+    let issue = flatten(data["issue"].take());
     if run.json {
-        let mut doc = json!({"issue": pick(issue, &fields)});
+        let mut doc = object([("issue", pick(issue, &fields))]);
         if !expires.is_null() {
             doc["signedUrlsExpireAt"] = expires;
         }
@@ -748,7 +750,8 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
         return run.output(json!({"changed": true, "dryRun": true, "id": id, "input": w.input}), &text);
     }
     let out = cl.query(run, queries::ISSUE_CREATE, json!({"input": w.input}))?;
-    let it = flatten(out["issueCreate"]["issue"].clone());
+    let mut out = out;
+    let it = flatten(out["issueCreate"]["issue"].take());
     let text = format!("created {} {}", str_at(&it, "identifier"), str_at(&it, "url"));
     run.output(json!({"changed": true, "dryRun": false, "id": id, "issue": it}), &text)
 }
@@ -874,7 +877,8 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
         return run.output(doc, &format!("would update {identifier}: {}", keys.join(", ")));
     }
     let out = cl.query(run, queries::ISSUE_UPDATE, json!({"id": str_at(is, "id"), "input": w.input}))?;
-    doc["issue"] = flatten(out["issueUpdate"]["issue"].clone());
+    let mut out = out;
+    doc["issue"] = flatten(out["issueUpdate"]["issue"].take());
     run.output(doc, &format!("updated {identifier}"))
 }
 

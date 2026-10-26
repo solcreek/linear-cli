@@ -33,15 +33,16 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
     let cursor = cursor_value(ctx)?;
     let cl = run.client()?;
     let (items, next) = collect(ctx.whole("limit"), cursor, |first, after| {
-        let data = cl
+        let mut data = cl
             .query(run, queries::COMMENT_LIST, json!({"id": r, "first": first, "after": optional(after)}))
             .map_err(|e| e.not_found(&format!("issue {r}")))?;
-        Ok(Page::from(&data["issue"]["comments"]))
+        Ok(Page::take(&mut data["issue"]["comments"]))
     })?;
-    let doc = list_doc(run, &items, &next, &fields);
     if run.json {
+        let doc = list_doc(run, items, &next, &fields);
         return run.print_json(doc);
     }
+    more_note(run, items.len(), &next);
     for it in &items {
         run.print(&format!(
             "— {}, {}\n{}\n\n",
