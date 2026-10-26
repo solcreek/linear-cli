@@ -289,3 +289,11 @@ func TestDescribe(t *testing.T) {
 		}
 	}
 }
+
+func TestJSONIsCompactIntoAPipe(t *testing.T) {
+	t.Parallel()
+	r := run(t, "config", "show", "--json")
+	if r.code != 0 || strings.Count(r.out, "\n") != 1 || strings.Contains(r.out, ": ") {
+		t.Errorf("not one compact line: %q", r.out)
+	}
+}

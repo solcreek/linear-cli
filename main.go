@@ -345,9 +345,14 @@ func output(cmd *cobra.Command, v any, text string) error {
 	return nil
 }
 
+// printJSON prints one JSON document: indented for a person at a terminal,
+// compact into a pipe, where an agent pays for every byte in its context
+// (17-35% smaller; docs/performance.md). The data is the same either way.
 func printJSON(v any) error {
 	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
+	if isTerminal(os.Stdout) {
+		enc.SetIndent("", "  ")
+	}
 	return enc.Encode(v)
 }
 
