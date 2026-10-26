@@ -56,7 +56,7 @@ jobs:
           mkdir tgz
           for d in npm-out/*; do (cd "$d" && npm pack --pack-destination ../../tgz); done
           npm install -g --prefix "$RUNNER_TEMP/g" --allow-scripts=@solcreek/linear-cli \
-            tgz/solcreek-linear-cli-linux-x64-0.0.0-ci.tgz tgz/solcreek-linear-cli-0.0.0-ci.tgz
+            ./tgz/solcreek-linear-cli-linux-x64-0.0.0-ci.tgz ./tgz/solcreek-linear-cli-0.0.0-ci.tgz
           bin="$RUNNER_TEMP/g/bin/linearctl"
           "$bin" --version
           if head -c 2 "$bin" | grep -q '#!'; then echo "bin is still the Node shim"; exit 1; fi
