@@ -17,6 +17,16 @@ names are only ever added, never renamed or removed.
   connection or a 5xx from Linear, that rerunning the command is safe. Without
   `--json` it is a `hint: …` line on stderr. `error` and the exit codes are
   unchanged.
+- An agent skill, `skills/linearctl/`, packaged as a Claude Code plugin
+  (`.claude-plugin/plugin.json`). `make skill` generates it from AGENTS.md and
+  the commands' `describe` and `--help`; `make test` fails when it is stale, or
+  when AGENTS.md's list of mutating commands differs from `describe`.
+
+### Fixed
+
+- AGENTS.md's list of mutating commands lacked `issue unarchive`,
+  `comment update`, `comment delete`, `relation create`, `relation delete` and
+  `project update`.
 
 ## [0.3.0] - 2026-10-26
 
