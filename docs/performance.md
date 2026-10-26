@@ -22,6 +22,10 @@ api.linear.app costs ~150 ms, and everything linearctl does around it costs
 | peak RSS | 12.7–15.6 MB | |
 | binary | 12.9 MB (8.8 MB with `-s -w`) | stripping does not change start time |
 
+`--json` into a pipe is compact (since `e44bd08`): 35% fewer bytes for a
+100-issue page (84,080 → 54,655), 30% with `--fields`, 17% for an issue with
+100 comments. At a terminal it stays indented.
+
 Requests per command: reads 1; `issue create`/`update`/`archive` and
 `comment create` 2 (resolve, then mutate) on one connection; `--limit 0`
 one per page of 100.
@@ -41,3 +45,27 @@ Linear's edge for these runs was Cloudflare `DFW`, origin behind Google
 Not yet measured, needs a real key: per-query complexity (`X-Complexity`),
 whether answers are gzip-compressed, and server time by query (search is
 rate-limited to 30/min and may be slower).
+
+## Tried and rejected
+
+- **Persisting TLS session tickets across runs** (2026-10-26): no gain.
+  Cold vs resumed against api.linear.app, 40 runs each, twice: min 151.4 /
+  150.3 ms cold, 152.7 / 153.4 ms resumed. TLS 1.3 resumption takes the same
+  one round trip as a full handshake; only 0-RTT would save it, and Go's
+  crypto/tls does not send early data.
+- **Reading the Keychain through Security.framework** instead of spawning
+  `security` (would save ~10 ms): the item's ACL trusts the tool that made
+  it, so linearctl reading it directly would raise a macOS permission dialog,
+  again after every upgrade of an unsigned binary. Agents set
+  `LINEAR_API_KEY` and skip the Keychain entirely.
+
+## Open, needs a real key
+
+- Page size above 100 for `--limit 0` (fewer round trips). Linear documents
+  no maximum `first`, only 10,000 complexity points per query; by its formula
+  an `issueRow` is ~30 points (20 of them `labels(first: 20)`), so 250 per
+  page is ~7,400. Linear checks auth before arguments, so this cannot be
+  probed without a key.
+- A persistent connection (`serve --stdio`, as crispctl has) would save the
+  TCP + TLS setup, ~40 ms of each ~150 ms command, for a caller making many
+  requests (the TUI, a long agent session).
