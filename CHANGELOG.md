@@ -9,6 +9,38 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Changed
+
+- linearctl is now written in Rust. Commands, flags, `--help`, `describe`,
+  `--json` output, error messages and exit codes are those of 0.2.0: 397
+  outputs recorded from 0.2.0 (help, usage errors, config and credentials,
+  every read and dry run in demo mode, `serve`, completion) match byte for
+  byte (`tests/golden`), and the 0.2.0 tests that run the binary against a
+  fake Linear pass unchanged (`acceptance/`). Against 0.2.0 as released, on
+  one machine in one session: 1.6× faster to start (2.7 vs 4.3 ms), 1.7× for
+  a 100-issue `issue list` (4.0 vs 6.7 ms), 2× for 100 requests through
+  `serve --stdio` (133 vs 270 ms), half the memory, and a 2.5 MiB binary
+  instead of 9.2 MiB ([docs/performance.md](docs/performance.md)).
+- Release binaries are still one self-contained file per platform (Linux:
+  static, musl); the archives, `checksums.txt` and the npm packages keep
+  their names.
+- `linearctl … | head` ends quietly, as before; an empty value among a
+  repeated flag's (`--label x --label ""`) is refused, as before.
+- From source: `cargo install --git https://github.com/solcreek/linear-cli`
+  (`go install` no longer applies).
+- The demo workspace moved from `cmd/linearctl/demo/workspace.json` to
+  `demo/workspace.json`.
+
+### Known differences
+
+- After `cannot reach HOST:`, the reason is the operating system's or the
+  HTTP client's wording, not Go's: `connection refused` rather than
+  `dial tcp 127.0.0.1:9: connect: connection refused`.
+- `watch` connects its WebSocket directly; `HTTPS_PROXY` applies to every
+  other request, as before.
+- An answer from Linear with a field of an unexpected type is read as far as
+  it goes, where 0.2.0 failed with `unexpected answer from Linear`.
+
 ## [0.2.1] - 2026-10-26
 
 ### Fixed

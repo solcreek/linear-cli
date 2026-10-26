@@ -1,0 +1,9 @@
+date: 2026-10-26T17:55:27Z
+load: 7.36 5.46 5.03
+toolchain: rustc 1.98.1 (48a229cea 2026-09-01) (Homebrew)
+clean release build: 35.8 s
+incremental release build (touch issue.rs): 23.3 s
+clean debug build: 10.0 s
+incremental debug build (touch issue.rs): 0.6 s
+test suite (make test): 19.9 s
+coverage (lines): 94.41%

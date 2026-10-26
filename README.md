@@ -3,9 +3,6 @@
 [![Release](https://img.shields.io/github/v/release/solcreek/linear-cli)](https://github.com/solcreek/linear-cli/releases/latest)
 [![npm version](https://img.shields.io/npm/v/@solcreek/linear-cli)](https://www.npmjs.com/package/@solcreek/linear-cli)
 [![CI](https://github.com/solcreek/linear-cli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/solcreek/linear-cli/actions/workflows/ci.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/solcreek/linear-cli.svg)](https://pkg.go.dev/github.com/solcreek/linear-cli/cmd/linearctl)
-[![Go version](https://img.shields.io/github/go-mod/go-version/solcreek/linear-cli)](go.mod)
-[![Go Report Card](https://goreportcard.com/badge/github.com/solcreek/linear-cli)](https://goreportcard.com/report/github.com/solcreek/linear-cli)
 [![MIT license](https://img.shields.io/github/license/solcreek/linear-cli)](LICENSE)
 
 An agent-first CLI for [Linear](https://linear.app): list, search, show, create and
@@ -23,14 +20,14 @@ tests.
 ## Install
 
 ```sh
-npm install -g @solcreek/linear-cli                          # macOS, Linux, Windows
-go install github.com/solcreek/linear-cli/cmd/linearctl@latest
+npm install -g @solcreek/linear-cli                         # macOS, Linux, Windows
+cargo install --git https://github.com/solcreek/linear-cli  # from source
 ```
 
 Or download a binary from [Releases](https://github.com/solcreek/linear-cli/releases/latest)
 (`checksums.txt` alongside). The npm package installs the native binary for
 your platform, and its install script puts that binary where `linearctl`
-points, so no Node runs when you call it (4 ms a run). Where install scripts
+points, so no Node runs when you call it (~3 ms a run). Where install scripts
 are skipped (`--ignore-scripts`, pnpm, and npm versions that ask for
 `--allow-scripts`), a small Node shim runs the same binary instead (~34 ms).
 To keep the fast path on npm 11.19 and later:
@@ -138,20 +135,26 @@ flags and exit codes as JSON.
 ## Speed
 
 A command's time is almost all the request to Linear (~150 ms). Starting,
-decoding and printing take ~5 ms; a 100-issue page decodes in 0.5 ms. Measurements
+decoding and printing take ~4 ms: 2.7 ms to start, ~1.3 ms for a 100-issue page. Measurements
 and what was tried: [docs/performance.md](docs/performance.md).
 
 ## Develop
 
+linearctl is written in Rust; the acceptance tests and the benchmark's fake
+Linear are Go.
+
 ```sh
-make test     # go test ./...
-make cover    # coverage across in-process tests and every binary run
+make test     # unit tests, then acceptance/ and tests/golden against the binary
+make check    # what CI runs: rustfmt, clippy, gofmt, go vet, then make test
+make cover    # coverage of all of the above, merged
 make schema   # refresh graphql/schema.graphql from Linear
 ```
 
-The tests run the built binary against a fake Linear, with `LINEARCTL_HOME`
-pointing at a temporary directory, so they never touch the network, the
-Keychain or your config. The design is in [docs/design.md](docs/design.md).
+`acceptance/` runs the built binary against a fake Linear that checks every
+request against Linear's schema, with `LINEARCTL_HOME` pointing at a temporary
+directory, so the tests never touch the network, the Keychain or your config.
+`tests/golden` holds what every command prints offline (help, errors, demo
+mode), byte for byte. The design is in [docs/design.md](docs/design.md).
 
 ## License
 
