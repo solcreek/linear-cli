@@ -31,6 +31,8 @@ Flags:
 
 ```
 Remove a relation between two issues. One that is not there is changed: false.
+Without TYPE, removes every relation between the two, in either direction,
+and lists each in relations.
 TYPE is one of:
   blocks      ISSUE blocks OTHER
   blocked-by  OTHER blocks ISSUE
@@ -40,11 +42,12 @@ TYPE is one of:
 Changes things: pass --dry-run to preview, --yes to apply.
 
 Usage:
-  linearctl relation delete ISSUE TYPE OTHER [flags]
+  linearctl relation delete ISSUE [TYPE] OTHER [flags]
 
 Examples:
   linearctl relation delete ENG-12 blocks ENG-15 --dry-run
   linearctl relation delete ENG-12 duplicate ENG-9 --yes --json
+  linearctl relation delete ENG-12 ENG-15 --dry-run --json
 
 Flags:
       --dry-run   show what would change; change nothing

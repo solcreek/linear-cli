@@ -128,7 +128,7 @@ asks for the following. They are the caller's to do, built from these commands:
 | [`linearctl project show PROJECT`](references/project.md) | Show a project: its overview, milestones and issues |  |
 | [`linearctl project update PROJECT`](references/project.md) | Change a project's name, description or overview | M |
 | [`linearctl relation create ISSUE TYPE OTHER`](references/relation.md) | Relate two issues | M |
-| [`linearctl relation delete ISSUE TYPE OTHER`](references/relation.md) | Remove a relation between two issues | M |
+| [`linearctl relation delete ISSUE [TYPE] OTHER`](references/relation.md) | Remove a relation between two issues | M |
 | [`linearctl serve`](references/serve.md) | Answer linearctl invocations over stdin and stdout, one JSON line each |  |
 | [`linearctl state list`](references/state.md) | List workflow states, by team and position |  |
 | [`linearctl team list`](references/team.md) | List teams |  |

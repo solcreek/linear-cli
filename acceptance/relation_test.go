@@ -101,3 +101,72 @@ func TestRelationDryRunDeleteAndRefusals(t *testing.T) {
 		t.Error("a refused relation reached Linear")
 	}
 }
+
+func TestRelationDeleteWithoutTypeDeletesEveryRelationBetweenTheTwo(t *testing.T) {
+	t.Parallel()
+	rels := []any{out("blocks", "id-B"), out("related", "id-C")}
+	inv := []any{in("duplicate", "id-B")}
+	deleted := func(api *fake) []string {
+		var ids []string
+		for _, c := range api.calls() {
+			if c.Op == "RelationDelete" {
+				ids = append(ids, c.Vars["id"].(string))
+			}
+		}
+		return ids
+	}
+
+	api := relFake(t, rels, inv)
+	r := runWith(t, opts{api: api, key: testKey}, "relation", "delete", "ENG-1", "ENG-2", "--dry-run", "--json")
+	d := decode(t, r.out)
+	if r.code != 0 || d["changed"] != true || d["dryRun"] != true || len(deleted(api)) != 0 {
+		t.Fatalf("dry run: exit %d, %q, deleted %v", r.code, r.out, deleted(api))
+	}
+
+	r = runWith(t, opts{api: api, key: testKey}, "relation", "delete", "ENG-1", "ENG-2", "--yes", "--json")
+	d = decode(t, r.out)
+	want := `[{"id":"rel-blocks","issue":"ENG-1","relatedIssue":"x","type":"blocks"},` +
+		`{"id":"rel-in-duplicate","issue":"x","relatedIssue":"ENG-1","type":"duplicate"}]`
+	if r.code != 0 || d["changed"] != true || jsonOf(d["relations"]) != want {
+		t.Errorf("exit %d, relations %s", r.code, jsonOf(d["relations"]))
+	}
+	if got := strings.Join(deleted(api), ","); got != "rel-blocks,rel-in-duplicate" {
+		t.Errorf("deleted %s; a relation to another issue must stay", got)
+	}
+
+	api = relFake(t, []any{out("related", "id-C")}, nil)
+	r = runWith(t, opts{api: api, key: testKey}, "relation", "delete", "ENG-1", "ENG-2", "--yes", "--json")
+	if d = decode(t, r.out); r.code != 0 || d["changed"] != false || jsonOf(d["relations"]) != `[]` || len(deleted(api)) != 0 {
+		t.Errorf("nothing between them: exit %d, %q", r.code, r.out)
+	}
+
+	for _, args := range [][]string{{"ENG-1"}, {"ENG-1", "blocks", "ENG-2", "ENG-3"}} {
+		r = runWith(t, opts{api: api, key: testKey}, append(append([]string{"relation", "delete"}, args...), "--dry-run")...)
+		if r.code != exitUsage {
+			t.Errorf("%v: exit %d", args, r.code)
+		}
+	}
+	r = runWith(t, opts{api: api, key: testKey}, "relation", "create", "ENG-1", "ENG-2", "--dry-run")
+	if r.code != exitUsage {
+		t.Errorf("create without TYPE: exit %d", r.code)
+	}
+}
+
+func TestRelationDeleteWithoutTypeReportsAFailedDeleteAsPartial(t *testing.T) {
+	t.Parallel()
+	api := relFake(t, []any{out("blocks", "id-B")}, []any{in("related", "id-B")}).
+		onFunc("RelationDelete", func(v map[string]any) (int, any, map[string]string) {
+			if v["id"] == "rel-blocks" {
+				return 200, map[string]any{"errors": []any{map[string]any{"message": "Entity not found"}}}, nil
+			}
+			return 200, map[string]any{"data": map[string]any{"issueRelationDelete": map[string]any{"success": true}}}, nil
+		})
+	r := runWith(t, opts{api: api, key: testKey}, "relation", "delete", "ENG-1", "ENG-2", "--yes", "--json")
+	d := decode(t, r.out)
+	if r.code != exitPartial || d["changed"] != true || jsonOf(d["relations"]) != `[{"id":"rel-in-related","issue":"x","relatedIssue":"ENG-1","type":"related"}]` {
+		t.Errorf("exit %d, %q", r.code, r.out)
+	}
+	if p, _ := d["problems"].([]any); len(p) != 1 || p[0].(map[string]any)["input"] != "rel-blocks" {
+		t.Errorf("problems %v", d["problems"])
+	}
+}

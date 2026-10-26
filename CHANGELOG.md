@@ -14,6 +14,9 @@ names are only ever added, never renamed or removed.
 - `issue list --blocked` and `--blocking` (Linear's hasBlockedByRelations and
   hasBlockingRelations; Linear ignores completed and canceled blockers), and
   `--completed-since WHEN`. `watch` takes them too.
+- `relation delete ISSUE OTHER`, without TYPE, deletes every relation between the
+  two issues in either direction and lists each in `relations`. One that fails
+  to delete is a partial result (exit 3) with `problems`.
 
 ### Fixed
 

@@ -3320,7 +3320,7 @@ exit: 0
             {
               "default": null,
               "name": "TYPE",
-              "required": true
+              "required": false
             },
             {
               "default": null,
@@ -3331,7 +3331,8 @@ exit: 0
           "commands": [],
           "examples": [
             "linearctl relation delete ENG-12 blocks ENG-15 --dry-run",
-            "linearctl relation delete ENG-12 duplicate ENG-9 --yes --json"
+            "linearctl relation delete ENG-12 duplicate ENG-9 --yes --json",
+            "linearctl relation delete ENG-12 ENG-15 --dry-run --json"
           ],
           "flags": [
             {
@@ -3387,7 +3388,7 @@ exit: 0
           "mutates": true,
           "name": "delete",
           "summary": "Remove a relation between two issues",
-          "usage": "linearctl relation delete ISSUE TYPE OTHER [flags]"
+          "usage": "linearctl relation delete ISSUE [TYPE] OTHER [flags]"
         }
       ],
       "examples": [],
