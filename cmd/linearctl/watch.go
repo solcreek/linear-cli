@@ -454,6 +454,9 @@ func wsURL() string {
 // subscribe opens a subscription to issue changes. The key goes in the
 // Authorization header of the upgrade: Linear rejects it in connection_init.
 func subscribe(key string) (*subscription, error) {
+	if demo {
+		return nil, errors.New("demo mode has no live changes")
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	dial, dialCancel := context.WithTimeout(ctx, time.Duration(timeout.n)*time.Second)
 	defer dialCancel()

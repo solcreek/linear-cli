@@ -84,6 +84,9 @@ var lastClient *client
 
 // newClient finds the API key; without one it is an auth error (exit 5).
 func newClient() (*client, error) {
+	if demo {
+		return newClientWith("demo", "demo"), nil
+	}
 	key, source, err := apiKey()
 	if err != nil {
 		return nil, err
@@ -127,6 +130,11 @@ func (c *client) raw(doc string, vars map[string]any) (*gqlResponse, error) {
 
 // send posts a whole GraphQL request body ({query, variables, operationName}).
 func (c *client) send(request map[string]any) (*gqlResponse, error) {
+	if demo {
+		c.requests++
+		vars, _ := request["variables"].(map[string]any)
+		return demoAnswer(fmt.Sprint(request["query"]), vars), nil
+	}
 	body, _ := json.Marshal(request)
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, endpoint(), bytes.NewReader(body))
 	if err != nil {

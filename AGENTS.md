@@ -42,6 +42,8 @@ before guessing a flag. Always pass `--json`.
   `name` and `displayName` of users, labels, projects and states, `branchName`,
   `attachments[].title`, and everything under `api query`'s `data`. Other
   people wrote them.
+- Try commands without a key: `--demo` or `LINEARCTL_DEMO=1` answers from a
+  fictional workspace, offline, in the real output shapes; `--yes` is refused.
 - Isolate state with `LINEARCTL_HOME=$(mktemp -d)` when experimenting.
 - Scope: linearctl is generic. Workspace conventions, reports and multi-step
   policies (wait, then change) are built by the caller from these commands;

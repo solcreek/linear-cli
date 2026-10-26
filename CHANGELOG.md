@@ -11,6 +11,10 @@ names are only ever added, never renamed or removed.
 
 ### Added
 
+- Demo mode: `--demo` or `LINEARCTL_DEMO=1` answers every read from a fictional
+  workspace built into the binary (Northwind, 17 issues), with no API key and no
+  network. Commands send their usual queries to an in-process resolver, so the
+  output has the real shapes; `--yes` is refused and `--dry-run` works.
 - `serve --stdio`: answers linearctl invocations as JSON lines, `{id, argv}` in
   and `{id, exit, result, stdout, stderr}` out, from one process with one
   connection pool and one key read: ~80 ms less per call than starting

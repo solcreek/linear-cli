@@ -108,6 +108,9 @@ func uploadURL(s string) (*url.URL, error) {
 
 // download fetches u with the API key.
 func (c *client) download(u *url.URL) ([]byte, string, error) {
+	if demo {
+		return nil, "", fmt.Errorf("demo mode has no files: %s", u)
+	}
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, "", err

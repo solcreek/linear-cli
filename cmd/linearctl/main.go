@@ -101,7 +101,10 @@ func newRoot() *cobra.Command {
 		// cobra answers --help before this runs.
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			if cmd.Annotations["mutates"] == "true" {
-				_, err := change(cmd)
+				dryRun, err := change(cmd)
+				if err == nil && demo && !dryRun {
+					return fmt.Errorf("demo mode is read-only: %s --yes changes nothing; --dry-run shows what it would do", cmd.CommandPath())
+				}
 				return err
 			}
 			return nil
@@ -112,6 +115,8 @@ func newRoot() *cobra.Command {
 	root.Flags().Bool("version", false, "print the version")
 	root.PersistentFlags().BoolVar(&asJSON, "json", false, "print one JSON document on stdout")
 	root.PersistentFlags().Var(&timeout, "timeout", "give up on a network request after `N` seconds")
+	root.PersistentFlags().BoolVar(&demo, "demo", os.Getenv("LINEARCTL_DEMO") == "1",
+		"answer from a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1")
 	root.PersistentFlags().BoolVar(&withMeta, "meta", os.Getenv("LINEARCTL_META") == "1",
 		"add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1")
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error { return usageError{err} })

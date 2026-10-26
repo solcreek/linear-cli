@@ -39,6 +39,18 @@ To keep the fast path on npm 11.19 and later:
 npm install -g @solcreek/linear-cli --allow-scripts=@solcreek/linear-cli
 ```
 
+## Try it without a key
+
+```sh
+linearctl --demo issue list
+LINEARCTL_DEMO=1 linearctl issue show ENG-142
+```
+
+Demo mode answers from a fictional workspace built into the binary, Northwind,
+with no API key and no network. Every command sends its usual GraphQL query and
+gets the answer from that workspace, so the output has exactly the shapes of
+real output. Writes are refused; `--dry-run` works.
+
 ## Authenticate
 
 Create a personal API key at <https://linear.app/settings/account/security>, then
