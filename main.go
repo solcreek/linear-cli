@@ -414,6 +414,9 @@ func describe(c *cobra.Command) map[string]any {
 	}
 	d["usage"] = c.UseLine()
 	d["mutates"] = c.Annotations["mutates"] == "true"
+	if c.Annotations["stdin"] == "true" { // it reads a secret from stdin
+		d["stdin"] = true
+	}
 	d["args"] = args
 	d["examples"] = examples
 	return d
