@@ -9,6 +9,12 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Added
+
+- `issue list --blocked` and `--blocking` (Linear's hasBlockedByRelations and
+  hasBlockingRelations; Linear ignores completed and canceled blockers), and
+  `--completed-since WHEN`. `watch` takes them too.
+
 ## [0.6.0] - 2026-10-26
 
 ### Added

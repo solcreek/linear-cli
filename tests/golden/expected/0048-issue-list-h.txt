@@ -20,36 +20,39 @@ Examples:
   linearctl issue list --query "login timeout" --limit 10
 
 Flags:
-      --any-label NAME       only issues with label NAME (repeatable; any of)
-      --assignee WHO         only issues assigned to WHO: me, none, or an email
-      --attachment-url URL   only issues with an attachment at URL (e.g. a linked pull request)
-      --creator WHO          only issues created by WHO: me, none, or an email
-      --cursor CURSOR        continue after CURSOR (nextCursor from the previous page)
-      --cycle CYCLE          only issues in cycle CYCLE: current, next, previous, a number, a UUID
-      --delegate WHO         only issues delegated to the agent WHO (name, email, me, any, none)
-      --due-after DATE       only issues due on or after DATE
-      --due-before DATE      only issues due on or before DATE (<DATE>)
-      --fields FIELDS        return only these comma-separated FIELDS (see Fields above)
-  -h, --help                 help for list
-      --id ISSUE             only the issue ISSUE (ENG-123 or a UUID; repeatable); one not
-                             found is a problem (exit 3)
-      --include-comments     with --query, also match the text of comments
-      --label NAME           only issues with label NAME (repeatable; all of)
-      --limit N              show at most N items; 0 for all (default 25)
-      --milestone NAME       only issues in project milestone NAME (none: in no milestone)
-      --priority PRIORITY    only issues of PRIORITY: 0-4 or none, urgent, high, medium, low
-                             (repeatable, any of)
-      --project NAME         only issues in project NAME (none: in no project)
-      --query TEXT           full-text search for TEXT
-      --reverse              reverse the order of --sort
-      --sort FIELD           FIELD: updated (default), created, priority, due-date, title, state
-      --state NAME           only issues in workflow state NAME (repeatable; any of)
-      --state-type TYPE      only issues whose state is of TYPE (repeatable): triage, backlog,
-                             unstarted, started, completed, canceled, duplicate
-      --team KEY             only issues of team KEY (e.g. ENG; repeatable, any of)
-      --updated-since WHEN   only issues updated since WHEN: a date, an RFC 3339 time, 7d or 24h
-      --view VIEW            only issues in Linear's saved custom view VIEW (a name or its id)
-      --without-label NAME   only issues without label NAME (repeatable; none of)
+      --any-label NAME         only issues with label NAME (repeatable; any of)
+      --assignee WHO           only issues assigned to WHO: me, none, or an email
+      --attachment-url URL     only issues with an attachment at URL (e.g. a linked pull request)
+      --blocked                only issues blocked by an open issue
+      --blocking               only issues that block another
+      --completed-since WHEN   only issues completed since WHEN: a date, an RFC 3339 time, 7d or 24h
+      --creator WHO            only issues created by WHO: me, none, or an email
+      --cursor CURSOR          continue after CURSOR (nextCursor from the previous page)
+      --cycle CYCLE            only issues in cycle CYCLE: current, next, previous, a number, a UUID
+      --delegate WHO           only issues delegated to the agent WHO (name, email, me, any, none)
+      --due-after DATE         only issues due on or after DATE
+      --due-before DATE        only issues due on or before DATE (<DATE>)
+      --fields FIELDS          return only these comma-separated FIELDS (see Fields above)
+  -h, --help                   help for list
+      --id ISSUE               only the issue ISSUE (ENG-123 or a UUID; repeatable); one not
+                               found is a problem (exit 3)
+      --include-comments       with --query, also match the text of comments
+      --label NAME             only issues with label NAME (repeatable; all of)
+      --limit N                show at most N items; 0 for all (default 25)
+      --milestone NAME         only issues in project milestone NAME (none: in no milestone)
+      --priority PRIORITY      only issues of PRIORITY: 0-4 or none, urgent, high, medium, low
+                               (repeatable, any of)
+      --project NAME           only issues in project NAME (none: in no project)
+      --query TEXT             full-text search for TEXT
+      --reverse                reverse the order of --sort
+      --sort FIELD             FIELD: updated (default), created, priority, due-date, title, state
+      --state NAME             only issues in workflow state NAME (repeatable; any of)
+      --state-type TYPE        only issues whose state is of TYPE (repeatable): triage, backlog,
+                               unstarted, started, completed, canceled, duplicate
+      --team KEY               only issues of team KEY (e.g. ENG; repeatable, any of)
+      --updated-since WHEN     only issues updated since WHEN: a date, an RFC 3339 time, 7d or 24h
+      --view VIEW              only issues in Linear's saved custom view VIEW (a name or its id)
+      --without-label NAME     only issues without label NAME (repeatable; none of)
 
 Global Flags:
       --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1

@@ -7,6 +7,9 @@ exit: 0
 --any-label	only issues with label `NAME` (repeatable; any of)
 --assignee	only issues assigned to `WHO`: me, none, or an email
 --attachment-url	only issues with an attachment at `URL` (e.g. a linked pull request)
+--blocked	only issues blocked by an open issue
+--blocking	only issues that block another
+--completed-since	only issues completed since `WHEN`: a date, an RFC 3339 time, 7d or 24h
 --creator	only issues created by `WHO`: me, none, or an email
 --cursor	continue after `CURSOR` (nextCursor from the previous page)
 --cycle	only issues in cycle `CYCLE`: current, next, previous, a number, a UUID

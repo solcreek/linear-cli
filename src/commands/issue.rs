@@ -85,6 +85,9 @@ pub fn filter_flags(c: Cmd) -> Cmd {
         .flag(Flag::str("cycle", "only issues in cycle `CYCLE`: current, next, previous, a number, a UUID"))
         .flag(Flag::str("updated-since", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h"))
         .flag(Flag::str("creator", "only issues created by `WHO`: me, none, or an email"))
+        .flag(Flag::str("completed-since", "only issues completed since `WHEN`: a date, an RFC 3339 time, 7d or 24h"))
+        .flag(Flag::bool("blocked", "only issues blocked by an open issue"))
+        .flag(Flag::bool("blocking", "only issues that block another"))
         .flag(Flag::str("due-before", "only issues due on or before `DATE` (2026-11-30)"))
         .flag(Flag::str("due-after", "only issues due on or after `DATE`"))
 }
@@ -335,6 +338,22 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
     let cy = ctx.str("cycle");
     if !cy.is_empty() {
         filter.insert("cycle".into(), super::cycle::cycle_ref("--cycle", &cy)?);
+    }
+    let done = ctx.str("completed-since");
+    if ctx.changed("completed-since") {
+        let at = when(&done).map_err(|_| {
+            usage(format!(
+                "--completed-since must be a date (2026-10-01), an RFC 3339 time, or 7d / 24h; got {}",
+                quote_go(&done)
+            ))
+        })?;
+        filter.insert("completedAt".into(), json!({"gte": at}));
+    }
+    if ctx.bool("blocked") {
+        filter.insert("hasBlockedByRelations".into(), json!({"eq": true}));
+    }
+    if ctx.bool("blocking") {
+        filter.insert("hasBlockingRelations".into(), json!({"eq": true}));
     }
     let creator = ctx.str("creator");
     if !creator.is_empty() {

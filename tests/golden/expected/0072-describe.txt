@@ -1925,6 +1925,27 @@ exit: 0
             },
             {
               "default": null,
+              "description": "only issues blocked by an open issue",
+              "name": "blocked",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "only issues that block another",
+              "name": "blocking",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "only issues completed since WHEN: a date, an RFC 3339 time, 7d or 24h",
+              "name": "completed-since",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
               "description": "only issues created by WHO: me, none, or an email",
               "name": "creator",
               "short": null,
@@ -4000,6 +4021,27 @@ exit: 0
         },
         {
           "default": null,
+          "description": "only issues blocked by an open issue",
+          "name": "blocked",
+          "short": null,
+          "type": "boolean"
+        },
+        {
+          "default": null,
+          "description": "only issues that block another",
+          "name": "blocking",
+          "short": null,
+          "type": "boolean"
+        },
+        {
+          "default": null,
+          "description": "only issues completed since WHEN: a date, an RFC 3339 time, 7d or 24h",
+          "name": "completed-since",
+          "short": null,
+          "type": "string"
+        },
+        {
+          "default": null,
           "description": "only issues created by WHO: me, none, or an email",
           "name": "creator",
           "short": null,
@@ -4070,7 +4112,7 @@ exit: 0
         },
         {
           "default": "auto",
-          "description": "MODE: auto (subscribe, else poll), subscription, poll",
+          "description": "MODE: auto (subscribe or poll), subscription, poll",
           "name": "mode",
           "short": null,
           "type": "string"
@@ -4098,7 +4140,7 @@ exit: 0
         },
         {
           "default": "300",
-          "description": "with subscriptions, catch up on missed changes every N s",
+          "description": "with subscriptions, re-read missed changes every N s",
           "name": "reconcile",
           "short": null,
           "type": "integer"

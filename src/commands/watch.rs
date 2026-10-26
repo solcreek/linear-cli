@@ -67,9 +67,9 @@ any since; beyond that (everything: true) every non-matching change is a remove.
         .run(watch);
     let c = filter_flags(c)
         .flag(Flag::str("since", "first replay changes since `WHEN` (a date, RFC 3339 time, 7d, 24h)"))
-        .flag(Flag::str("mode", "`MODE`: auto (subscribe, else poll), subscription, poll").default_to("auto"))
+        .flag(Flag::str("mode", "`MODE`: auto (subscribe or poll), subscription, poll").default_to("auto"))
         .flag(Flag::whole("heartbeat", 30, "print a heartbeat every `N` seconds"))
-        .flag(Flag::whole("reconcile", 300, "with subscriptions, catch up on missed changes every `N` s"))
+        .flag(Flag::whole("reconcile", 300, "with subscriptions, re-read missed changes every `N` s"))
         .flag(Flag::whole("poll-interval", 60, "when polling, ask Linear every `N` seconds"))
         // For tests; the default protects the rate limit.
         .flag(Flag::whole("batch-ms", 2000, "check changed issues at most every `MS` milliseconds").hidden());

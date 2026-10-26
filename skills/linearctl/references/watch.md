@@ -36,30 +36,33 @@ Examples:
   linearctl watch --assignee me --state-type started --since 2026-10-26T09:00:00Z --json
 
 Flags:
-      --any-label NAME       only issues with label NAME (repeatable; any of)
-      --assignee WHO         only issues assigned to WHO: me, none, or an email
-      --attachment-url URL   only issues with an attachment at URL (e.g. a linked pull request)
-      --creator WHO          only issues created by WHO: me, none, or an email
-      --cycle CYCLE          only issues in cycle CYCLE: current, next, previous, a number, a UUID
-      --delegate WHO         only issues delegated to the agent WHO (name, email, me, any, none)
-      --due-after DATE       only issues due on or after DATE
-      --due-before DATE      only issues due on or before DATE (2026-11-30)
-      --fields FIELDS        return only these comma-separated FIELDS (see Fields above)
-      --heartbeat N          print a heartbeat every N seconds (default 30)
-  -h, --help                 help for watch
-      --label NAME           only issues with label NAME (repeatable; all of)
-      --milestone NAME       only issues in project milestone NAME (none: in no milestone)
-      --mode MODE            MODE: auto (subscribe, else poll), subscription, poll (default "auto")
-      --poll-interval N      when polling, ask Linear every N seconds (default 60)
-      --priority PRIORITY    only issues of PRIORITY: 0-4 or none, urgent, high, medium, low
-                             (repeatable, any of)
-      --project NAME         only issues in project NAME (none: in no project)
-      --reconcile N          with subscriptions, catch up on missed changes every N s (default 300)
-      --since WHEN           first replay changes since WHEN (a date, RFC 3339 time, 7d, 24h)
-      --state NAME           only issues in workflow state NAME (repeatable; any of)
-      --state-type TYPE      only issues whose state is of TYPE (repeatable): triage, backlog,
-                             unstarted, started, completed, canceled, duplicate
-      --team KEY             only issues of team KEY (e.g. ENG; repeatable, any of)
-      --updated-since WHEN   only issues updated since WHEN: a date, an RFC 3339 time, 7d or 24h
-      --without-label NAME   only issues without label NAME (repeatable; none of)
+      --any-label NAME         only issues with label NAME (repeatable; any of)
+      --assignee WHO           only issues assigned to WHO: me, none, or an email
+      --attachment-url URL     only issues with an attachment at URL (e.g. a linked pull request)
+      --blocked                only issues blocked by an open issue
+      --blocking               only issues that block another
+      --completed-since WHEN   only issues completed since WHEN: a date, an RFC 3339 time, 7d or 24h
+      --creator WHO            only issues created by WHO: me, none, or an email
+      --cycle CYCLE            only issues in cycle CYCLE: current, next, previous, a number, a UUID
+      --delegate WHO           only issues delegated to the agent WHO (name, email, me, any, none)
+      --due-after DATE         only issues due on or after DATE
+      --due-before DATE        only issues due on or before DATE (2026-11-30)
+      --fields FIELDS          return only these comma-separated FIELDS (see Fields above)
+      --heartbeat N            print a heartbeat every N seconds (default 30)
+  -h, --help                   help for watch
+      --label NAME             only issues with label NAME (repeatable; all of)
+      --milestone NAME         only issues in project milestone NAME (none: in no milestone)
+      --mode MODE              MODE: auto (subscribe or poll), subscription, poll (default "auto")
+      --poll-interval N        when polling, ask Linear every N seconds (default 60)
+      --priority PRIORITY      only issues of PRIORITY: 0-4 or none, urgent, high, medium, low
+                               (repeatable, any of)
+      --project NAME           only issues in project NAME (none: in no project)
+      --reconcile N            with subscriptions, re-read missed changes every N s (default 300)
+      --since WHEN             first replay changes since WHEN (a date, RFC 3339 time, 7d, 24h)
+      --state NAME             only issues in workflow state NAME (repeatable; any of)
+      --state-type TYPE        only issues whose state is of TYPE (repeatable): triage, backlog,
+                               unstarted, started, completed, canceled, duplicate
+      --team KEY               only issues of team KEY (e.g. ENG; repeatable, any of)
+      --updated-since WHEN     only issues updated since WHEN: a date, an RFC 3339 time, 7d or 24h
+      --without-label NAME     only issues without label NAME (repeatable; none of)
 ```
