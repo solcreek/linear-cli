@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+// Runs the native linearctl from the platform package npm installed beside
+// this one. install.js normally replaces this file with that binary, so this
+// runs only where install scripts were skipped (--ignore-scripts, pnpm) or on
+// Windows.
+"use strict"
+const { spawnSync } = require("node:child_process")
+
+const pkg = `@solcreek/linear-cli-${process.platform}-${process.arch}`
+const exe = process.platform === "win32" ? "linearctl.exe" : "linearctl"
+let bin
+try {
+  bin = require.resolve(`${pkg}/bin/${exe}`)
+} catch {
+  console.error(`linearctl: no binary for ${process.platform}-${process.arch} (${pkg} is not installed).`)
+  console.error("Reinstall without --no-optional, or build it: go install github.com/solcreek/linear-cli/cmd/linearctl@latest")
+  process.exit(1)
+}
+const run = spawnSync(bin, process.argv.slice(2), { stdio: "inherit" })
+if (run.error) {
+  console.error(`linearctl: ${run.error.message}`)
+  process.exit(1)
+}
+if (run.signal) process.kill(process.pid, run.signal)
+process.exit(run.status ?? 1)
