@@ -99,9 +99,13 @@ fn websocket(
         s.connections.push(vec![]);
         s.connections.len() - 1
     };
+    // Closes as Linear does, waiting for the client's answer: dropping the
+    // socket with its messages unread would reset it on Windows, and the
+    // close frame with its code could be lost.
     let close = |ws: &mut tungstenite::WebSocket<TcpStream>, code: u16| {
         let _ = ws.close(Some(CloseFrame { code: CloseCode::from(code), reason: "".into() }));
         let _ = ws.flush();
+        while ws.read().is_ok() {}
     };
     let _ = ws.get_ref().set_read_timeout(Some(Duration::from_millis(300)));
     loop {
