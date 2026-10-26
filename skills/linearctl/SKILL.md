@@ -64,6 +64,27 @@ before guessing a flag. Always pass `--json`.
   policies (wait, then change) are built by the caller from these commands;
   see "What belongs in linearctl" in https://github.com/solcreek/linear-cli/blob/main/docs/design.md.
 
+### Working as a Linear agent
+
+When linearctl acts for a Linear agent (an app user, with an OAuth `actor=app`
+token), Linear's guide (https://linear.app/developers/agent-best-practices)
+asks for the following. They are the caller's to do, built from these commands:
+
+- Work starts on a delegated issue that is not already started, completed or
+  canceled: `issue update ISSUE --state-type started --yes` (the team's first
+  started state).
+- The issue has no delegate: `issue update ISSUE --delegate me --yes` (an app
+  token only; a person's key is refused).
+- An automation delegated it: leave it in triage, and leave assignment to a
+  person.
+- Acknowledge a new agent session within 10 seconds with a thought activity;
+  finish with a response activity, or elicitation or error when a person must
+  act. linearctl does not send agent activities yet (it takes personal API keys
+  only), so send those with Linear's API.
+- Rebuild context from the session's activities, not from comments, which can
+  be edited (`api query` on `agentSession(id:)`).
+- `notification list` is the agent's inbox.
+
 ## Commands
 
 `M`: changes things; pass exactly one of `--dry-run` and `--yes`.
