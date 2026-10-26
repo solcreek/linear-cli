@@ -72,7 +72,9 @@ func issueList() *cobra.Command {
 			case "created":
 				vars["orderBy"] = "createdAt"
 			case "priority":
-				vars["sort"] = []any{map[string]any{"priority": map[string]any{"order": "Ascending", "noPriorityFirst": false}}}
+				// Descending is Linear's urgent-first order, with no priority last;
+				// Ascending puts no priority (0) first (verified 2026-10-26).
+				vars["sort"] = []any{map[string]any{"priority": map[string]any{"order": "Descending"}}}
 			default:
 				return usageError{fmt.Errorf("--sort must be updated, created or priority; got %q", sortBy)}
 			}

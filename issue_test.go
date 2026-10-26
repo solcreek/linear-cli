@@ -145,7 +145,7 @@ func TestIssueListSearchAndSort(t *testing.T) {
 		t.Errorf("search --sort created: %v", v)
 	}
 	runWith(t, opts{api: api, key: testKey}, "issue", "list", "--sort", "priority")
-	if v := api.last("IssueList").Vars; v["orderBy"] != nil || jsonOf(v["sort"]) != `[{"priority":{"noPriorityFirst":false,"order":"Ascending"}}]` {
+	if v := api.last("IssueList").Vars; v["orderBy"] != nil || jsonOf(v["sort"]) != `[{"priority":{"order":"Descending"}}]` {
 		t.Errorf("--sort priority: %v", v)
 	}
 }
