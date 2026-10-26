@@ -173,3 +173,105 @@ func TestCycleListFilters(t *testing.T) {
 		}
 	}
 }
+
+const newCycleID = "0b6c1e2a-3f4d-4a5b-8c6d-7e8f9a0b1c2d"
+
+func cycleRow(id string, archived any) map[string]any {
+	c := cycleNode(24, "ENG")
+	c["id"], c["name"], c["archivedAt"] = id, "Sprint", archived
+	for _, k := range []string{"issues", "uncompletedIssuesUponClose"} {
+		delete(c, k)
+	}
+	return c
+}
+
+func TestCycleCreate(t *testing.T) {
+	t.Parallel()
+	resolve := func(existing ...any) *fake {
+		return newFake(t).on("CycleCreateResolve", map[string]any{"teams": conn("", map[string]any{"id": "t-ENG", "key": "ENG"}), "existing": conn("", existing...)}).
+			on("CycleCreate", map[string]any{"cycleCreate": map[string]any{"success": true, "cycle": cycleRow(newCycleID, nil)}})
+	}
+	api := resolve()
+	r := runWith(t, opts{api: api, key: testKey}, "cycle", "create", "--team", "eng", "--starts-at", "2026-11-02", "--ends-at", "2026-11-16T12:00:00+08:00",
+		"--name", "Sprint", "--dry-run", "--json")
+	d := decode(t, r.out)
+	in, _ := d["input"].(map[string]any)
+	if r.code != 0 || in["teamId"] != "t-ENG" || in["startsAt"] != "2026-11-02T00:00:00Z" || in["endsAt"] != "2026-11-16T04:00:00Z" || in["name"] != "Sprint" || in["id"] != d["id"] {
+		t.Fatalf("dry run: exit %d, %q", r.code, r.out)
+	}
+	if slices.Contains(api.ops(), "CycleCreate") {
+		t.Error("a dry run created")
+	}
+	r = runWith(t, opts{api: api, key: testKey}, "cycle", "create", "--team", "ENG", "--starts-at", "2026-11-02", "--ends-at", "2026-11-16", "--id", newCycleID, "--yes", "--json")
+	if in := api.last("CycleCreate").Vars["input"].(map[string]any); r.code != 0 || in["id"] != newCycleID || decode(t, r.out)["cycle"] == nil {
+		t.Errorf("yes: exit %d, %q", r.code, r.out)
+	}
+	api = resolve(cycleRow(newCycleID, nil))
+	r = runWith(t, opts{api: api, key: testKey}, "cycle", "create", "--team", "ENG", "--starts-at", "2026-11-02", "--ends-at", "2026-11-16", "--id", newCycleID, "--yes", "--json")
+	if r.code != 0 || decode(t, r.out)["changed"] != false || slices.Contains(api.ops(), "CycleCreate") {
+		t.Errorf("rerun: exit %d, %q", r.code, r.out)
+	}
+	n := len(api.calls())
+	for _, args := range [][]string{
+		{"--team", "ENG", "--starts-at", "2026-11-02", "--ends-at", "2026-11-16", "--yes"}, // no --id
+		{"--team", "ENG", "--ends-at", "2026-11-16", "--dry-run"},
+		{"--team", "ENG", "--starts-at", "2026-11-16", "--ends-at", "2026-11-02", "--dry-run"},
+		{"--team", "ENG", "--starts-at", "soon", "--ends-at", "2026-11-16", "--dry-run"},
+		{"--starts-at", "2026-11-02", "--ends-at", "2026-11-16", "--dry-run"},
+	} {
+		if r := runWith(t, opts{api: api, key: testKey}, append([]string{"cycle", "create"}, args...)...); r.code != exitUsage {
+			t.Errorf("%v: exit %d, %q", args, r.code, r.err)
+		}
+	}
+	if len(api.calls()) != n {
+		t.Error("a refused create reached Linear")
+	}
+}
+
+func TestCycleUpdateAndArchive(t *testing.T) {
+	t.Parallel()
+	find := func(cycles ...any) *fake {
+		return newFake(t).on("CycleFind", map[string]any{"cycles": conn("", cycles...)}).
+			on("CycleUpdate", map[string]any{"cycleUpdate": map[string]any{"success": true, "cycle": cycleRow("cy", nil)}}).
+			on("CycleArchive", map[string]any{"cycleArchive": map[string]any{"success": true}})
+	}
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--name", "Sprint", "--starts-at", "2026-10-19", "--ends-at", "2026-11-02T08:00:00+08:00"}, ""}, // all as they are
+		{[]string{"--name", "Checkout", "--ends-at", "2026-11-05"}, `{"endsAt":"2026-11-05T00:00:00Z","name":"Checkout"}`},
+		{[]string{"--description", "Ship checkout v2"}, ""},
+		{[]string{"--description", "Ship it"}, `{"description":"Ship it"}`},
+		{[]string{"--completed-at", "2026-10-30T10:00:00Z"}, `{"completedAt":"2026-10-30T10:00:00Z"}`},
+	} {
+		api := find(cycleRow("cy", nil))
+		r := runWith(t, opts{api: api, key: testKey}, append([]string{"cycle", "update", "current", "--team", "ENG", "--yes", "--json"}, c.args...)...)
+		d := decode(t, r.out)
+		if r.code != 0 || d["changed"] != (c.want != "") {
+			t.Errorf("%v: exit %d, %q", c.args, r.code, r.out)
+			continue
+		}
+		if sent := slices.Contains(api.ops(), "CycleUpdate"); sent != (c.want != "") || (sent && jsonOf(api.last("CycleUpdate").Vars["input"]) != c.want) {
+			t.Errorf("%v: sent %v %v", c.args, sent, d["input"])
+		}
+	}
+	api := find(cycleRow("cy", nil))
+	if r := runWith(t, opts{api: api, key: testKey}, "cycle", "update", "current", "--dry-run"); r.code != exitUsage {
+		t.Errorf("nothing to change: exit %d", r.code)
+	}
+	r := runWith(t, opts{api: find(cycleRow("a", nil), cycleNode(24, "WEB")), key: testKey}, "cycle", "update", "24", "--name", "x", "--dry-run", "--json")
+	if e, _ := decode(t, r.out)["error"].(string); r.code != exitFailed || !strings.Contains(e, "pass --team") {
+		t.Errorf("ambiguous: exit %d, %q", r.code, r.out)
+	}
+	api = find(cycleRow("cy", nil))
+	r = runWith(t, opts{api: api, key: testKey}, "cycle", "archive", "previous", "--team", "ENG", "--yes", "--json")
+	if r.code != 0 || decode(t, r.out)["changed"] != true || api.last("CycleArchive").Vars["id"] != "cy" {
+		t.Errorf("archive: exit %d, %q", r.code, r.out)
+	}
+	api = find(cycleRow("cy", "2026-10-25T00:00:00.000Z"))
+	r = runWith(t, opts{api: api, key: testKey}, "cycle", "archive", "previous", "--yes", "--json")
+	if r.code != 0 || decode(t, r.out)["changed"] != false || slices.Contains(api.ops(), "CycleArchive") {
+		t.Errorf("already archived: exit %d, %q", r.code, r.out)
+	}
+}

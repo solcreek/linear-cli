@@ -893,6 +893,196 @@ exit: 0
       "commands": [
         {
           "aliases": [],
+          "args": [
+            {
+              "default": null,
+              "name": "CYCLE",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "examples": [
+            "linearctl cycle archive 21 --team ENG --dry-run",
+            "linearctl cycle archive 21 --team ENG --yes --json"
+          ],
+          "flags": [
+            {
+              "default": null,
+              "description": "show what would change; change nothing",
+              "name": "dry-run",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "help for archive",
+              "name": "help",
+              "short": "h",
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "the cycle's team KEY (falls back to LINEARCTL_TEAM, then default-team)",
+              "name": "team",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "apply the change",
+              "name": "yes",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1",
+              "name": "demo",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "print one JSON document on stdout",
+              "name": "json",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1",
+              "name": "meta",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": "30",
+              "description": "give up on a network request after N seconds",
+              "name": "timeout",
+              "short": null,
+              "type": "integer"
+            }
+          ],
+          "mutates": true,
+          "name": "archive",
+          "summary": "Archive a cycle",
+          "usage": "linearctl cycle archive CYCLE [flags]"
+        },
+        {
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "examples": [
+            "linearctl cycle create --team ENG --starts-at <DATE> --ends-at <DATE> --dry-run --json",
+            "linearctl cycle create --team ENG --starts-at <DATE> --ends-at <DATE> --id 0b6c… --yes"
+          ],
+          "flags": [
+            {
+              "default": null,
+              "description": "when it was completed, TIME (completes it early)",
+              "name": "completed-at",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "the cycle's description, TEXT",
+              "name": "description",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "show what would change; change nothing",
+              "name": "dry-run",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "when it ends, TIME",
+              "name": "ends-at",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "help for create",
+              "name": "help",
+              "short": "h",
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "the new cycle's UUID; required with --yes",
+              "name": "id",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "the cycle's custom NAME (Linear shows \"Cycle N\" without one)",
+              "name": "name",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "when it starts, TIME: a date or an RFC 3339 time",
+              "name": "starts-at",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "create in team KEY (e.g. ENG)",
+              "name": "team",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "apply the change",
+              "name": "yes",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1",
+              "name": "demo",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "print one JSON document on stdout",
+              "name": "json",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1",
+              "name": "meta",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": "30",
+              "description": "give up on a network request after N seconds",
+              "name": "timeout",
+              "short": null,
+              "type": "integer"
+            }
+          ],
+          "mutates": true,
+          "name": "create",
+          "summary": "Create a cycle in a team",
+          "usage": "linearctl cycle create [flags]"
+        },
+        {
+          "aliases": [],
           "args": [],
           "commands": [],
           "examples": [
@@ -1107,6 +1297,118 @@ exit: 0
           "name": "show",
           "summary": "Show a cycle: its progress, histories and issues, as Linear computes them",
           "usage": "linearctl cycle show CYCLE [flags]"
+        },
+        {
+          "aliases": [],
+          "args": [
+            {
+              "default": null,
+              "name": "CYCLE",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "examples": [
+            "linearctl cycle update current --team ENG --name \"Checkout v2\" --dry-run --json",
+            "linearctl cycle update 24 --team ENG --ends-at <DATE> --yes"
+          ],
+          "flags": [
+            {
+              "default": null,
+              "description": "when it was completed, TIME (completes it early)",
+              "name": "completed-at",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "the cycle's description, TEXT",
+              "name": "description",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "show what would change; change nothing",
+              "name": "dry-run",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "when it ends, TIME",
+              "name": "ends-at",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "help for update",
+              "name": "help",
+              "short": "h",
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "the cycle's custom NAME (Linear shows \"Cycle N\" without one)",
+              "name": "name",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "when it starts, TIME: a date or an RFC 3339 time",
+              "name": "starts-at",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "the cycle's team KEY (falls back to LINEARCTL_TEAM, then default-team)",
+              "name": "team",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "apply the change",
+              "name": "yes",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1",
+              "name": "demo",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "print one JSON document on stdout",
+              "name": "json",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1",
+              "name": "meta",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": "30",
+              "description": "give up on a network request after N seconds",
+              "name": "timeout",
+              "short": null,
+              "type": "integer"
+            }
+          ],
+          "mutates": true,
+          "name": "update",
+          "summary": "Change a cycle's name, description or dates",
+          "usage": "linearctl cycle update CYCLE [flags]"
         }
       ],
       "examples": [],
@@ -1149,7 +1451,7 @@ exit: 0
       ],
       "mutates": false,
       "name": "cycle",
-      "summary": "List and show cycles",
+      "summary": "List, show, create, update and archive cycles",
       "usage": "linearctl cycle [flags]"
     },
     {

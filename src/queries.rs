@@ -221,6 +221,35 @@ pub const CYCLES: &str = concat!(
     " }\n}"
 );
 
+/// The cycle a change applies to, as it is now; two so an ambiguous CYCLE
+/// shows up.
+pub const CYCLE_FIND: &str = concat!(
+    "query CycleFind($filter: CycleFilter!) {\n  cycles(filter: $filter, first: 2, includeArchived: true) { nodes { ",
+    cycle_row!(),
+    " archivedAt } }\n}"
+);
+
+/// cycle create's team, and whether a cycle with the chosen id exists.
+pub const CYCLE_CREATE_RESOLVE: &str = concat!(
+    "query CycleCreateResolve($team: String!, $id: ID!) {\n  teams(filter: { key: { eqIgnoreCase: $team } }) { nodes { id key } }\n  existing: cycles(filter: { id: { eq: $id } }, includeArchived: true) { nodes { ",
+    cycle_row!(),
+    " } }\n}"
+);
+
+pub const CYCLE_CREATE: &str = concat!(
+    "mutation CycleCreate($input: CycleCreateInput!) {\n  cycleCreate(input: $input) { success cycle { ",
+    cycle_row!(),
+    " } }\n}"
+);
+
+pub const CYCLE_UPDATE: &str = concat!(
+    "mutation CycleUpdate($id: String!, $input: CycleUpdateInput!) {\n  cycleUpdate(id: $id, input: $input) { success cycle { ",
+    cycle_row!(),
+    " } }\n}"
+);
+
+pub const CYCLE_ARCHIVE: &str = "mutation CycleArchive($id: String!) { cycleArchive(id: $id) { success } }";
+
 /// matches asks for two, so a CYCLE that names a cycle in two teams shows up
 /// as ambiguous; the detail asks for one, since first multiplies the cost of
 /// everything nested (two at 250 issues each was 14,027 points of 10,000).
@@ -270,6 +299,11 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("Projects", PROJECTS),
         ("Cycles", CYCLES),
         ("CycleShow", CYCLE_SHOW),
+        ("CycleFind", CYCLE_FIND),
+        ("CycleCreateResolve", CYCLE_CREATE_RESOLVE),
+        ("CycleCreate", CYCLE_CREATE),
+        ("CycleUpdate", CYCLE_UPDATE),
+        ("CycleArchive", CYCLE_ARCHIVE),
         ("WatchIDs", WATCH_IDS),
         ("WatchGone", WATCH_GONE),
         ("WatchChanged", WATCH_CHANGED),

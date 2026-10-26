@@ -21,6 +21,11 @@ names are only ever added, never renamed or removed.
 - `cycle list` rows carry the same fields as `cycle show`'s top level:
   `description`, `completedAt`, `isPrevious`, `isPast`, `isFuture`, `progress`,
   and `team.id`.
+- `cycle create` (`--team`, `--starts-at`, `--ends-at`, `--name`,
+  `--description`; `--yes` needs `--id`, so a rerun returns the existing cycle),
+  `cycle update` (sends only what differs) and `cycle archive`. Linear's
+  `cycleShiftAll` and `cycleStartUpcomingCycleToday` are left out: neither can
+  be previewed, and running either twice moves cycles twice.
 - `cycle list --active`, `--next`, `--previous`, `--past`, `--future` (Linear's
   `is*` states; several match any of them), `--starts-since` and
   `--ends-before`.
