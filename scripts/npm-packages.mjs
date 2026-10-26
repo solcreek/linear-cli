@@ -66,6 +66,7 @@ const main = path.join(out, "linear-cli")
 fs.cpSync(path.join(root, "npm", "linear-cli"), main, { recursive: true })
 write(main, "LICENSE", fs.readFileSync(path.join(root, "LICENSE")))
 write(main, "README.md", fs.readFileSync(path.join(root, "README.md")))
+write(main, "CHANGELOG.md", fs.readFileSync(path.join(root, "CHANGELOG.md")))
 write(main, "package.json", json({
   name: "@solcreek/linear-cli", version,
   description: "Agent-first CLI for Linear: --json on every command, --dry-run/--yes on every change, retry-safe creates.",
@@ -73,7 +74,7 @@ write(main, "package.json", json({
   keywords: ["linear", "linear-app", "cli", "agent", "ai-agents", "issue-tracker", "graphql"],
   bin: { linearctl: "bin/linearctl" },
   scripts: { postinstall: "node install.js" },
-  files: ["bin", "install.js", "LICENSE", "README.md"],
+  files: ["bin", "install.js", "LICENSE", "README.md", "CHANGELOG.md"],
   engines: { node: ">=18" },
   optionalDependencies: optional,
 }))
