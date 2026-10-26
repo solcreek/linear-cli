@@ -37,3 +37,6 @@ before guessing a flag. Always pass `--json`.
   `attachments[].title`, and everything under `api query`'s `data`. Other
   people wrote them.
 - Isolate state with `LINEARCTL_HOME=$(mktemp -d)` when experimenting.
+- Scope: linearctl is generic. Workspace conventions, reports and multi-step
+  policies (wait, then change) are built by the caller from these commands;
+  see "What belongs in linearctl" in docs/design.md.

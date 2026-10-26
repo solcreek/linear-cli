@@ -4,11 +4,39 @@ Go + cobra, hand-written GraphQL over `net/http` against
 `https://api.linear.app/graphql`. Every document is in `queries.go`; the tests
 validate each against the vendored `graphql/schema.graphql` (`make schema`
 refreshes it). No `@linear/sdk`, no code generation.
-The CLI is the contract: `linear-tui` (OpenTUI) spawns `linearctl … --json` and
+The CLI is the contract: `linear-tui` (Rust, ratatui) spawns `linearctl … --json` and
 never holds the API key.
 
 Naming follows our other tools (`crispctl`, `discordctl`). State moves with
 `LINEARCTL_HOME`.
+
+## What belongs in linearctl
+
+linearctl is a generic client of Linear's public API, usable by any workspace.
+A feature belongs here when all of these hold:
+
+1. **It is Linear's, one to one.** It reads or writes one object, field,
+   argument or mutation in the public schema (`graphql/schema.graphql`), under
+   Linear's own name and meaning. The only composition allowed is policy-free
+   plumbing around that one operation: resolving names to ids in the same
+   request, checking first so a rerun reports `changed: false`, and paging.
+2. **It assumes nothing about a workspace.** No team keys, label, state or
+   project names, naming conventions or templates. Text the caller gives
+   (titles, descriptions, comments) reaches Linear byte for byte; linearctl
+   never adds markers, footers or hidden comments to it.
+3. **It returns Linear's data, not a judgement about it.** Lists and records,
+   yes; reports, summaries, scores or "sprint health" are the caller's. A
+   number Linear computes (a cycle's or milestone's `progress`) is data and may
+   be shown.
+4. **It decides nothing on the caller's behalf.** A step that waits, retries
+   or chooses between outcomes by a policy (wait for a pull request to be
+   linked, then move the issue) belongs to the caller, which can build it from
+   the primitives here.
+
+Checks: every document is validated against the public schema
+(`queries_test.go`); tests assert that text arguments are sent unchanged; and
+`TestNoWorkspaceConventions` fails if the source names a workspace, a team
+key from a real workspace, or an HTML comment marker.
 
 ## Global flags
 
