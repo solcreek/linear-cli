@@ -70,6 +70,8 @@ func TestIssueListFilters(t *testing.T) {
 		{[]string{"--cycle", "current"}, `{"cycle":{"isActive":{"eq":true}}}`},
 		{[]string{"--cycle", "next"}, `{"cycle":{"isNext":{"eq":true}}}`},
 		{[]string{"--cycle", "12"}, `{"cycle":{"number":{"eq":12}}}`},
+		{[]string{"--cycle", "previous"}, `{"cycle":{"isPrevious":{"eq":true}}}`},
+		{[]string{"--cycle", "5F1E2A3B-4C5D-4E6F-8A9B-0C1D2E3F4A5B"}, `{"cycle":{"id":{"eq":"5f1e2a3b-4c5d-4e6f-8a9b-0c1d2e3f4a5b"}}}`},
 		{[]string{"--updated-since", "2026-10-01"}, `{"updatedAt":{"gte":"2026-10-01T00:00:00Z"}}`},
 		{[]string{"--updated-since", "2026-10-01T08:00:00+08:00"}, `{"updatedAt":{"gte":"2026-10-01T00:00:00Z"}}`},
 	}

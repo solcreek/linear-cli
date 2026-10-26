@@ -50,8 +50,10 @@ def agents_section():
 def check_agents(commands):
     """AGENTS.md's list of mutating commands, against describe's."""
     text = (ROOT / "AGENTS.md").read_text()
-    m = re.search(r"^- Mutating: (.*?)\. Run each", text, re.S | re.M)
-    listed = set(re.findall(r"`([^`]+)`", m.group(1))) if m else set()
+    m = re.search(r"^- Mutating[^:\n]*: (.*?)\. Run\s+each", text, re.S | re.M)
+    if not m:
+        return ["AGENTS.md has no '- Mutating…: …. Run each' list to check"]
+    listed = set(re.findall(r"`([^`]+)`", m.group(1)))
     actual = {" ".join(path) for path, c in commands if c.get("mutates")}
     problems = [f"AGENTS.md lists {c} as mutating; describe does not" for c in sorted(listed - actual)]
     problems += [f"AGENTS.md's Mutating: list lacks {c}" for c in sorted(actual - listed)]

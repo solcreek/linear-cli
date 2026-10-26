@@ -1,7 +1,7 @@
 exit: 2
 --- stdout
-{"error":"--cycle must be current, next or a number; got \"x\"","usage":true}
+{"error":"--cycle must be current, next, previous, a cycle number, or its UUID; got \"x\"","usage":true}
 
 --- stderr
-linearctl: --cycle must be current, next or a number; got "x"
+linearctl: --cycle must be current, next, previous, a cycle number, or its UUID; got "x"
 Run 'linearctl --help' for usage.

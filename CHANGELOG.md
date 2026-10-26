@@ -22,11 +22,33 @@ names are only ever added, never renamed or removed.
   the commands' `describe` and `--help`; `make test` fails when it is stale, or
   when AGENTS.md's list of mutating commands differs from `describe`.
 
-### Fixed
+## [0.4.0] - 2026-10-26
 
-- AGENTS.md's list of mutating commands lacked `issue unarchive`,
-  `comment update`, `comment delete`, `relation create`, `relation delete` and
-  `project update`.
+### Added
+
+- `cycle show CYCLE` (current, next, previous, a number, or a UUID; `--team`
+  picks among teams): Linear's own Cycle fields under Linear's names, among them
+  `progress`, `currentProgress`, `progressHistory` and the day-by-day
+  `scopeHistory`, `completedScopeHistory`, `inProgressScopeHistory`,
+  `issueCountHistory` and `completedIssueCountHistory`, plus `issues` (paged
+  with `--cursor`) and `uncompletedIssuesUponClose` as lists. Nothing is
+  computed; `--fields` trims.
+- `cycle list` rows carry the same fields as `cycle show`'s top level:
+  `description`, `completedAt`, `isPrevious`, `isPast`, `isFuture`, `progress`,
+  and `team.id`.
+- `cycle create` (`--team`, `--starts-at`, `--ends-at`, `--name`,
+  `--description`; `--yes` needs `--id`, so a rerun returns the existing cycle),
+  `cycle update` (sends only what differs) and `cycle archive`. Linear's
+  `cycleShiftAll` and `cycleStartUpcomingCycleToday` are left out: neither can
+  be previewed, and running either twice moves cycles twice.
+- `cycle list --active`, `--next`, `--previous`, `--past`, `--future` (Linear's
+  `is*` states; several match any of them), `--starts-since` and
+  `--ends-before`.
+
+### Changed
+
+- `issue list --cycle` also takes `previous` and a cycle's UUID, the words
+  `cycle show` takes.
 
 ## [0.3.0] - 2026-10-26
 
@@ -168,7 +190,8 @@ names are only ever added, never renamed or removed.
 - Releases for linux, darwin and windows, and the npm package
   `@solcreek/linear-cli` with one native binary per platform.
 
-[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/solcreek/linear-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/solcreek/linear-cli/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/solcreek/linear-cli/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/solcreek/linear-cli/compare/v0.1.0...v0.2.0

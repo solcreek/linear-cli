@@ -1,8 +1,10 @@
 exit: 0
 --- stdout
-List cycles.
+List cycles, with the same fields as cycle show's top level. Several of --active,
+--next, --previous, --past and --future match any of them.
 
-Fields: id, number, name, startsAt, endsAt, isActive, isNext, team
+Fields: id, number, name, description, startsAt, endsAt, completedAt, isActive,
+isNext, isPrevious, isPast, isFuture, progress, team
 
 Usage:
   linearctl cycle list [flags]
@@ -11,11 +13,18 @@ Examples:
   linearctl cycle list --team ENG --json
 
 Flags:
-      --cursor CURSOR   continue after CURSOR (nextCursor from the previous page)
-      --fields FIELDS   return only these comma-separated FIELDS (see Fields above)
-  -h, --help            help for list
-      --limit N         show at most N items; 0 for all (default 50)
-      --team KEY        only team KEY (falls back to LINEARCTL_TEAM, then default-team)
+      --active              only the active cycle (Linear's isActive; CYCLE current elsewhere)
+      --cursor CURSOR       continue after CURSOR (nextCursor from the previous page)
+      --ends-before WHEN    only cycles ending at or before WHEN
+      --fields FIELDS       return only these comma-separated FIELDS (see Fields above)
+      --future              only cycles yet to start (isFuture)
+  -h, --help                help for list
+      --limit N             show at most N items; 0 for all (default 50)
+      --next                only the next cycle (isNext)
+      --past                only cycles that have ended (isPast)
+      --previous            only the previous cycle (isPrevious)
+      --starts-since WHEN   only cycles starting at or after WHEN (a date, RFC 3339, 7d, 24h)
+      --team KEY            only team KEY (falls back to LINEARCTL_TEAM, then default-team)
 
 Global Flags:
       --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1

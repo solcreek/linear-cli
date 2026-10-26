@@ -1,13 +1,17 @@
 exit: 0
 --- stdout
-List cycles
+List, show, create, update and archive cycles
 
 Usage:
   linearctl cycle [flags]
   linearctl cycle [command]
 
 Available Commands:
+  archive     Archive a cycle
+  create      Create a cycle in a team
   list        List cycles
+  show        Show a cycle: its progress, histories and issues, as Linear computes them
+  update      Change a cycle's name, description or dates
 
 Flags:
   -h, --help   help for cycle

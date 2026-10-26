@@ -37,7 +37,7 @@ Flags:
       --any-label NAME       only issues with label NAME (repeatable; any of)
       --assignee WHO         only issues assigned to WHO: me, none, or an email
       --attachment-url URL   only issues with an attachment at URL (e.g. a linked pull request)
-      --cycle CYCLE          only issues in cycle CYCLE: current, next, or a cycle number
+      --cycle CYCLE          only issues in cycle CYCLE: current, next, previous, a number, a UUID
       --delegate WHO         only issues delegated to the agent WHO (name or email; any; none)
       --fields FIELDS        return only these comma-separated FIELDS (see Fields above)
       --heartbeat N          print a heartbeat every N seconds (default 30)

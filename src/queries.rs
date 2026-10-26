@@ -204,10 +204,68 @@ pub const NOTIFICATIONS: &str = concat!(
     " }\n}"
 );
 
+/// A cycle's own fields under Linear's names: what cycle list shows, and
+/// what cycle show starts from. progress is Linear's (completed points plus a
+/// quarter of in-progress ones, over all points); nothing here is computed.
+macro_rules! cycle_row {
+    () => {
+        "id number name description startsAt endsAt completedAt isActive isNext isPrevious isPast isFuture progress team { id key }"
+    };
+}
+
 pub const CYCLES: &str = concat!(
-    "query Cycles($filter: CycleFilter, $first: Int!, $after: String) {\n  cycles(filter: $filter, first: $first, after: $after) { nodes { id number name startsAt endsAt isActive isNext team { key } } ",
+    "query Cycles($filter: CycleFilter, $first: Int!, $after: String) {\n  cycles(filter: $filter, first: $first, after: $after) { nodes { ",
+    cycle_row!(),
+    " } ",
     page_info!(),
     " }\n}"
+);
+
+/// The cycle a change applies to, as it is now; two so an ambiguous CYCLE
+/// shows up.
+pub const CYCLE_FIND: &str = concat!(
+    "query CycleFind($filter: CycleFilter!) {\n  cycles(filter: $filter, first: 2, includeArchived: true) { nodes { ",
+    cycle_row!(),
+    " archivedAt } }\n}"
+);
+
+/// cycle create's team, and whether a cycle with the chosen id exists.
+pub const CYCLE_CREATE_RESOLVE: &str = concat!(
+    "query CycleCreateResolve($team: String!, $id: ID!) {\n  teams(filter: { key: { eqIgnoreCase: $team } }) { nodes { id key } }\n  existing: cycles(filter: { id: { eq: $id } }, includeArchived: true) { nodes { ",
+    cycle_row!(),
+    " } }\n}"
+);
+
+pub const CYCLE_CREATE: &str = concat!(
+    "mutation CycleCreate($input: CycleCreateInput!) {\n  cycleCreate(input: $input) { success cycle { ",
+    cycle_row!(),
+    " } }\n}"
+);
+
+pub const CYCLE_UPDATE: &str = concat!(
+    "mutation CycleUpdate($id: String!, $input: CycleUpdateInput!) {\n  cycleUpdate(id: $id, input: $input) { success cycle { ",
+    cycle_row!(),
+    " } }\n}"
+);
+
+pub const CYCLE_ARCHIVE: &str = "mutation CycleArchive($id: String!) { cycleArchive(id: $id) { success } }";
+
+/// matches asks for two, so a CYCLE that names a cycle in two teams shows up
+/// as ambiguous; the detail asks for one, since first multiplies the cost of
+/// everything nested (two at 250 issues each was 14,027 points of 10,000).
+/// Archived cycles count: a UUID may name one.
+pub const CYCLE_SHOW: &str = concat!(
+    "query CycleShow($filter: CycleFilter!, $issues: Int!, $withIssues: Boolean!, $after: String,\n  $uncompleted: Int!, $withUncompleted: Boolean!) {\n  matches: cycles(filter: $filter, first: 2, includeArchived: true) { nodes { id team { key } } }\n  cycles(filter: $filter, first: 1, includeArchived: true) { nodes {\n    ",
+    cycle_row!(),
+    "\n    createdAt updatedAt archivedAt autoArchivedAt\n    currentProgress progressHistory scopeHistory completedScopeHistory inProgressScopeHistory\n    issueCountHistory completedIssueCountHistory\n    inheritedFrom { id number name team { id key } }\n    issues(first: $issues, after: $after) @include(if: $withIssues) { nodes {",
+    issue_row!(),
+    " } ",
+    page_info!(),
+    " }\n    uncompletedIssuesUponClose(first: $uncompleted) @include(if: $withUncompleted) { nodes {",
+    issue_row!(),
+    " } ",
+    page_info!(),
+    " }\n  } }\n}"
 );
 
 /// Every document above, by name, for the schema test.
@@ -240,6 +298,12 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("Users", USERS),
         ("Projects", PROJECTS),
         ("Cycles", CYCLES),
+        ("CycleShow", CYCLE_SHOW),
+        ("CycleFind", CYCLE_FIND),
+        ("CycleCreateResolve", CYCLE_CREATE_RESOLVE),
+        ("CycleCreate", CYCLE_CREATE),
+        ("CycleUpdate", CYCLE_UPDATE),
+        ("CycleArchive", CYCLE_ARCHIVE),
         ("WatchIDs", WATCH_IDS),
         ("WatchGone", WATCH_GONE),
         ("WatchChanged", WATCH_CHANGED),

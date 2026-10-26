@@ -32,6 +32,51 @@ struct Lookup {
 
 pub const PROJECT_STATUSES: &[&str] = &["backlog", "planned", "started", "paused", "completed", "canceled"];
 
+/// cycle list's filter: the team, Linear's is* states (any of those given),
+/// and a range of start and end dates.
+fn cycle_filter(ctx: &Ctx, team: &str) -> R<Option<Value>> {
+    let mut and: Vec<Value> = vec![];
+    if !team.is_empty() {
+        and.push(json!({"team": {"key": {"eqIgnoreCase": team}}}));
+    }
+    let states: Vec<Value> = [
+        ("active", "isActive"),
+        ("next", "isNext"),
+        ("previous", "isPrevious"),
+        ("past", "isPast"),
+        ("future", "isFuture"),
+    ]
+    .iter()
+    .filter(|(flag, _)| ctx.bool(flag))
+    .map(|(_, field)| json!({*field: {"eq": true}}))
+    .collect();
+    match states.len() {
+        0 => {}
+        1 => and.push(states[0].clone()),
+        _ => and.push(json!({"or": states})),
+    }
+    for (flag, field, op) in [("starts-since", "startsAt", "gte"), ("ends-before", "endsAt", "lte")] {
+        let w = ctx.str(flag);
+        if ctx.changed(flag) && w.is_empty() {
+            return Err(usage(format!("--{flag} is empty")));
+        }
+        if !w.is_empty() {
+            let at = super::issue::when(&w).map_err(|_| {
+                usage(format!(
+                    "--{flag} must be a date (2026-10-01), an RFC 3339 time, or 7d / 24h; got {}",
+                    quote_go(&w)
+                ))
+            })?;
+            and.push(json!({field: {op: at}}));
+        }
+    }
+    Ok(match and.len() {
+        0 => None,
+        1 => and.pop(),
+        _ => Some(json!({"and": and})),
+    })
+}
+
 fn team_key(_: &Ctx, team: &str) -> R<Option<Value>> {
     Ok((!team.is_empty()).then(|| json!({"team": {"key": {"eqIgnoreCase": team}}})))
 }
@@ -193,14 +238,29 @@ const LOOKUPS: &[Lookup] = &[
     Lookup {
         noun: "cycle",
         short: "List cycles",
-        long: "",
+        long: "List cycles, with the same fields as cycle show's top level. Several of --active,\n--next, --previous, --past and --future match any of them.",
         example: "  linearctl cycle list --team ENG --json",
         doc: queries::CYCLES,
         conn: "cycles",
-        fields: &["id", "number", "name", "startsAt", "endsAt", "isActive", "isNext", "team"],
+        fields: &[
+            "id",
+            "number",
+            "name",
+            "description",
+            "startsAt",
+            "endsAt",
+            "completedAt",
+            "isActive",
+            "isNext",
+            "isPrevious",
+            "isPast",
+            "isFuture",
+            "progress",
+            "team",
+        ],
         cols: &["team.key", "number", "startsAt", "endsAt"],
         team: true,
-        filter: Some(team_key),
+        filter: Some(cycle_filter),
         sort: None,
     },
 ];
@@ -222,6 +282,14 @@ fn command(l: &Lookup) -> Cmd {
             list.flag(Flag::str("type", "only notifications of `TYPE` as Linear names them (e.g. issueAssignedToYou)"))
         }
         "milestone" => list.flag(Flag::str("project", "only milestones of project `NAME`")),
+        "cycle" => list
+            .flag(Flag::bool("active", "only the active cycle (Linear's isActive; CYCLE current elsewhere)"))
+            .flag(Flag::bool("next", "only the next cycle (isNext)"))
+            .flag(Flag::bool("previous", "only the previous cycle (isPrevious)"))
+            .flag(Flag::bool("past", "only cycles that have ended (isPast)"))
+            .flag(Flag::bool("future", "only cycles yet to start (isFuture)"))
+            .flag(Flag::str("starts-since", "only cycles starting at or after `WHEN` (a date, RFC 3339, 7d, 24h)"))
+            .flag(Flag::str("ends-before", "only cycles ending at or before `WHEN`")),
         "project" => list.flag(Flag::strs(
             "status",
             &format!("only projects whose status is `TYPE` (repeatable):\n{}", PROJECT_STATUSES.join(", ")),

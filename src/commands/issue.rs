@@ -82,7 +82,7 @@ pub fn filter_flags(c: Cmd) -> Cmd {
         .flag(Flag::str("milestone", "only issues in project milestone `NAME` (none: in no milestone)"))
         .flag(Flag::str("delegate", "only issues delegated to the agent `WHO` (name or email; any; none)"))
         .flag(Flag::str("attachment-url", "only issues with an attachment at `URL` (e.g. a linked pull request)"))
-        .flag(Flag::str("cycle", "only issues in cycle `CYCLE`: current, next, or a cycle number"))
+        .flag(Flag::str("cycle", "only issues in cycle `CYCLE`: current, next, previous, a number, a UUID"))
         .flag(Flag::str("updated-since", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h"))
 }
 
@@ -272,13 +272,7 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
     }
     let cy = ctx.str("cycle");
     if !cy.is_empty() {
-        let f = match cy.as_str() {
-            "current" => json!({"isActive": {"eq": true}}),
-            "next" => json!({"isNext": {"eq": true}}),
-            n if n.bytes().all(|c| c.is_ascii_digit()) => json!({"number": {"eq": n.parse::<i64>().unwrap_or(0)}}),
-            _ => return Err(usage(format!("--cycle must be current, next or a number; got {}", quote_go(&cy)))),
-        };
-        filter.insert("cycle".into(), f);
+        filter.insert("cycle".into(), super::cycle::cycle_ref("--cycle", &cy)?);
     }
     let since = ctx.str("updated-since");
     if !since.is_empty() {
