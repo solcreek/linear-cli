@@ -35,8 +35,9 @@ var (
   issues(filter: $filter, first: $first, after: $after, orderBy: $orderBy, sort: $sort) { nodes {` + issueRow + ` } ` + pageInfo + ` }
 }`
 
-	qIssueSearch = `query IssueSearch($term: String!, $filter: IssueFilter, $first: Int!, $after: String, $orderBy: PaginationOrderBy) {
-  searchIssues(term: $term, filter: $filter, first: $first, after: $after, orderBy: $orderBy) { nodes {` + issueRow + ` } ` + pageInfo + ` }
+	qIssueSearch = `query IssueSearch($term: String!, $filter: IssueFilter, $first: Int!, $after: String, $orderBy: PaginationOrderBy,
+  $includeComments: Boolean) {
+  searchIssues(term: $term, filter: $filter, first: $first, after: $after, orderBy: $orderBy, includeComments: $includeComments) { nodes {` + issueRow + ` } ` + pageInfo + ` }
 }`
 
 	qIssueShow = `query IssueShow($id: String!, $comments: Int!, $withComments: Boolean!) {

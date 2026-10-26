@@ -146,6 +146,13 @@ func TestIssueListSearchAndSort(t *testing.T) {
 	if v["term"] != "login timeout" || v["orderBy"] != nil {
 		t.Errorf("search ranks by relevance by default: %v", v)
 	}
+	runWith(t, opts{api: api, key: testKey}, "issue", "list", "--query", "x", "--include-comments")
+	if v := api.last("IssueSearch").Vars; v["includeComments"] != true {
+		t.Errorf("--include-comments: %v", v)
+	}
+	if r := runWith(t, opts{api: api, key: testKey}, "issue", "list", "--include-comments"); r.code != exitUsage {
+		t.Errorf("--include-comments without --query: exit %d", r.code)
+	}
 	runWith(t, opts{api: api, key: testKey}, "issue", "list", "--query", "x", "--sort", "created")
 	if v := api.last("IssueSearch").Vars; v["orderBy"] != "createdAt" {
 		t.Errorf("search --sort created: %v", v)

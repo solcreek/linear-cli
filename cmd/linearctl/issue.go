@@ -80,8 +80,15 @@ func issueList() *cobra.Command {
 				return usageError{fmt.Errorf("--sort must be updated, created or priority; got %q", sortBy)}
 			}
 			doc, conn := qIssueList, "issues"
+			withComments, _ := cmd.Flags().GetBool("include-comments")
+			if withComments && query == "" {
+				return usageError{errors.New("--include-comments searches comments too, so it needs --query")}
+			}
 			if query != "" {
 				doc, conn, vars["term"] = qIssueSearch, "searchIssues", query
+				if withComments {
+					vars["includeComments"] = true
+				}
 			}
 			cl, err := newClient()
 			if err != nil {
@@ -119,6 +126,7 @@ func issueList() *cobra.Command {
 	c.Flags().String("cycle", "", "only issues in cycle `CYCLE`: current, next, or a cycle number")
 	c.Flags().String("updated-since", "", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h")
 	c.Flags().String("query", "", "full-text search for `TEXT`")
+	c.Flags().Bool("include-comments", false, "with --query, also match the text of comments")
 	c.Flags().String("sort", "", "order by `FIELD`: updated (default), created, priority")
 	limitFlag(c, 25)
 	cursorFlag(c)
