@@ -158,7 +158,7 @@ const LOOKUPS: &[Lookup] = &[
         example: "  linearctl project list --team ENG --status started --json",
         doc: queries::PROJECTS,
         conn: "projects",
-        fields: &["id", "name", "url", "targetDate", "status", "lead"],
+        fields: &["id", "name", "slugId", "url", "startDate", "targetDate", "progress", "status", "lead"],
         cols: &["name", "status.name", "lead.name"],
         team: true,
         filter: Some(|ctx, team| {

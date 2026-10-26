@@ -245,7 +245,7 @@ pub const USERS: &str = concat!(
 );
 
 pub const PROJECTS: &str = concat!(
-    "query Projects($filter: ProjectFilter, $first: Int!, $after: String) {\n  projects(filter: $filter, first: $first, after: $after) { nodes { id name url targetDate status { name type } lead { name email } } ",
+    "query Projects($filter: ProjectFilter, $first: Int!, $after: String) {\n  projects(filter: $filter, first: $first, after: $after) { nodes { id name slugId url startDate targetDate progress status { name type } lead { name email } } ",
     page_info!(),
     " }\n}"
 );

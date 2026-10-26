@@ -1,5 +1,5 @@
 exit: 0
 --- stdout
-{"items":[{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","lead":{"email":"maya@northwind.example","name":"Maya Patel"},"name":"Checkout v2","status":{"name":"In Progress","type":"started"},"targetDate":"<DATE>","url":"https://linear.app/northwind/project/checkout-v2-baac88349ee8"},{"id":"70e07509-792f-5809-bc99-42f8c729824e","lead":{"email":"sofia@northwind.example","name":"Sofia Romero"},"name":"Mobile 3.0","status":{"name":"In Progress","type":"started"},"targetDate":"<DATE>","url":"https://linear.app/northwind/project/mobile-3-0-42f8c729824e"}],"nextCursor":null,"shown":2,"total":null,"truncated":false}
+{"items":[{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","lead":{"email":"maya@northwind.example","name":"Maya Patel"},"name":"Checkout v2","progress":0,"slugId":"baac88349ee8","startDate":null,"status":{"name":"In Progress","type":"started"},"targetDate":"<DATE>","url":"https://linear.app/northwind/project/checkout-v2-baac88349ee8"},{"id":"70e07509-792f-5809-bc99-42f8c729824e","lead":{"email":"sofia@northwind.example","name":"Sofia Romero"},"name":"Mobile 3.0","progress":0,"slugId":"42f8c729824e","startDate":null,"status":{"name":"In Progress","type":"started"},"targetDate":"<DATE>","url":"https://linear.app/northwind/project/mobile-3-0-42f8c729824e"}],"nextCursor":null,"shown":2,"total":null,"truncated":false}
 
 --- stderr

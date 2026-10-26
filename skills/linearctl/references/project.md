@@ -7,7 +7,7 @@
 ```
 List projects.
 
-Fields: id, name, url, targetDate, status, lead
+Fields: id, name, slugId, url, startDate, targetDate, progress, status, lead
 
 Usage:
   linearctl project list [flags]
