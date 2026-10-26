@@ -94,7 +94,11 @@ func addLookups(root *cobra.Command) {
 				if team != "" {
 					f["accessibleTeams"] = map[string]any{"some": map[string]any{"key": map[string]any{"eqIgnoreCase": team}}}
 				}
-				if s, _ := cmd.Flags().GetStringArray("status"); len(s) > 0 {
+				s, err := values(cmd, "status")
+				if err != nil {
+					return nil, err
+				}
+				if len(s) > 0 {
 					for _, t := range s {
 						if !slices.Contains(projectStatuses, t) {
 							return nil, usageError{fmt.Errorf("--status must be one of %s; got %q", strings.Join(projectStatuses, ", "), t)}

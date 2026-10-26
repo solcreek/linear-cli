@@ -297,3 +297,26 @@ func TestJSONIsCompactIntoAPipe(t *testing.T) {
 		t.Errorf("not one compact line: %q", r.out)
 	}
 }
+
+// pflag reads --flag "" on a repeatable flag as no values, which would drop
+// a filter silently; every repeatable flag refuses it instead.
+func TestRepeatableFlagsRefuseAnEmptyValue(t *testing.T) {
+	t.Parallel()
+	api := newFake(t)
+	for _, args := range [][]string{
+		{"issue", "list", "--state", ""}, {"issue", "list", "--state-type", ""}, {"issue", "list", "--label", ""},
+		{"issue", "create", "--team", "ENG", "--title", "x", "--label", "", "--dry-run"},
+		{"issue", "update", "ENG-1", "--label", "", "--dry-run"},
+		{"issue", "update", "ENG-1", "--add-label", "", "--dry-run"},
+		{"issue", "update", "ENG-1", "--remove-label", "", "--dry-run"},
+		{"project", "list", "--status", ""},
+	} {
+		r := runWith(t, opts{api: api, key: testKey}, append(args, "--json")...)
+		if e, _ := decode(t, r.out)["error"].(string); r.code != exitUsage || !strings.Contains(e, "is empty") {
+			t.Errorf("%v: exit %d, %q", args, r.code, r.out)
+		}
+	}
+	if len(api.calls()) != 0 {
+		t.Errorf("an empty filter reached Linear: %v", api.ops())
+	}
+}

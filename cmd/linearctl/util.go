@@ -90,6 +90,22 @@ func teamFlag(cmd *cobra.Command) (string, error) {
 	return strings.ToUpper(team), nil
 }
 
+// values is a repeatable flag's values, each checked by plain. pflag reads
+// --label "" as no values at all, which would drop the filter and widen
+// the result without a word; that is a usage error instead.
+func values(cmd *cobra.Command, name string) ([]string, error) {
+	vs, _ := cmd.Flags().GetStringArray(name)
+	if cmd.Flags().Changed(name) && len(vs) == 0 {
+		return nil, usageError{fmt.Errorf("--%s is empty", name)}
+	}
+	for _, v := range vs {
+		if _, err := plain("--"+name, v); err != nil {
+			return nil, err
+		}
+	}
+	return vs, nil
+}
+
 // readConfig is config.json, empty when there is none.
 func readConfig() (map[string]string, error) {
 	cfg := map[string]string{}

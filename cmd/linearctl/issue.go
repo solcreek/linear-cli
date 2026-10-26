@@ -142,15 +142,18 @@ func listFilter(cmd *cobra.Command) (map[string]any, error) {
 		filter["assignee"] = f
 	}
 	state := map[string]any{}
-	if names, _ := cmd.Flags().GetStringArray("state"); len(names) > 0 {
-		for _, n := range names {
-			if _, err := plain("--state", n); err != nil {
-				return nil, err
-			}
-		}
+	names, err := values(cmd, "state")
+	if err != nil {
+		return nil, err
+	}
+	if len(names) > 0 {
 		state["name"] = map[string]any{"in": names}
 	}
-	if types, _ := cmd.Flags().GetStringArray("state-type"); len(types) > 0 {
+	types, err := values(cmd, "state-type")
+	if err != nil {
+		return nil, err
+	}
+	if len(types) > 0 {
 		for _, t := range types {
 			if !slices.Contains(stateTypes, t) {
 				return nil, usageError{fmt.Errorf("--state-type must be one of %s; got %q", strings.Join(stateTypes, ", "), t)}
@@ -161,11 +164,11 @@ func listFilter(cmd *cobra.Command) (map[string]any, error) {
 	if len(state) > 0 {
 		filter["state"] = state
 	}
-	labels, _ := cmd.Flags().GetStringArray("label")
+	labels, err := values(cmd, "label")
+	if err != nil {
+		return nil, err
+	}
 	for _, l := range labels {
-		if _, err := plain("--label", l); err != nil {
-			return nil, err
-		}
 		and = append(and, map[string]any{"labels": map[string]any{"some": map[string]any{"name": map[string]any{"eqIgnoreCase": l}}}})
 	}
 	if len(and) > 0 {
@@ -417,10 +420,8 @@ func readWanted(cmd *cobra.Command) (*wanted, error) {
 		w.parent = ref
 	}
 	if f := cmd.Flags().Lookup("label"); f != nil {
-		w.labels, _ = cmd.Flags().GetStringArray("label")
-	}
-	for _, l := range w.labels {
-		if _, err := plain("--label", l); err != nil {
+		var err error
+		if w.labels, err = values(cmd, "label"); err != nil {
 			return nil, err
 		}
 	}
@@ -674,15 +675,16 @@ func issueUpdate() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			add, _ := cmd.Flags().GetStringArray("add-label")
-			remove, _ := cmd.Flags().GetStringArray("remove-label")
+			add, err := values(cmd, "add-label")
+			if err != nil {
+				return err
+			}
+			remove, err := values(cmd, "remove-label")
+			if err != nil {
+				return err
+			}
 			if cmd.Flags().Changed("label") && (len(add) > 0 || len(remove) > 0) {
 				return usageError{errors.New("pass --label, or --add-label/--remove-label, not both")}
-			}
-			for _, l := range append(slices.Clone(add), remove...) {
-				if _, err := plain("--add-label/--remove-label", l); err != nil {
-					return err
-				}
 			}
 			cl, err := newClient()
 			if err != nil {
