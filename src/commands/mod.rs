@@ -3,6 +3,7 @@
 mod api;
 mod auth;
 mod comment;
+mod completion;
 mod config;
 mod file;
 mod issue;
@@ -40,7 +41,7 @@ LINEARCTL_HOME moves config and credentials under one directory.",
         Flag::bool("meta", "add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1")
             .default_to(env_on("LINEARCTL_META")),
     ];
-    let mut subs: Vec<Cmd> = vec![auth::command(), issue::command(), comment::command(), relation::command()];
+    let mut subs = vec![auth::command(), issue::command(), comment::command(), relation::command()];
     for mut c in lookups::commands() {
         if c.name() == "project" {
             c.short = "List, show and update projects".into();
@@ -55,6 +56,7 @@ LINEARCTL_HOME moves config and credentials under one directory.",
             .run(describe),
     );
     subs.push(help_command());
+    subs.extend(completion::commands());
     root.subs = subs;
     root
 }
