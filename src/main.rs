@@ -46,4 +46,16 @@ fn interrupts() {
             }
         });
     }
+    // Ctrl-C and Ctrl-Break are Go's os.Interrupt there; closing the
+    // console, logging off or shutting down are its SIGTERM.
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::System::Console::{CTRL_BREAK_EVENT, CTRL_C_EVENT, SetConsoleCtrlHandler};
+        unsafe extern "system" fn handler(event: u32) -> windows_sys::core::BOOL {
+            state::remove_ours();
+            std::process::exit(if event == CTRL_C_EVENT || event == CTRL_BREAK_EVENT { 130 } else { 143 });
+        }
+        // SAFETY: handler is a valid function for the life of the process.
+        unsafe { SetConsoleCtrlHandler(Some(handler), 1) };
+    }
 }

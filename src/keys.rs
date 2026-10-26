@@ -213,6 +213,7 @@ mod tests {
 
     /// A stand-in for macOS's security(1): it keeps one password in a file
     /// and logs every argv, so a test can check the key never was one.
+    #[cfg(unix)]
     const FAKE_SECURITY: &str = r#"#!/bin/sh
 echo "$*" >> "$0.argv"
 case "$1" in
@@ -230,6 +231,7 @@ delete-generic-password)
 esac
 "#;
 
+    #[cfg(unix)]
     fn fake(body: &str) -> (std::path::PathBuf, String) {
         use std::os::unix::fs::PermissionsExt;
         let dir = std::env::temp_dir().join(format!("lc-keychain-{}-{}", std::process::id(), crate::util::new_id()));
@@ -243,6 +245,7 @@ esac
     const KEY: &str = "lin_api_test0000000000000000";
 
     #[test]
+    #[cfg(unix)] // a shell script stands in for security(1)
     fn keychain_store_read_forget() {
         let (dir, tool) = fake(FAKE_SECURITY);
         let k = Store::Keychain(tool.clone());
@@ -294,6 +297,7 @@ esac
     }
 
     #[test]
+    #[cfg(unix)] // a shell script stands in for security(1)
     fn keychain_failures_are_named() {
         let (dir, tool) = fake("#!/bin/sh\necho 'User interaction is not allowed.' >&2\nexit 51\n");
         let k = Store::Keychain(tool);

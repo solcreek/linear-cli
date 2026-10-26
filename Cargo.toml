@@ -20,6 +20,9 @@ ureq = { version = "3", default-features = false, features = ["rustls", "gzip", 
 [target.'cfg(unix)'.dependencies]
 signal-hook = { version = "0.4", default-features = false, features = ["iterator"] }
 
+[target."cfg(windows)".dependencies]
+windows-sys = { version = "0.61", default-features = false, features = ["Win32_System_Console", "Win32_Foundation"] }
+
 [profile.release]
 lto = "fat"
 codegen-units = 1
