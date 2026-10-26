@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
-# Build and test times, and coverage, for the Go or the Rust tree. Appends to
+# Build and test times, and coverage, for the Rust tree, or for a Go tree
+# (0.2.0 and before: git archive v0.2.0 | tar -x -C DIR). Writes
 # bench/results/LABEL/build.txt.
 #
-#   bench/build.sh go go-0.2.0
-#   bench/build.sh rust rust-0.3.0
+#   bench/build.sh rust rust
+#   bench/build.sh go go-0.2.0-release DIR
 set -euo pipefail
 lang=$1
 label=$2
 root=$(cd "$(dirname "$0")/.." && pwd)
+src=$(cd "${3:-$root}" && pwd)
 out=$root/bench/results/$label
 mkdir -p "$out"
-cd "$root"
+cd "$src"
 
 secs() { # secs CMD...: wall seconds of one run, output discarded
   local s e
@@ -31,20 +33,23 @@ secs() { # secs CMD...: wall seconds of one run, output discarded
     touch cmd/linearctl/issue.go
     echo "incremental build (touch issue.go): $(GOCACHE=$cache secs go build -o /dev/null ./cmd/linearctl) s"
     rm -rf "$cache"
+    cache=$(mktemp -d)
+    echo "clean release build (-trimpath -s -w): $(GOCACHE=$cache secs go build -trimpath -ldflags '-s -w' -o /dev/null ./cmd/linearctl) s"
+    rm -rf "$cache"
     echo "test suite (go test -count=1): $(secs go test -count=1 ./...) s"
-    echo "coverage: $(make -s cover 2>/dev/null | tail -1 | awk '{print $NF}')"
+    echo "coverage (statements): $(make -s cover 2>/dev/null | tail -1 | awk '{print $NF}')"
     ;;
   rust)
     echo "toolchain: $(rustc --version)"
     cargo clean -q
     echo "clean release build: $(secs cargo build --release --locked) s"
-    touch src/main.rs
-    echo "incremental release build (touch main.rs): $(secs cargo build --release --locked) s"
+    touch src/commands/issue.rs
+    echo "incremental release build (touch issue.rs): $(secs cargo build --release --locked) s"
     echo "clean debug build: $(cargo clean -q; secs cargo build --locked) s"
-    touch src/main.rs
-    echo "incremental debug build (touch main.rs): $(secs cargo build --locked) s"
+    touch src/commands/issue.rs
+    echo "incremental debug build (touch issue.rs): $(secs cargo build --locked) s"
     echo "test suite (make test): $(secs make test) s"
-    echo "coverage: $(make -s cover 2>/dev/null | tail -1)"
+    echo "coverage (lines): $(scripts/cover.sh 2>/dev/null | tail -1 | awk '{print $(NF-3)}')"
     ;;
   esac
 } | tee "$out/build.txt"

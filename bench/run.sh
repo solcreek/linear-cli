@@ -14,7 +14,7 @@ runs=${RUNS:-300}
 port=${PORT:-8787}
 rm -rf "$out" && mkdir -p "$out"
 work=$(mktemp -d)
-trap 'kill $fake 2>/dev/null; wait $fake 2>/dev/null; rm -rf "$work"' EXIT
+trap 'kill $fake 2>/dev/null; wait $fake 2>/dev/null || true; rm -rf "$work"' EXIT
 
 go build -o "$work/fake" "$root/bench/fake"
 "$work/fake" -addr "127.0.0.1:$port" 2>/dev/null &
