@@ -1462,7 +1462,7 @@ exit: 0
             },
             {
               "default": null,
-              "description": "only issues in cycle CYCLE: current, next, or a cycle number",
+              "description": "only issues in cycle CYCLE: current, next, previous, a number, a UUID",
               "name": "cycle",
               "short": null,
               "type": "string"
@@ -3342,7 +3342,7 @@ exit: 0
         },
         {
           "default": null,
-          "description": "only issues in cycle CYCLE: current, next, or a cycle number",
+          "description": "only issues in cycle CYCLE: current, next, previous, a number, a UUID",
           "name": "cycle",
           "short": null,
           "type": "string"

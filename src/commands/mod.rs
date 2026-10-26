@@ -5,6 +5,7 @@ mod auth;
 mod comment;
 mod completion;
 mod config;
+mod cycle;
 mod file;
 mod issue;
 mod lookups;

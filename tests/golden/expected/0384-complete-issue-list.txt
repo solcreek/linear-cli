@@ -8,7 +8,7 @@ exit: 0
 --assignee	only issues assigned to `WHO`: me, none, or an email
 --attachment-url	only issues with an attachment at `URL` (e.g. a linked pull request)
 --cursor	continue after `CURSOR` (nextCursor from the previous page)
---cycle	only issues in cycle `CYCLE`: current, next, or a cycle number
+--cycle	only issues in cycle `CYCLE`: current, next, previous, a number, a UUID
 --delegate	only issues delegated to the agent `WHO` (name or email; any; none)
 --fields	return only these comma-separated `FIELDS` (see Fields above)
 --help	help for list

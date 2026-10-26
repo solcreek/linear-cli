@@ -24,7 +24,7 @@ Flags:
       --assignee WHO         only issues assigned to WHO: me, none, or an email
       --attachment-url URL   only issues with an attachment at URL (e.g. a linked pull request)
       --cursor CURSOR        continue after CURSOR (nextCursor from the previous page)
-      --cycle CYCLE          only issues in cycle CYCLE: current, next, or a cycle number
+      --cycle CYCLE          only issues in cycle CYCLE: current, next, previous, a number, a UUID
       --delegate WHO         only issues delegated to the agent WHO (name or email; any; none)
       --fields FIELDS        return only these comma-separated FIELDS (see Fields above)
   -h, --help                 help for list

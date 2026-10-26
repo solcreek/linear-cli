@@ -9,6 +9,11 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Changed
+
+- `issue list --cycle` also takes `previous` and a cycle's UUID, the words
+  `cycle show` takes.
+
 ## [0.3.0] - 2026-10-26
 
 ### Changed
