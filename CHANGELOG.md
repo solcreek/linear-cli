@@ -11,6 +11,12 @@ names are only ever added, never renamed or removed.
 
 ### Added
 
+- `watch`: streams changes to the issues an `issue list` filter matches, one
+  JSON line per event (`ready`, `upsert`, `remove` with a reason, `heartbeat`
+  with the rate limit left, `gap` with a replay after a reconnect or a fall
+  back to polling). It uses Linear's GraphQL subscriptions over WebSocket
+  (undocumented, working with a personal API key) and checks each batch of
+  changed issues against the filter with one request; `--since` replays first.
 - `relation create` and `relation delete ISSUE TYPE OTHER` for blocks,
   blocked-by, duplicate, related and similar. Creating a relation that exists,
   or deleting one that does not, is `changed: false`.
