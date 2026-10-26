@@ -9,6 +9,8 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-26
+
 ### Added
 
 - `issue list --blocked` and `--blocking` (Linear's hasBlockedByRelations and
@@ -286,7 +288,8 @@ names are only ever added, never renamed or removed.
 - Releases for linux, darwin and windows, and the npm package
   `@solcreek/linear-cli` with one native binary per platform.
 
-[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/solcreek/linear-cli/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/solcreek/linear-cli/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/solcreek/linear-cli/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/solcreek/linear-cli/compare/v0.3.0...v0.4.0
