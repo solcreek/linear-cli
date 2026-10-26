@@ -539,6 +539,7 @@ version = "0.2.0"
 dependencies = [
  "apollo-compiler",
  "getrandom 0.4.3",
+ "libc",
  "rustls",
  "rustls-platform-verifier",
  "serde_json",

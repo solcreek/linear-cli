@@ -18,6 +18,7 @@ tungstenite = { version = "0.30", default-features = false, features = ["handsha
 ureq = { version = "3", default-features = false, features = ["rustls", "gzip", "platform-verifier"] }
 
 [target.'cfg(unix)'.dependencies]
+libc = "0.2"
 signal-hook = { version = "0.4", default-features = false, features = ["iterator"] }
 
 [target."cfg(windows)".dependencies]

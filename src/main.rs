@@ -37,6 +37,11 @@ fn main() {
 fn interrupts() {
     #[cfg(unix)]
     {
+        // A reader that stops early (| head) ends the run quietly, as Go's
+        // runtime did, rather than with "Broken pipe" on stderr: Rust
+        // ignores SIGPIPE by default.
+        // SAFETY: restoring the default action, before any thread starts.
+        unsafe { libc::signal(libc::SIGPIPE, libc::SIG_DFL) };
         use signal_hook::consts::{SIGINT, SIGTERM};
         let Ok(mut signals) = signal_hook::iterator::Signals::new([SIGINT, SIGTERM]) else { return };
         std::thread::spawn(move || {
