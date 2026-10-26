@@ -39,11 +39,10 @@ struct Fake {
 
 impl Fake {
     fn start(behavior: Behavior) -> Fake {
-        Fake::start_slow(behavior, Duration::ZERO)
+        Fake::start_with(behavior, Data::default())
     }
 
-    /// One whose snapshot query (WatchIDs) takes snapshot to answer.
-    fn start_slow(behavior: Behavior, snapshot: Duration) -> Fake {
+    fn start_with(behavior: Behavior, data: Data) -> Fake {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let url = format!("http://{}/graphql", listener.local_addr().unwrap());
         let seen = Arc::new(Mutex::new(Seen::default()));
@@ -52,7 +51,7 @@ impl Fake {
         std::thread::spawn(move || {
             for stream in listener.incoming().flatten() {
                 let (s, o) = (s.clone(), o.clone());
-                std::thread::spawn(move || serve(stream, behavior, snapshot, s, o));
+                std::thread::spawn(move || serve(stream, behavior, data, s, o));
             }
         });
         Fake { url, seen, open }
@@ -74,7 +73,7 @@ impl Fake {
 fn serve(
     stream: TcpStream,
     behavior: Behavior,
-    snapshot: Duration,
+    data: Data,
     seen: Arc<Mutex<Seen>>,
     open: Arc<Mutex<Vec<tungstenite::WebSocket<TcpStream>>>>,
 ) {
@@ -83,7 +82,7 @@ fn serve(
     if String::from_utf8_lossy(&head[..n]).to_ascii_lowercase().contains("upgrade: websocket") {
         websocket(stream, behavior, seen, open);
     } else {
-        graphql(stream, snapshot);
+        graphql(stream, data);
     }
 }
 
@@ -157,9 +156,30 @@ fn websocket(
     }
 }
 
-/// Answers watch's queries: no issues match at start; an issue asked for by
-/// id is there and matches. The snapshot's answer waits snapshot.
-fn graphql(stream: TcpStream, snapshot: Duration) {
+/// What the fake's GraphQL holds.
+#[derive(Clone, Copy, Default)]
+struct Data {
+    /// How long the snapshot query (WatchIDs) takes to answer.
+    snapshot: Duration,
+    /// Issues that match at start and have since been archived, ids arch-N:
+    /// in the snapshot, changed since any time, no longer matching.
+    archived: usize,
+}
+
+/// One page of ids from 0..n, as Linear pages: first (or the query's own
+/// limit) from after.
+fn page(req: &Value, n: usize, limit: usize) -> Value {
+    let first = req["variables"]["first"].as_u64().map_or(limit, |f| f as usize);
+    let from = req["variables"]["after"].as_str().and_then(|a| a.parse().ok()).unwrap_or(0);
+    let to = n.min(from + first);
+    let nodes: Vec<Value> =
+        (from..to).map(|i| json!({"id": format!("arch-{i}"), "identifier": format!("ENG-{}", 100 + i)})).collect();
+    json!({"nodes": nodes, "pageInfo": {"hasNextPage": to < n, "endCursor": to.to_string()}})
+}
+
+/// Answers watch's queries: at start only the archived issues match; an
+/// issue asked for by id is there and matches, unless it is archived.
+fn graphql(stream: TcpStream, fake: Data) {
     let mut reader = BufReader::new(stream.try_clone().unwrap());
     let mut stream = stream;
     loop {
@@ -185,7 +205,7 @@ fn graphql(stream: TcpStream, snapshot: Duration) {
         let query = req["query"].as_str().unwrap_or("");
         let op = query.split_whitespace().nth(1).unwrap_or("").split('(').next().unwrap_or("");
         if op == "WatchIDs" {
-            std::thread::sleep(snapshot);
+            std::thread::sleep(fake.snapshot);
         }
         let nodes: Vec<Value> = match op {
             "IssueList" => {
@@ -194,13 +214,27 @@ fn graphql(stream: TcpStream, snapshot: Duration) {
                 ids.as_array()
                     .into_iter()
                     .flatten()
+                    .filter(|id| !id.as_str().unwrap_or("").starts_with("arch-"))
                     .map(|id| json!({"id": id, "identifier": "ENG-1", "title": "One", "state": {"name": "Todo"}}))
                     .collect()
             }
+            // At most 250 a request, as the query asks.
+            "WatchGone" => req["variables"]["ids"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .take(250)
+                .filter_map(|id| id.as_str()?.strip_prefix("arch-")?.parse::<usize>().ok())
+                .map(|i| {
+                    json!({"id": format!("arch-{i}"), "identifier": format!("ENG-{}", 100 + i),
+                           "archivedAt": "2026-10-26T00:00:00.000Z", "trashed": false})
+                })
+                .collect(),
             _ => vec![],
         };
         let data = match op {
-            "WatchGone" | "WatchChanged" => json!({"issues": {"nodes": nodes}}),
+            "WatchGone" => json!({"issues": {"nodes": nodes}}),
+            "WatchIDs" | "WatchChanged" => json!({"issues": page(&req, fake.archived, 250)}),
             _ => json!({"issues": {"nodes": nodes, "pageInfo": {"hasNextPage": false, "endCursor": null}}}),
         };
         let body = json!({"data": data}).to_string();
@@ -307,7 +341,8 @@ fn one_subscription_falls_back_to_updates() {
 /// to it, so watch still falls back.
 #[test]
 fn one_subscription_falls_back_after_a_slow_snapshot() {
-    falls_back(Fake::start_slow(Behavior::OneSubscription, Duration::from_secs(11)));
+    let data = Data { snapshot: Duration::from_secs(11), ..Data::default() };
+    falls_back(Fake::start_with(Behavior::OneSubscription, data));
 }
 
 fn falls_back(fake: Fake) {
@@ -331,4 +366,22 @@ fn falls_back(fake: Fake) {
     assert_eq!(connections[0].len(), 2, "the first asked for more than one: {connections:?}");
     assert_eq!(connections[1], vec!["updated"], "{connections:?}");
     assert!(err.contains("Linear allows one subscription at a time"), "stderr:\n{err}");
+}
+
+/// With issue updates alone subscribed, archives come only by catching up:
+/// every one of them, not just the first 250 changed.
+#[test]
+fn catching_up_reports_every_archive() {
+    let fake = Fake::start_with(Behavior::OneSubscription, Data { archived: 300, ..Data::default() });
+    let w = Watch::start(&fake);
+    let ready = w.next("ready", Duration::from_secs(10));
+    assert_eq!(ready["known"], 300, "{ready}");
+    w.next("gap", Duration::from_secs(5));
+    let mut gone = std::collections::HashSet::new();
+    while gone.len() < 300 {
+        let v = w.next("remove", Duration::from_secs(5));
+        assert_eq!(v["reason"], "archived", "{v}");
+        gone.insert(v["id"].as_str().unwrap().to_string());
+    }
+    w.stderr();
 }

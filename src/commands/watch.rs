@@ -201,12 +201,18 @@ impl Watcher {
         Ok(())
     }
 
-    /// Reports issues that no longer match, with why.
+    /// Reports issues that no longer match, with why: a request for each
+    /// 250 of them.
     fn gone(&mut self, run: &mut Run, ids: &[String]) -> R {
-        let report: Vec<&String> = ids.iter().filter(|id| self.known.contains_key(*id) || self.everything).collect();
-        if report.is_empty() {
-            return Ok(());
+        let report: Vec<String> =
+            ids.iter().filter(|id| self.known.contains_key(*id) || self.everything).cloned().collect();
+        for batch in report.chunks(PAGE_SIZE as usize) {
+            self.gone_batch(run, batch)?;
         }
+        Ok(())
+    }
+
+    fn gone_batch(&mut self, run: &mut Run, report: &[String]) -> R {
         let data = self.cl.query(run, queries::WATCH_GONE, json!({"ids": report}))?;
         let found = nodes(&data["issues"]);
         for id in report {
@@ -266,9 +272,17 @@ impl Watcher {
             matched.insert(str_at(it, "id"));
             self.upsert(run, it)?;
         }
-        let changed = self.cl.query(run, queries::WATCH_CHANGED, json!({"filter": gte}))?;
-        let rest: Vec<String> =
-            nodes(&changed["issues"]).iter().map(|n| str_at(n, "id")).filter(|id| !matched.contains(id)).collect();
+        // Every page: with issue updates alone subscribed, this is how
+        // archives arrive.
+        let (changed, _) = collect(PAGE_SIZE * SNAPSHOT_PAGES, String::new(), |first, after| {
+            let mut data = cl.query(
+                run,
+                queries::WATCH_CHANGED,
+                json!({"filter": gte, "first": first, "after": optional(after)}),
+            )?;
+            Ok(Page::take(&mut data["issues"]))
+        })?;
+        let rest: Vec<String> = changed.iter().map(|n| str_at(n, "id")).filter(|id| !matched.contains(id)).collect();
         self.gone(run, &rest)?;
         self.since = started - RECONCILE_SKEW;
         Ok(())

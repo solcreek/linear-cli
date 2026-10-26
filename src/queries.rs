@@ -146,7 +146,11 @@ pub const WATCH_IDS: &str = concat!(
 
 pub const WATCH_GONE: &str = "query WatchGone($ids: [ID!]!) {\n  issues(filter: { id: { in: $ids } }, first: 250, includeArchived: true) { nodes { id identifier archivedAt trashed } }\n}";
 
-pub const WATCH_CHANGED: &str = "query WatchChanged($filter: IssueFilter!) {\n  issues(filter: $filter, first: 250, includeArchived: true, orderBy: updatedAt) { nodes { id } }\n}";
+pub const WATCH_CHANGED: &str = concat!(
+    "query WatchChanged($filter: IssueFilter!, $first: Int!, $after: String) {\n  issues(filter: $filter, first: $first, after: $after, includeArchived: true, orderBy: updatedAt) { nodes { id } ",
+    page_info!(),
+    " }\n}"
+);
 
 pub const WATCH_CREATED: &str = "subscription WatchCreated { issueCreated { id } }";
 pub const WATCH_UPDATED: &str = "subscription WatchUpdated { issueUpdated { id } }";
