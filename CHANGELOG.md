@@ -27,6 +27,8 @@ names are only ever added, never renamed or removed.
   UUID or exact name; a name two projects share is an error that lists both.
 - `issue unarchive`.
 - `issue update --parent none` detaches an issue from its parent.
+- `issue list --attachment-url URL`: the issues that link a URL, such as a pull
+  request. A caller that must wait for Linear to link one polls this.
 - `comment create --parent COMMENT` to reply in a thread; `comment update` and
   `comment delete` (a comment that is not there is `changed: false`,
   `found: false`).

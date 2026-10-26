@@ -66,6 +66,7 @@ func TestIssueListFilters(t *testing.T) {
 		{[]string{"--without-label", "wontfix"}, `{"and":[{"labels":{"every":{"name":{"neqIgnoreCase":"wontfix"}}}}]}`},
 		{[]string{"--label", "bug", "--any-label", "p1", "--any-label", "p2", "--without-label", "dup"}, `{"and":[{"labels":{"some":{"name":{"eqIgnoreCase":"bug"}}}},{"or":[{"labels":{"some":{"name":{"eqIgnoreCase":"p1"}}}},{"labels":{"some":{"name":{"eqIgnoreCase":"p2"}}}}]},{"labels":{"every":{"name":{"neqIgnoreCase":"dup"}}}}]}`},
 		{[]string{"--project", "Q4 launch"}, `{"project":{"name":{"eqIgnoreCase":"Q4 launch"}}}`},
+		{[]string{"--attachment-url", "https://github.com/acme/app/pull/42"}, `{"attachments":{"some":{"url":{"eq":"https://github.com/acme/app/pull/42"}}}}`},
 		{[]string{"--cycle", "current"}, `{"cycle":{"isActive":{"eq":true}}}`},
 		{[]string{"--cycle", "next"}, `{"cycle":{"isNext":{"eq":true}}}`},
 		{[]string{"--cycle", "12"}, `{"cycle":{"number":{"eq":12}}}`},
@@ -101,7 +102,7 @@ func TestIssueListRefusesBadFilters(t *testing.T) {
 	cases := [][]string{
 		{"--assignee", "ada"}, {"--state-type", "done"}, {"--cycle", "last"}, {"--updated-since", "yesterday"},
 		{"--sort", "title"}, {"--query", "x", "--sort", "priority"}, {"--fields", "identifier,nope"},
-		{"--team", "E N G"}, {"--priority", "soon"}, {"--priority", "5"}, {"--state", "a\x07"}, {"--limit", "-1"}, {"--any-label", ""}, {"--without-label", "a\x07"},
+		{"--team", "E N G"}, {"--priority", "soon"}, {"--priority", "5"}, {"--state", "a\x07"}, {"--limit", "-1"}, {"--any-label", ""}, {"--without-label", "a\x07"}, {"--attachment-url", "github.com/x"},
 	}
 	api := newFake(t)
 	for _, args := range cases {

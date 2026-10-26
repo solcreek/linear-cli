@@ -161,6 +161,7 @@ func issueList() *cobra.Command {
 	c.Flags().String("project", "", "only issues in project `NAME`")
 	c.Flags().String("milestone", "", "only issues in project milestone `NAME` (none: in no milestone)")
 	c.Flags().String("delegate", "", "only issues delegated to the agent `WHO` (name or email; any; none)")
+	c.Flags().String("attachment-url", "", "only issues with an attachment at `URL` (e.g. a linked pull request)")
 	c.Flags().String("cycle", "", "only issues in cycle `CYCLE`: current, next, or a cycle number")
 	c.Flags().String("updated-since", "", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h")
 	c.Flags().StringArray("id", nil, "only the issue `ISSUE` (ENG-123 or a UUID; repeatable); one not\nfound is a problem (exit 3)")
@@ -292,6 +293,15 @@ func listFilter(cmd *cobra.Command) (map[string]any, error) {
 			return nil, err
 		}
 		filter["project"] = map[string]any{"name": map[string]any{"eqIgnoreCase": p}}
+	}
+	if u, _ := cmd.Flags().GetString("attachment-url"); u != "" {
+		if _, err := plain("--attachment-url", u); err != nil {
+			return nil, err
+		}
+		if !strings.HasPrefix(u, "https://") && !strings.HasPrefix(u, "http://") {
+			return nil, usageError{fmt.Errorf("--attachment-url must be an http(s) URL; got %q", u)}
+		}
+		filter["attachments"] = map[string]any{"some": map[string]any{"url": map[string]any{"eq": u}}}
 	}
 	if d, _ := cmd.Flags().GetString("delegate"); d != "" {
 		if _, err := plain("--delegate", d); err != nil {
