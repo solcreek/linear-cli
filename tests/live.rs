@@ -88,11 +88,14 @@ impl Watch {
         Watch { child, lines }
     }
 
-    /// The first line with this event for which ok holds, within limit.
+    /// The first line with this event for which ok holds, within limit. A
+    /// gap fails it: watch then catches up over HTTP, which could deliver
+    /// the change without the subscription the test is about.
     fn wait(&self, event: &str, limit: Duration, ok: impl Fn(&Value) -> bool) -> Value {
         let deadline = Instant::now() + limit;
         loop {
             match self.lines.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
+                Ok(v) if v["event"] == "gap" => panic!("the subscription dropped while waiting for {event}: {v}"),
                 Ok(v) if v["event"] == event && ok(&v) => return v,
                 Ok(_) => {}
                 Err(RecvTimeoutError::Timeout) => panic!("no {event} within {limit:?}"),
