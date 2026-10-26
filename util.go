@@ -202,8 +202,30 @@ func pick(item map[string]any, fields []string) map[string]any {
 	return out
 }
 
+// addFieldsFlag adds --fields and lists the known fields in the long help.
 func addFieldsFlag(c *cobra.Command, known []string) {
-	c.Flags().String("fields", "", "return only these comma-separated `FIELDS` ("+strings.Join(known, ",")+")")
+	c.Flags().String("fields", "", "return only these comma-separated `FIELDS` (see Fields above)")
+	if c.Long == "" {
+		c.Long = c.Short + "."
+	}
+	c.Long += "\n\n" + wrap("Fields: "+strings.Join(known, ", "), 80)
+}
+
+// wrap breaks text into lines of at most width columns, between words.
+func wrap(text string, width int) string {
+	var lines []string
+	line := ""
+	for _, w := range strings.Fields(text) {
+		if line != "" && len(line)+1+len(w) > width {
+			lines = append(lines, line)
+			line = ""
+		}
+		if line != "" {
+			line += " "
+		}
+		line += w
+	}
+	return strings.Join(append(lines, line), "\n")
 }
 
 // page is one connection page as Linear returns it.

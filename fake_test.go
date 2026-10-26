@@ -133,6 +133,14 @@ func conn(next string, nodes ...any) map[string]any {
 	return map[string]any{"nodes": nodes, "pageInfo": map[string]any{"hasNextPage": next != "", "endCursor": next}}
 }
 
+// nodes is a nested connection asked for without pageInfo.
+func nodes(items ...any) map[string]any {
+	if items == nil {
+		items = []any{}
+	}
+	return map[string]any{"nodes": items}
+}
+
 // issueNode is an issue as issueRow returns it.
 func issueNode(identifier, title string) map[string]any {
 	return map[string]any{

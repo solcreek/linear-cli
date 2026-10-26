@@ -1,0 +1,852 @@
+package main
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"regexp"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/spf13/cobra"
+)
+
+var showFields = append(slices.Clone(issueRowFields), "description", "dueDate", "estimate", "branchName", "startedAt",
+	"completedAt", "canceledAt", "archivedAt", "creator", "parent", "children", "relations", "attachments", "comments")
+
+func addIssue(root *cobra.Command) {
+	issue := &cobra.Command{
+		Use:   "issue",
+		Short: "List, show, create, update and archive issues",
+		Args:  usageArgs(cobra.NoArgs),
+		RunE:  func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
+	}
+	issue.AddCommand(issueList(), issueShow(), issueCreate(), issueUpdate(), issueArchive())
+	root.AddCommand(issue)
+}
+
+func issueList() *cobra.Command {
+	c := &cobra.Command{
+		Use:   "list",
+		Short: "List issues, most recently updated first",
+		Long: "List issues, most recently updated first. Filters combine with AND; a repeated\n" +
+			"--state or --state-type matches any of its values, a repeated --label all of them.\n" +
+			"--query searches titles, descriptions and comments, ranked by relevance unless\n" +
+			"--sort is given; Linear allows 30 searches a minute.\n" +
+			"--team falls back to LINEARCTL_TEAM, then to default-team in config.",
+		Example: "  linearctl issue list --assignee me --state-type started --json\n" +
+			"  linearctl issue list --team ENG --label bug --updated-since 7d --fields identifier,title --json\n" +
+			"  linearctl issue list --query \"login timeout\" --limit 10",
+		Args: usageArgs(cobra.NoArgs),
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			fields, err := fieldsFlag(cmd, issueRowFields)
+			if err != nil {
+				return err
+			}
+			filter, err := listFilter(cmd)
+			if err != nil {
+				return err
+			}
+			cursor, err := cursorValue(cmd)
+			if err != nil {
+				return err
+			}
+			query, _ := cmd.Flags().GetString("query")
+			sortBy, _ := cmd.Flags().GetString("sort")
+			if query != "" {
+				if _, err := plain("--query", query); err != nil {
+					return err
+				}
+				if sortBy == "priority" {
+					return usageError{errors.New("--sort priority does not work with --query; use updated or created")}
+				}
+			}
+			vars := map[string]any{"filter": filter}
+			switch sortBy {
+			case "", "updated":
+				if query == "" || sortBy != "" {
+					vars["orderBy"] = "updatedAt"
+				}
+			case "created":
+				vars["orderBy"] = "createdAt"
+			case "priority":
+				vars["sort"] = []any{map[string]any{"priority": map[string]any{"order": "Ascending", "noPriorityFirst": false}}}
+			default:
+				return usageError{fmt.Errorf("--sort must be updated, created or priority; got %q", sortBy)}
+			}
+			doc, conn := qIssueList, "issues"
+			if query != "" {
+				doc, conn, vars["term"] = qIssueSearch, "searchIssues", query
+			}
+			cl, err := newClient()
+			if err != nil {
+				return err
+			}
+			limit := cmd.Flags().Lookup("limit").Value.(*wholeNumber).n
+			items, next, err := collect(limit, cursor, func(first int, after string) (page, error) {
+				vars["first"], vars["after"] = first, optional(after)
+				var out map[string]page
+				err := cl.query(doc, vars, &out)
+				return out[conn], err
+			})
+			if err != nil {
+				return err
+			}
+			doc2 := listDoc(items, next, fields)
+			if asJSON {
+				return printJSON(doc2)
+			}
+			rows(cmd, items, "identifier", "state.name", "assignee.name", "title")
+			return nil
+		},
+	}
+	c.Flags().String("team", "", "only issues of team `KEY` (e.g. ENG)")
+	c.Flags().String("assignee", "", "only issues assigned to `WHO`: me, none, or an email")
+	c.Flags().StringArray("state", nil, "only issues in workflow state `NAME` (repeatable; any of)")
+	c.Flags().StringArray("state-type", nil, "only issues whose state is of `TYPE` (repeatable): triage, backlog,\nunstarted, started, completed, canceled")
+	c.Flags().StringArray("label", nil, "only issues with label `NAME` (repeatable; all of)")
+	c.Flags().String("project", "", "only issues in project `NAME`")
+	c.Flags().String("cycle", "", "only issues in cycle `CYCLE`: current, next, or a cycle number")
+	c.Flags().String("updated-since", "", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h")
+	c.Flags().String("query", "", "full-text search for `TEXT`")
+	c.Flags().String("sort", "", "order by `FIELD`: updated (default), created, priority")
+	limitFlag(c, 25)
+	cursorFlag(c)
+	addFieldsFlag(c, issueRowFields)
+	return c
+}
+
+var stateTypes = []string{"triage", "backlog", "unstarted", "started", "completed", "canceled"}
+
+// listFilter is Linear's IssueFilter for issue list's flags. Names go to
+// Linear as names, so listing needs no lookups.
+func listFilter(cmd *cobra.Command) (map[string]any, error) {
+	filter := map[string]any{}
+	var and []any
+	team, err := teamFlag(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if team != "" {
+		filter["team"] = map[string]any{"key": map[string]any{"eq": team}}
+	}
+	if who, _ := cmd.Flags().GetString("assignee"); who != "" {
+		f, err := userFilter("--assignee", who)
+		if err != nil {
+			return nil, err
+		}
+		filter["assignee"] = f
+	}
+	state := map[string]any{}
+	if names, _ := cmd.Flags().GetStringArray("state"); len(names) > 0 {
+		for _, n := range names {
+			if _, err := plain("--state", n); err != nil {
+				return nil, err
+			}
+		}
+		state["name"] = map[string]any{"in": names}
+	}
+	if types, _ := cmd.Flags().GetStringArray("state-type"); len(types) > 0 {
+		for _, t := range types {
+			if !slices.Contains(stateTypes, t) {
+				return nil, usageError{fmt.Errorf("--state-type must be one of %s; got %q", strings.Join(stateTypes, ", "), t)}
+			}
+		}
+		state["type"] = map[string]any{"in": types}
+	}
+	if len(state) > 0 {
+		filter["state"] = state
+	}
+	labels, _ := cmd.Flags().GetStringArray("label")
+	for _, l := range labels {
+		if _, err := plain("--label", l); err != nil {
+			return nil, err
+		}
+		and = append(and, map[string]any{"labels": map[string]any{"some": map[string]any{"name": map[string]any{"eqIgnoreCase": l}}}})
+	}
+	if len(and) > 0 {
+		filter["and"] = and
+	}
+	if p, _ := cmd.Flags().GetString("project"); p != "" {
+		if _, err := plain("--project", p); err != nil {
+			return nil, err
+		}
+		filter["project"] = map[string]any{"name": map[string]any{"eqIgnoreCase": p}}
+	}
+	if cy, _ := cmd.Flags().GetString("cycle"); cy != "" {
+		switch {
+		case cy == "current":
+			filter["cycle"] = map[string]any{"isActive": map[string]any{"eq": true}}
+		case cy == "next":
+			filter["cycle"] = map[string]any{"isNext": map[string]any{"eq": true}}
+		case strings.Trim(cy, "0123456789") == "":
+			n, _ := strconv.Atoi(cy)
+			filter["cycle"] = map[string]any{"number": map[string]any{"eq": n}}
+		default:
+			return nil, usageError{fmt.Errorf("--cycle must be current, next or a number; got %q", cy)}
+		}
+	}
+	if since, _ := cmd.Flags().GetString("updated-since"); since != "" {
+		t, err := when(since)
+		if err != nil {
+			return nil, err
+		}
+		filter["updatedAt"] = map[string]any{"gte": t}
+	}
+	if len(filter) == 0 {
+		return nil, nil
+	}
+	return filter, nil
+}
+
+// userFilter is a NullableUserFilter for me, none or an email.
+func userFilter(flag, who string) (map[string]any, error) {
+	switch {
+	case who == "me":
+		return map[string]any{"isMe": map[string]any{"eq": true}}, nil
+	case who == "none":
+		return map[string]any{"null": true}, nil
+	case emailPattern.MatchString(who):
+		return map[string]any{"email": map[string]any{"eqIgnoreCase": who}}, nil
+	}
+	return nil, usageError{fmt.Errorf("%s must be me, none or an email; got %q", flag, who)}
+}
+
+var (
+	emailPattern = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
+	agoPattern   = regexp.MustCompile(`^([0-9]{1,4})([dh])$`)
+)
+
+// when is --updated-since as an RFC 3339 time: a date, a time, or 7d / 24h.
+func when(s string) (string, error) {
+	if m := agoPattern.FindStringSubmatch(s); m != nil {
+		n, _ := strconv.Atoi(m[1])
+		unit := map[string]time.Duration{"d": 24 * time.Hour, "h": time.Hour}[m[2]]
+		return time.Now().Add(-time.Duration(n) * unit).UTC().Format(time.RFC3339), nil
+	}
+	if t, err := time.Parse("2006-01-02", s); err == nil {
+		return t.Format(time.RFC3339), nil
+	}
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t.UTC().Format(time.RFC3339), nil
+	}
+	return "", usageError{fmt.Errorf("--updated-since must be a date (2026-10-01), an RFC 3339 time, or 7d / 24h; got %q", s)}
+}
+
+// optional is a GraphQL variable that is null when empty.
+func optional(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+func issueShow() *cobra.Command {
+	c := &cobra.Command{
+		Use:   "show ISSUE",
+		Short: "Show one issue with its description, comments, sub-issues and relations",
+		Long: "Show one issue with its description, comments, sub-issues and relations.\n" +
+			"ISSUE is an identifier (ENG-123), a UUID, or a linear.app issue URL.\n" +
+			"--signed-urls makes file URLs in the result open without the API key for that\n" +
+			"many seconds, so a viewer can fetch images directly.",
+		Example: "  linearctl issue show ENG-123\n  linearctl issue show ENG-123 --signed-urls 300 --json\n" +
+			"  linearctl issue show ENG-123 --comments 0 --fields identifier,title,description --json",
+		Args: usageArgs(cobra.ExactArgs(1)),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ref, err := issueRef("ISSUE", args[0])
+			if err != nil {
+				return err
+			}
+			fields, err := fieldsFlag(cmd, showFields)
+			if err != nil {
+				return err
+			}
+			comments := cmd.Flags().Lookup("comments").Value.(*wholeNumber).n
+			if comments > 250 {
+				return usageError{errors.New("--comments is at most 250; page with 'linearctl comment list'")}
+			}
+			cl, err := newClient()
+			if err != nil {
+				return err
+			}
+			cl.signedURLs = cmd.Flags().Lookup("signed-urls").Value.(*wholeNumber).n
+			var out struct {
+				Issue map[string]any `json:"issue"`
+			}
+			err = cl.query(qIssueShow, map[string]any{"id": ref, "comments": comments, "withComments": comments > 0}, &out)
+			if err != nil {
+				return notFound(err, "issue "+ref)
+			}
+			issue := flatten(out.Issue).(map[string]any)
+			if asJSON {
+				return printJSON(map[string]any{"issue": pick(issue, fields)})
+			}
+			w := cmd.OutOrStdout()
+			fmt.Fprintf(w, "%s  %s\n", str(issue, "identifier"), printable(str(issue, "title")))
+			fmt.Fprintf(w, "state: %s   assignee: %s   priority: %s\n", printable(str(issue, "state.name")),
+				orDash(printable(str(issue, "assignee.name"))), str(issue, "priorityLabel"))
+			fmt.Fprintf(w, "%s\n", str(issue, "url"))
+			if d := str(issue, "description"); d != "" {
+				fmt.Fprintf(w, "\n%s\n", printableText(d))
+			}
+			if cs, _ := issue["comments"].([]any); len(cs) > 0 {
+				fmt.Fprintf(w, "\n%d comments\n", len(cs))
+				for _, x := range cs {
+					m, _ := x.(map[string]any)
+					fmt.Fprintf(w, "\n— %s, %s\n%s\n", printable(str(m, "user.name")), str(m, "createdAt"), printableText(str(m, "body")))
+				}
+			}
+			return nil
+		},
+	}
+	c.Flags().Var(&wholeNumber{n: 20}, "comments", "include the first `N` comments; 0 for none")
+	c.Flags().Var(&wholeNumber{}, "signed-urls", "sign file URLs for `SECONDS` so they open without the key")
+	addFieldsFlag(c, showFields)
+	return c
+}
+
+func orDash(s string) string {
+	if s == "" {
+		return "-"
+	}
+	return s
+}
+
+// printableText is printable but keeps newlines, for a description or body.
+func printableText(s string) string {
+	lines := strings.Split(s, "\n")
+	for i, l := range lines {
+		lines[i] = printable(strings.TrimSuffix(l, "\r"))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// issueFields are the flags issue create and update share.
+func issueFields(c *cobra.Command) {
+	c.Flags().String("title", "", "the title, `TEXT`")
+	c.Flags().String("description", "", "the description, Markdown `TEXT`")
+	c.Flags().String("description-file", "", "read the description from `PATH` (- for stdin)")
+	c.Flags().String("assignee", "", "assign to `WHO`: me, none, or an email")
+	c.Flags().String("state", "", "workflow state `NAME` (see 'linearctl state list')")
+	c.Flags().String("priority", "", "`PRIORITY`: 0-4 or none, urgent, high, medium, low")
+	c.Flags().String("project", "", "project `NAME`")
+	c.Flags().String("parent", "", "make it a sub-issue of `ISSUE`")
+	c.Flags().String("json-input", "", "read Linear's input object from `PATH` (- for stdin); flags win")
+}
+
+var priorities = map[string]int{"none": 0, "urgent": 1, "high": 2, "medium": 3, "low": 4}
+
+// wanted is what the shared flags ask for, before names become ids.
+type wanted struct {
+	input    map[string]any // the input object so far (from --json-input and plain flags)
+	state    string
+	assignee string // me, none or an email
+	labels   []string
+	project  string
+	parent   string // an issue ref
+}
+
+func readWanted(cmd *cobra.Command) (*wanted, error) {
+	w := &wanted{input: map[string]any{}}
+	if path, _ := cmd.Flags().GetString("json-input"); path != "" {
+		data, err := readInput("--json-input", path)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(data, &w.input); err != nil {
+			return nil, usageError{fmt.Errorf("--json-input is not a JSON object: %s", err)}
+		}
+	}
+	if cmd.Flags().Changed("title") {
+		t, _ := cmd.Flags().GetString("title")
+		if _, err := plain("--title", t); err != nil {
+			return nil, err
+		}
+		w.input["title"] = t
+	}
+	d, set, err := text(cmd, "description")
+	if err != nil {
+		return nil, err
+	}
+	if set {
+		w.input["description"] = d
+	}
+	if p, _ := cmd.Flags().GetString("priority"); p != "" {
+		n, ok := priorities[strings.ToLower(p)]
+		if !ok {
+			var err error
+			if n, err = strconv.Atoi(p); err != nil || n < 0 || n > 4 {
+				return nil, usageError{fmt.Errorf("--priority must be 0-4 or none, urgent, high, medium, low; got %q", p)}
+			}
+		}
+		w.input["priority"] = n
+	}
+	for flag, dst := range map[string]*string{"state": &w.state, "project": &w.project} {
+		if v, _ := cmd.Flags().GetString(flag); v != "" {
+			if _, err := plain("--"+flag, v); err != nil {
+				return nil, err
+			}
+			*dst = v
+		}
+	}
+	if a, _ := cmd.Flags().GetString("assignee"); a != "" {
+		if _, err := userFilter("--assignee", a); err != nil {
+			return nil, err
+		}
+		w.assignee = a
+	}
+	if p, _ := cmd.Flags().GetString("parent"); p != "" {
+		ref, err := issueRef("--parent", p)
+		if err != nil {
+			return nil, err
+		}
+		w.parent = ref
+	}
+	if f := cmd.Flags().Lookup("label"); f != nil {
+		w.labels, _ = cmd.Flags().GetStringArray("label")
+	}
+	for _, l := range w.labels {
+		if _, err := plain("--label", l); err != nil {
+			return nil, err
+		}
+	}
+	return w, nil
+}
+
+// resolveVars are the variables both resolve queries share.
+func (w *wanted) resolveVars(extraLabels []string) map[string]any {
+	labels := append(slices.Clone(w.labels), extraLabels...)
+	parent := map[string]any{}
+	if w.parent != "" {
+		parent = issueFilter(w.parent)
+	}
+	email := ""
+	if emailPattern.MatchString(w.assignee) {
+		email = w.assignee
+	}
+	return map[string]any{
+		"state": w.state, "withState": w.state != "",
+		"email": email, "withUser": email != "", "me": w.assignee == "me",
+		"labels": labels, "withLabels": len(labels) > 0,
+		"project": w.project, "withProject": w.project != "",
+		"parent": parent, "withParent": w.parent != "",
+	}
+}
+
+type named struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Email      string `json:"email"`
+	Identifier string `json:"identifier"`
+	Team       *struct {
+		ID string `json:"id"`
+	} `json:"team"`
+}
+
+type resolved struct {
+	Users       struct{ Nodes []named } `json:"users"`
+	Viewer      *named                  `json:"viewer"`
+	IssueLabels struct{ Nodes []named } `json:"issueLabels"`
+	Projects    struct{ Nodes []named } `json:"projects"`
+	Parent      struct{ Nodes []named } `json:"parent"`
+}
+
+// one is the single match for name, or an error naming what was looked for.
+func one(kind, name string, nodes []named, hint string) (string, error) {
+	switch len(nodes) {
+	case 0:
+		return "", fmt.Errorf("no %s named %q; see %s", kind, name, hint)
+	case 1:
+		return nodes[0].ID, nil
+	}
+	return "", fmt.Errorf("%d %ss are named %q; rename one in Linear, or pass its id in --json-input", len(nodes), kind, name)
+}
+
+// apply turns the resolved names into ids on input. teamID picks team labels
+// over another team's label of the same name.
+func (w *wanted) apply(r resolved, states []named, teamID string) error {
+	if w.state != "" {
+		id, err := one("workflow state", w.state, states, "'linearctl state list'")
+		if err != nil {
+			return err
+		}
+		w.input["stateId"] = id
+	}
+	switch {
+	case w.assignee == "none":
+		w.input["assigneeId"] = nil
+	case w.assignee == "me":
+		w.input["assigneeId"] = r.Viewer.ID
+	case w.assignee != "":
+		id, err := one("user with email", w.assignee, r.Users.Nodes, "'linearctl user list'")
+		if err != nil {
+			return err
+		}
+		w.input["assigneeId"] = id
+	}
+	if w.project != "" {
+		id, err := one("project", w.project, r.Projects.Nodes, "'linearctl project list'")
+		if err != nil {
+			return err
+		}
+		w.input["projectId"] = id
+	}
+	if w.parent != "" {
+		if len(r.Parent.Nodes) == 0 {
+			return fmt.Errorf("not found: parent issue %s", w.parent)
+		}
+		w.input["parentId"] = r.Parent.Nodes[0].ID
+	}
+	if len(w.labels) > 0 {
+		ids, err := labelIDs(w.labels, r.IssueLabels.Nodes, teamID)
+		if err != nil {
+			return err
+		}
+		w.input["labelIds"] = ids
+	}
+	return nil
+}
+
+// labelIDs maps names to ids, preferring the team's own label, then a
+// workspace label (no team).
+func labelIDs(names []string, nodes []named, teamID string) ([]string, error) {
+	ids := []string{}
+	for _, n := range names {
+		var team, workspace []named
+		for _, l := range nodes {
+			switch {
+			case !strings.EqualFold(l.Name, n):
+			case l.Team == nil:
+				workspace = append(workspace, l)
+			case l.Team.ID == teamID:
+				team = append(team, l)
+			}
+		}
+		match := team
+		if len(match) == 0 {
+			match = workspace
+		}
+		id, err := one("label", n, match, "'linearctl label list'")
+		if err != nil {
+			return nil, err
+		}
+		if !slices.Contains(ids, id) {
+			ids = append(ids, id)
+		}
+	}
+	return ids, nil
+}
+
+func issueCreate() *cobra.Command {
+	c := &cobra.Command{
+		Use:   "create",
+		Short: "Create an issue",
+		Long: "Create an issue in a team. Names (state, label, project, assignee email) are\n" +
+			"resolved to ids first; --dry-run prints the exact input it would send.\n\n" +
+			"--yes requires --id, a UUID you choose, so a rerun can never create a second\n" +
+			"issue: if one with that id exists, it is returned with changed: false.\n" +
+			"--dry-run without --id generates one and prints it as id; pass it to --yes.\n" +
+			"Changes things: pass --dry-run to preview, --yes to apply.",
+		Example: "  linearctl issue create --team ENG --title \"Fix login timeout\" --label bug --dry-run --json\n" +
+			"  linearctl issue create --team ENG --title \"Fix login timeout\" --label bug --yes --id 0b6c…\n" +
+			"  linearctl issue create --json-input issue.json --id 0b6c… --yes",
+		Args: usageArgs(cobra.NoArgs),
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			dryRun, _ := change(cmd)
+			id, _ := cmd.Flags().GetString("id")
+			switch {
+			case id == "" && !dryRun:
+				return usageError{errors.New("--yes needs --id UUID so a rerun cannot create a second issue; run --dry-run for one")}
+			case id == "":
+				id = newID()
+			case !uuidPattern.MatchString(id):
+				return usageError{fmt.Errorf("--id must be a UUID; got %q", id)}
+			}
+			id = strings.ToLower(id)
+			w, err := readWanted(cmd)
+			if err != nil {
+				return err
+			}
+			team, err := teamFlag(cmd)
+			if err != nil {
+				return err
+			}
+			if team == "" {
+				return usageError{errors.New("pass --team KEY (or set LINEARCTL_TEAM, or default-team with 'linearctl config set')")}
+			}
+			if t, _ := w.input["title"].(string); t == "" {
+				return usageError{errors.New("pass --title (or title in --json-input)")}
+			}
+			cl, err := newClient()
+			if err != nil {
+				return err
+			}
+			vars := w.resolveVars(nil)
+			vars["team"], vars["id"], vars["withID"] = team, id, true
+			var r struct {
+				resolved
+				Teams struct {
+					Nodes []struct {
+						ID     string                  `json:"id"`
+						Key    string                  `json:"key"`
+						States struct{ Nodes []named } `json:"states"`
+					}
+				} `json:"teams"`
+				Existing struct {
+					Nodes []map[string]any `json:"nodes"`
+				} `json:"existing"`
+			}
+			if err := cl.query(qCreateResolve, vars, &r); err != nil {
+				return err
+			}
+			if len(r.Existing.Nodes) > 0 {
+				it := flatten(r.Existing.Nodes[0]).(map[string]any)
+				return output(cmd, map[string]any{"changed": false, "dryRun": dryRun, "id": id, "issue": it},
+					fmt.Sprintf("exists %s %s", str(it, "identifier"), str(it, "url")))
+			}
+			if len(r.Teams.Nodes) == 0 {
+				return fmt.Errorf("no team with key %s; see 'linearctl team list'", team)
+			}
+			t := r.Teams.Nodes[0]
+			if err := w.apply(r.resolved, t.States.Nodes, t.ID); err != nil {
+				return err
+			}
+			w.input["teamId"], w.input["id"] = t.ID, id
+			if dryRun {
+				return output(cmd, map[string]any{"changed": true, "dryRun": true, "id": id, "input": w.input},
+					fmt.Sprintf("would create in %s: %s\nid: %s (pass --id %s --yes)", t.Key, printable(w.input["title"].(string)), id, id))
+			}
+			var out struct {
+				IssueCreate struct {
+					Success bool           `json:"success"`
+					Issue   map[string]any `json:"issue"`
+				} `json:"issueCreate"`
+			}
+			if err := cl.query(qIssueCreate, map[string]any{"input": w.input}, &out); err != nil {
+				return err
+			}
+			it := flatten(out.IssueCreate.Issue).(map[string]any)
+			return output(cmd, map[string]any{"changed": true, "dryRun": false, "id": id, "issue": it},
+				fmt.Sprintf("created %s %s", str(it, "identifier"), str(it, "url")))
+		},
+	}
+	c.Flags().String("team", "", "create in team `KEY` (e.g. ENG)")
+	c.Flags().String("id", "", "the new issue's `UUID`; required with --yes")
+	issueFields(c)
+	c.Flags().StringArray("label", nil, "add label `NAME` (repeatable)")
+	mutating(c)
+	return c
+}
+
+func issueUpdate() *cobra.Command {
+	c := &cobra.Command{
+		Use:   "update ISSUE",
+		Short: "Change an issue's fields",
+		Long: "Change an issue's fields. Only fields that differ from the issue as it is are\n" +
+			"sent; when none differ, nothing is sent and the result is changed: false.\n" +
+			"--label replaces all labels; --add-label and --remove-label adjust them.\n" +
+			"State names resolve within the issue's own team.\n" +
+			"Changes things: pass --dry-run to preview, --yes to apply.",
+		Example: "  linearctl issue update ENG-123 --state \"In Progress\" --assignee me --dry-run --json\n" +
+			"  linearctl issue update ENG-123 --add-label blocked --priority high --yes",
+		Args: usageArgs(cobra.ExactArgs(1)),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			dryRun, _ := change(cmd)
+			ref, err := issueRef("ISSUE", args[0])
+			if err != nil {
+				return err
+			}
+			w, err := readWanted(cmd)
+			if err != nil {
+				return err
+			}
+			add, _ := cmd.Flags().GetStringArray("add-label")
+			remove, _ := cmd.Flags().GetStringArray("remove-label")
+			if cmd.Flags().Changed("label") && (len(add) > 0 || len(remove) > 0) {
+				return usageError{errors.New("pass --label, or --add-label/--remove-label, not both")}
+			}
+			for _, l := range append(slices.Clone(add), remove...) {
+				if _, err := plain("--add-label/--remove-label", l); err != nil {
+					return err
+				}
+			}
+			cl, err := newClient()
+			if err != nil {
+				return err
+			}
+			vars := w.resolveVars(append(slices.Clone(add), remove...))
+			vars["id"] = ref
+			var r struct {
+				resolved
+				Issue struct {
+					ID          string  `json:"id"`
+					Identifier  string  `json:"identifier"`
+					Title       string  `json:"title"`
+					Description *string `json:"description"`
+					Priority    float64 `json:"priority"`
+					Team        struct {
+						ID     string                  `json:"id"`
+						States struct{ Nodes []named } `json:"states"`
+					} `json:"team"`
+					State    *named                  `json:"state"`
+					Assignee *named                  `json:"assignee"`
+					Project  *named                  `json:"project"`
+					Parent   *named                  `json:"parent"`
+					Labels   struct{ Nodes []named } `json:"labels"`
+				} `json:"issue"`
+			}
+			if err := cl.query(qUpdateResolve, vars, &r); err != nil {
+				return notFound(err, "issue "+ref)
+			}
+			is := r.Issue
+			if err := w.apply(r.resolved, is.Team.States.Nodes, is.Team.ID); err != nil {
+				return err
+			}
+			current := []string{}
+			for _, l := range is.Labels.Nodes {
+				current = append(current, l.ID)
+			}
+			if len(add) > 0 || len(remove) > 0 {
+				addIDs, err := labelIDs(add, r.IssueLabels.Nodes, is.Team.ID)
+				if err != nil {
+					return err
+				}
+				removeIDs, err := labelIDs(remove, r.IssueLabels.Nodes, is.Team.ID)
+				if err != nil {
+					return err
+				}
+				var added, removed []string
+				for _, id := range addIDs {
+					if !slices.Contains(current, id) {
+						added = append(added, id)
+					}
+				}
+				for _, id := range removeIDs {
+					if slices.Contains(current, id) {
+						removed = append(removed, id)
+					}
+				}
+				if len(added) > 0 {
+					w.input["addedLabelIds"] = added
+				}
+				if len(removed) > 0 {
+					w.input["removedLabelIds"] = removed
+				}
+			}
+			// Drop what already holds, so a rerun sends nothing (rubric S5).
+			id := func(n *named) any {
+				if n == nil {
+					return nil
+				}
+				return n.ID
+			}
+			desc := any(nil)
+			if is.Description != nil {
+				desc = *is.Description
+			}
+			now := map[string]any{"title": is.Title, "description": desc, "priority": int(is.Priority),
+				"stateId": id(is.State), "assigneeId": id(is.Assignee), "projectId": id(is.Project), "parentId": id(is.Parent)}
+			for k, v := range now {
+				if got, ok := w.input[k]; ok && sameValue(got, v) {
+					delete(w.input, k)
+				}
+			}
+			if ids, ok := w.input["labelIds"].([]string); ok && sameSet(ids, current) {
+				delete(w.input, "labelIds")
+			}
+			changed := len(w.input) > 0
+			doc := map[string]any{"changed": changed, "dryRun": dryRun, "identifier": is.Identifier, "input": w.input}
+			if !changed {
+				return output(cmd, doc, "unchanged "+is.Identifier)
+			}
+			if dryRun {
+				keys := make([]string, 0, len(w.input))
+				for k := range w.input {
+					keys = append(keys, k)
+				}
+				slices.Sort(keys)
+				return output(cmd, doc, fmt.Sprintf("would update %s: %s", is.Identifier, strings.Join(keys, ", ")))
+			}
+			var out struct {
+				IssueUpdate struct {
+					Issue map[string]any `json:"issue"`
+				} `json:"issueUpdate"`
+			}
+			if err := cl.query(qIssueUpdate, map[string]any{"id": is.ID, "input": w.input}, &out); err != nil {
+				return err
+			}
+			doc["issue"] = flatten(out.IssueUpdate.Issue)
+			return output(cmd, doc, "updated "+is.Identifier)
+		},
+	}
+	issueFields(c)
+	c.Flags().StringArray("label", nil, "set the labels to `NAME`s, replacing the rest (repeatable)")
+	c.Flags().StringArray("add-label", nil, "add label `NAME` (repeatable)")
+	c.Flags().StringArray("remove-label", nil, "remove label `NAME` (repeatable)")
+	mutating(c)
+	return c
+}
+
+// sameValue compares a wanted input value with the issue's, as JSON.
+func sameValue(a, b any) bool {
+	x, _ := json.Marshal(a)
+	y, _ := json.Marshal(b)
+	return string(x) == string(y)
+}
+
+func sameSet(a, b []string) bool {
+	x, y := slices.Clone(a), slices.Clone(b)
+	slices.Sort(x)
+	slices.Sort(y)
+	return slices.Equal(x, y)
+}
+
+func issueArchive() *cobra.Command {
+	c := &cobra.Command{
+		Use:   "archive ISSUE",
+		Short: "Archive an issue",
+		Long: "Archive an issue. An issue already archived is changed: false.\n" +
+			"Changes things: pass --dry-run to preview, --yes to apply.",
+		Example: "  linearctl issue archive ENG-123 --dry-run\n  linearctl issue archive ENG-123 --yes --json",
+		Args:    usageArgs(cobra.ExactArgs(1)),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			dryRun, _ := change(cmd)
+			ref, err := issueRef("ISSUE", args[0])
+			if err != nil {
+				return err
+			}
+			cl, err := newClient()
+			if err != nil {
+				return err
+			}
+			var r struct {
+				Issue struct {
+					ID         string  `json:"id"`
+					Identifier string  `json:"identifier"`
+					Title      string  `json:"title"`
+					URL        string  `json:"url"`
+					ArchivedAt *string `json:"archivedAt"`
+				} `json:"issue"`
+			}
+			if err := cl.query(qIssueArchived, map[string]any{"id": ref}, &r); err != nil {
+				return notFound(err, "issue "+ref)
+			}
+			changed := r.Issue.ArchivedAt == nil
+			if changed && !dryRun {
+				if err := cl.query(qIssueArchive, map[string]any{"id": r.Issue.ID}, nil); err != nil {
+					return err
+				}
+			}
+			verb := map[bool]string{true: "archived", false: "already archived"}[changed]
+			if changed && dryRun {
+				verb = "would archive"
+			}
+			return output(cmd, map[string]any{"changed": changed, "dryRun": dryRun, "identifier": r.Issue.Identifier, "url": r.Issue.URL},
+				fmt.Sprintf("%s %s", verb, r.Issue.Identifier))
+		},
+	}
+	mutating(c)
+	return c
+}
