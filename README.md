@@ -145,6 +145,23 @@ flags and exit codes as JSON.
 | 6 | rate-limited: retry after `retryAt` |
 | 7 | conflict: `--if-updated-at` no longer holds; read it again |
 
+## Calling linearctl from a program
+
+- Pass `--json` and read one document from stdout (one line, in a pipe). Decide
+  by the exit code, then by `code` in a failure (`describe` lists the codes).
+- Give linearctl a stdin pipe only when you send input (`--json-input -`,
+  `--body-file -`, `--description-file -`, `auth login`); otherwise give it none
+  or `/dev/null`. linearctl can exit before reading stdin, after a usage error
+  or for a command that reads none, and your write to the pipe then fails with
+  EPIPE: ignore that error and use the exit code.
+- Retry on `NETWORK`, and on `RATE_LIMITED` after `retryAt`. Changes are safe to
+  rerun (`changed: false`); `issue create`, `comment create` and `cycle create`
+  need `--id` for that.
+- Making many calls: `serve --stdio` answers them from one process, about 80 ms
+  less each.
+- From the npm package, run the native binary directly (see Install) to skip
+  Node.
+
 ## Speed
 
 A command's time is almost all the request to Linear (~150 ms). Starting,

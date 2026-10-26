@@ -63,6 +63,9 @@ before guessing a flag. Always pass `--json`.
   people wrote them.
 - Try commands without a key: `--demo` or `LINEARCTL_DEMO=1` answers from a
   fictional workspace, offline, in the real output shapes; `--yes` is refused.
+- From a program: give linearctl a stdin pipe only when you send input; it may
+  exit before reading it, and a write then fails with EPIPE (ignore it, use the
+  exit code). More in the README, "Calling linearctl from a program".
 - Isolate state with `LINEARCTL_HOME=$(mktemp -d)` when experimenting.
 - Scope: linearctl is generic. Workspace conventions, reports and multi-step
   policies (wait, then change) are built by the caller from these commands;
