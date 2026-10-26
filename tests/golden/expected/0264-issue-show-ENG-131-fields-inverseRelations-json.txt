@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"issue":{"inverseRelations":[{"id":"815d98f8-ac42-5b70-a78e-97d5aff9dc96","issue":{"identifier":"ENG-142","title":"Checkout fails when a coupon code has trailing whitespace"},"type":"related"}]}}
+
+--- stderr

@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+Maya Patel <maya@northwind.example> in Northwind; key from demo
+
+--- stderr

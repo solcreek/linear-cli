@@ -1,0 +1,32 @@
+exit: 0
+--- stdout
+--demo	use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+--json	print one JSON document on stdout
+--meta	add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+--timeout	give up on a network request after `N` seconds
+--any-label	only issues with label `NAME` (repeatable; any of)
+--assignee	only issues assigned to `WHO`: me, none, or an email
+--attachment-url	only issues with an attachment at `URL` (e.g. a linked pull request)
+--cursor	continue after `CURSOR` (nextCursor from the previous page)
+--cycle	only issues in cycle `CYCLE`: current, next, or a cycle number
+--delegate	only issues delegated to the agent `WHO` (name or email; any; none)
+--fields	return only these comma-separated `FIELDS` (see Fields above)
+--help	help for list
+--id	only the issue `ISSUE` (ENG-123 or a UUID; repeatable); one not
+--include-comments	with --query, also match the text of comments
+--label	only issues with label `NAME` (repeatable; all of)
+--limit	show at most `N` items; 0 for all
+--milestone	only issues in project milestone `NAME` (none: in no milestone)
+--priority	only issues of `PRIORITY`: 0-4 or none, urgent, high, medium, low
+--project	only issues in project `NAME`
+--query	full-text search for `TEXT`
+--sort	order by `FIELD`: updated (default), created, priority
+--state	only issues in workflow state `NAME` (repeatable; any of)
+--state-type	only issues whose state is of `TYPE` (repeatable): triage, backlog,
+--team	only issues of team `KEY` (e.g. ENG; repeatable, any of)
+--updated-since	only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h
+--without-label	only issues without label `NAME` (repeatable; none of)
+:4
+
+--- stderr
+Completion ended with directive: ShellCompDirectiveNoFileComp

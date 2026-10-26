@@ -1,0 +1,5 @@
+exit: 1
+--- stdout
+
+--- stderr
+linearctl: demo mode is read-only: linearctl issue create --yes changes nothing; --dry-run shows what it would do

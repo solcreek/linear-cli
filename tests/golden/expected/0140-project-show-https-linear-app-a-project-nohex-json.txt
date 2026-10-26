@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"PROJECT: no project id at the end of https://linear.app/a/project/nohex","usage":true}
+
+--- stderr
+linearctl: PROJECT: no project id at the end of https://linear.app/a/project/nohex
+Run 'linearctl --help' for usage.

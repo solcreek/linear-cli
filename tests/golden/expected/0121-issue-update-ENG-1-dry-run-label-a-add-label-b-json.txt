@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"pass --label, or --add-label/--remove-label, not both","usage":true}
+
+--- stderr
+linearctl: pass --label, or --add-label/--remove-label, not both
+Run 'linearctl --help' for usage.

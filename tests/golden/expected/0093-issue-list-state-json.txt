@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--state is empty","usage":true}
+
+--- stderr
+linearctl: --state is empty
+Run 'linearctl --help' for usage.

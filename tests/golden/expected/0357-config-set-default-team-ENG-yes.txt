@@ -1,0 +1,5 @@
+exit: 1
+--- stdout
+
+--- stderr
+linearctl: demo mode is read-only: linearctl config set --yes changes nothing; --dry-run shows what it would do

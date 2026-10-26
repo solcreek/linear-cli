@@ -1,0 +1,33 @@
+exit: 0
+--- stdout
+Send a GraphQL query and print Linear's answer as JSON: data, errors, and the
+query's complexity (Linear allows 10,000 points per query). The request is
+{"query": "…", "variables": {…}, "operationName": "…"} from --json-input.
+Mutations and subscriptions are refused: changes go through the typed commands,
+which preview with --dry-run. Errors alongside data are exit 3, as problems.
+Schema and examples: https://linear.app/developers/graphql
+
+Usage:
+  linearctl api query [flags]
+
+Examples:
+  echo '{"query":"query { viewer { name } }"}' | linearctl api query --json-input -
+  linearctl api query --json-input req.json --signed-urls 300
+
+Flags:
+  -h, --help                  help for query
+      --json-input PATH       read the request from PATH (- for stdin)
+      --signed-urls SECONDS   sign file URLs for SECONDS so they open without the key
+
+Global Flags:
+      --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+      --json        print one JSON document on stdout
+      --meta        add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+      --timeout N   give up on a network request after N seconds (default 30)
+
+Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or
+Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since
+you read it; read it again)
+Run 'linearctl describe' for every command as JSON.
+
+--- stderr

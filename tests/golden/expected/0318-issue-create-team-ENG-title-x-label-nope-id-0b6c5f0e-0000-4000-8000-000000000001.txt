@@ -1,0 +1,6 @@
+exit: 1
+--- stdout
+{"error":"no label named \"nope\"; see 'linearctl label list'","usage":false}
+
+--- stderr
+linearctl: no label named "nope"; see 'linearctl label list'

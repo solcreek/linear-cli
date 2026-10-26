@@ -1,0 +1,8 @@
+exit: 0
+--- stdout
+--state	only issues in workflow state `NAME` (repeatable; any of)
+--state-type	only issues whose state is of `TYPE` (repeatable): triage, backlog,
+:4
+
+--- stderr
+Completion ended with directive: ShellCompDirectiveNoFileComp

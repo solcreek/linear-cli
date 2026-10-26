@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"pass --stdio (the only transport so far)","usage":true}
+
+--- stderr
+linearctl: pass --stdio (the only transport so far)
+Run 'linearctl --help' for usage.

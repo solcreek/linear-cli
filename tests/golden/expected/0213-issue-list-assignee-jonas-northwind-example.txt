@@ -1,0 +1,7 @@
+exit: 0
+--- stdout
+ENG-158	Todo	Jonas Berg	Customers in Brazil can't pay with Pix
+ENG-144	Todo	Jonas Berg	Add a regression test for whitespace in coupon codes
+ENG-131	Done	Jonas Berg	Show a clear error when a coupon has expired
+
+--- stderr

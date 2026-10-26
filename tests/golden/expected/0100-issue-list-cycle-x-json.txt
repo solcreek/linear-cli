@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--cycle must be current, next or a number; got \"x\"","usage":true}
+
+--- stderr
+linearctl: --cycle must be current, next or a number; got "x"
+Run 'linearctl --help' for usage.

@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"accepts 1 arg(s), received 2","usage":true}
+
+--- stderr
+linearctl: accepts 1 arg(s), received 2
+Run 'linearctl --help' for usage.

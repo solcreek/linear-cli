@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"organization":{"name":"Northwind","urlKey":"northwind"},"rateLimit":{},"source":"demo","user":{"id":"af30a989-2809-5e5d-a29c-d755f04fc468","name":"Maya Patel","email":"maya@northwind.example"}}
+
+--- stderr

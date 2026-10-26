@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"URL must be a file on https://uploads.linear.app; got \"https://uploads.linear.app/\"","usage":true}
+
+--- stderr
+linearctl: URL must be a file on https://uploads.linear.app; got "https://uploads.linear.app/"
+Run 'linearctl --help' for usage.

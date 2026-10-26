@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--heartbeat is at least 1","usage":true}
+
+--- stderr
+linearctl: --heartbeat is at least 1
+Run 'linearctl --help' for usage.

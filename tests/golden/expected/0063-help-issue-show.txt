@@ -1,0 +1,43 @@
+exit: 0
+--- stdout
+Show one issue with its description, comments, sub-issues and relations.
+ISSUE is an identifier (ENG-123), a UUID, or a linear.app issue URL.
+--signed-urls makes file URLs in the result open without the API key for that
+many seconds, so a viewer can fetch images directly; signedUrlsExpireAt says until when.
+Comments are included (20 by default); give another count as --comments=N.
+
+Fields: id, identifier, title, priority, priorityLabel, url, createdAt,
+updatedAt, state, assignee, delegate, team, project, cycle, projectMilestone,
+labels, description, dueDate, estimate, branchName, startedAt, completedAt,
+canceledAt, archivedAt, creator, parent, children, relations, inverseRelations,
+attachments, comments
+
+Usage:
+  linearctl issue show ISSUE [flags]
+
+Aliases:
+  show, view
+
+Examples:
+  linearctl issue show ENG-123
+  linearctl issue view ENG-123 --signed-urls 300 --json
+  linearctl issue show ENG-123 --comments=0 --fields identifier,title,description --json
+
+Flags:
+      --comments N[=20]       include the first N comments (--comments=N); 0 for none (default 20)
+      --fields FIELDS         return only these comma-separated FIELDS (see Fields above)
+  -h, --help                  help for show
+      --signed-urls SECONDS   sign file URLs for SECONDS so they open without the key
+
+Global Flags:
+      --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+      --json        print one JSON document on stdout
+      --meta        add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+      --timeout N   give up on a network request after N seconds (default 30)
+
+Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or
+Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since
+you read it; read it again)
+Run 'linearctl describe' for every command as JSON.
+
+--- stderr

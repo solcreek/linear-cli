@@ -1,0 +1,9 @@
+exit: 0
+--- stdout
+maya@northwind.example	Maya Patel
+jonas@northwind.example	Jonas Berg
+aiko@northwind.example	Aiko Tanaka
+daniel@northwind.example	Daniel Okafor
+sofia@northwind.example	Sofia Romero
+
+--- stderr

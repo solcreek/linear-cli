@@ -1,0 +1,6 @@
+exit: 1
+--- stdout
+{"error":"not found: project Nope (or this API key cannot see it)","usage":false}
+
+--- stderr
+linearctl: not found: project Nope (or this API key cannot see it)

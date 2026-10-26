@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--team must be a team key like ENG; got \"not a key\"","usage":true}
+
+--- stderr
+linearctl: --team must be a team key like ENG; got "not a key"
+Run 'linearctl --help' for usage.

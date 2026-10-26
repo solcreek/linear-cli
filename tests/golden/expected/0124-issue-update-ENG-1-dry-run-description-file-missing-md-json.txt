@@ -1,0 +1,6 @@
+exit: 1
+--- stdout
+{"error":"no such file: missing.md","usage":false}
+
+--- stderr
+linearctl: no such file: missing.md

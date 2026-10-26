@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"api query sends queries only; this is a mutation. Use the typed commands to change things","usage":true}
+
+--- stderr
+linearctl: api query sends queries only; this is a mutation. Use the typed commands to change things
+Run 'linearctl --help' for usage.

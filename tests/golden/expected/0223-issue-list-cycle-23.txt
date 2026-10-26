@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+ENG-131	Done	Jonas Berg	Show a clear error when a coupon has expired
+
+--- stderr

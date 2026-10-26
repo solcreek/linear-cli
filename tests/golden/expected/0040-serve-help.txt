@@ -1,0 +1,37 @@
+exit: 0
+--- stdout
+Answer linearctl invocations over stdin and stdout, for a program that makes many
+calls (a TUI, a long agent session). One process serves them all: no start-up, no
+new TLS connection, no Keychain read per call.
+
+Each line on stdin is a request:   {"id": ANY, "argv": ["issue", "list", "--json"]}
+Each line on stdout answers one:   {"id": ANY, "exit": N, "result": JSON|null,
+                                    "stdout": TEXT|null, "stderr": TEXT}
+argv is what follows linearctl on a command line; exit and the JSON in result are
+exactly what that command line would give (result is null when it printed text,
+which is then in stdout). Requests run one at a time, in order. A malformed line
+is answered with exit 2. watch and serve are refused, and so is - as a file:
+stdin carries requests. serve ends when stdin closes (exit 0).
+
+Usage:
+  linearctl serve [flags]
+
+Examples:
+  printf '{"id":1,"argv":["issue","list","--json"]}\n' | linearctl serve --stdio
+
+Flags:
+  -h, --help    help for serve
+      --stdio   read requests on stdin, answer on stdout
+
+Global Flags:
+      --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+      --json        print one JSON document on stdout
+      --meta        add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+      --timeout N   give up on a network request after N seconds (default 30)
+
+Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or
+Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since
+you read it; read it again)
+Run 'linearctl describe' for every command as JSON.
+
+--- stderr

@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"changed":true,"dryRun":true,"identifier":"ENG-142","input":{"addedLabelIds":["092c5cee-b50a-5a73-815e-33c66304617e"],"removedLabelIds":["83ce6140-aabf-565d-b4c6-1e862431f51d"]}}
+
+--- stderr

@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"issue":{"identifier":"ENG-142"},"signedUrlsExpireAt":"<TIME>"}
+
+--- stderr

@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"TYPE must be one of blocks, blocked-by, duplicate, related, similar; got \"nope\"","usage":true}
+
+--- stderr
+linearctl: TYPE must be one of blocks, blocked-by, duplicate, related, similar; got "nope"
+Run 'linearctl --help' for usage.

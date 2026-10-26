@@ -1,0 +1,30 @@
+exit: 0
+--- stdout
+Store, check or remove the Linear API key
+
+Usage:
+  linearctl auth [flags]
+  linearctl auth [command]
+
+Available Commands:
+  login       Check an API key read from stdin and store it
+  logout      Remove the stored API key
+  status      Show whose key is in use, where it comes from, and the rate limit left
+
+Flags:
+  -h, --help   help for auth
+
+Global Flags:
+      --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+      --json        print one JSON document on stdout
+      --meta        add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+      --timeout N   give up on a network request after N seconds (default 30)
+
+Use "linearctl auth [command] --help" for more information about a command.
+
+Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or
+Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since
+you read it; read it again)
+Run 'linearctl describe' for every command as JSON.
+
+--- stderr

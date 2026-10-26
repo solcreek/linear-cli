@@ -1,0 +1,32 @@
+exit: 0
+--- stdout
+Check an API key read from stdin with Linear, then store it: in the macOS Keychain,
+or in credentials.json under the config directory elsewhere and whenever
+LINEARCTL_HOME is set. LINEAR_API_KEY, when set, wins over a stored key.
+Create a key at https://linear.app/settings/account/security.
+Changes things: pass --dry-run to check the key only, --yes to store it.
+
+Usage:
+  linearctl auth login [flags]
+
+Examples:
+  pbpaste | linearctl auth login --yes
+  linearctl auth login --dry-run --json < key.txt
+
+Flags:
+      --dry-run   show what would change; change nothing
+  -h, --help      help for login
+      --yes       apply the change
+
+Global Flags:
+      --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+      --json        print one JSON document on stdout
+      --meta        add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+      --timeout N   give up on a network request after N seconds (default 30)
+
+Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or
+Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since
+you read it; read it again)
+Run 'linearctl describe' for every command as JSON.
+
+--- stderr

@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--priority must be 0-4 or none, urgent, high, medium, low; got \"9\"","usage":true}
+
+--- stderr
+linearctl: --priority must be 0-4 or none, urgent, high, medium, low; got "9"
+Run 'linearctl --help' for usage.

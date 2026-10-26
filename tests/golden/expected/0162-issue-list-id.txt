@@ -1,0 +1,5 @@
+exit: 5
+--- stdout
+
+--- stderr
+linearctl: no API key: set LINEAR_API_KEY, or pipe one to 'linearctl auth login --yes'

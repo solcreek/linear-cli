@@ -1,0 +1,7 @@
+exit: 0
+--- stdout
+ENG-157	Triage	-	Search ignores accents: "café" does not match "cafe"
+ENG-155	Backlog	-	Dark mode for the settings pages
+ENG-156	Triage	-	Export invoices as CSV
+
+--- stderr

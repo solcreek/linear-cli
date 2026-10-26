@@ -1,0 +1,6 @@
+exit: 2
+--- stdout
+
+--- stderr
+linearctl: flag needs an argument: --limit
+Run 'linearctl --help' for usage.

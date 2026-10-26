@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"complexity":null,"data":{"organization":{"name":"Northwind","urlKey":"northwind"},"viewer":{"email":"maya@northwind.example","name":"Maya Patel"}}}
+
+--- stderr

@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"create changes things: pass --dry-run to preview, or --yes to apply (one of them)","usage":true}
+
+--- stderr
+linearctl: create changes things: pass --dry-run to preview, or --yes to apply (one of them)
+Run 'linearctl --help' for usage.

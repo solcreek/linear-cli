@@ -1,0 +1,51 @@
+exit: 0
+--- stdout
+ENG-142  Checkout fails when a coupon code has trailing whitespace
+state: In Progress   assignee: Maya Patel   priority: Urgent
+https://linear.app/northwind/issue/ENG-142/checkout-fails-when-a-coupon-code-has-trailing-whitespace
+
+Customers who paste a coupon code from our emails get **"This code is not valid"** at the last step of checkout. The pasted text ends with a space or a newline.
+
+## Steps to reproduce
+
+1. Add any item to the cart.
+2. Paste `WELCOME10 ` (with the trailing space) into *Coupon code*.
+3. Click **Pay now**.
+
+Expected: 10% off. Actual: a 422 from `POST /api/checkout/confirm`:
+
+```json
+{
+  "error": "coupon_invalid",
+  "code": "WELCOME10 "
+}
+```
+
+![checkout-error.png](https://uploads.linear.app/demo/checkout-error.png)
+
+## Scope
+
+- [x] Reproduced on web (Chrome, Safari)
+- [x] Reproduced on iOS 3.4.1
+- [ ] Check Android
+- [ ] Check the partner API
+
+> Support says this is the most common checkout complaint this week: 41 tickets since Monday.
+
+The server fix is in ENG-143; the regression test in ENG-144.
+
+4 comments
+
+— Aiko Tanaka, <TIME>
+Same on Android 3.4.0. The app sends the field as typed, no trimming.
+
+— Maya Patel, <TIME>
+Thanks. Then trimming on the server fixes every client at once; I'll leave the apps alone.
+
+— Daniel Okafor, <TIME>
+Careful with case too: `welcome10` fails the same way. Lookups should be case-insensitive.
+
+— Maya Patel, <TIME>
+PR #2841 trims and uppercases before the lookup. Deploying to staging after review.
+
+--- stderr

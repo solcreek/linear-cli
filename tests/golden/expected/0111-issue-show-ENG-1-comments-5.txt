@@ -1,0 +1,6 @@
+exit: 2
+--- stdout
+
+--- stderr
+linearctl: give the count as --comments=5
+Run 'linearctl --help' for usage.

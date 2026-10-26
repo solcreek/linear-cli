@@ -1,0 +1,8 @@
+exit: 0
+--- stdout
+ENG-142	In Progress	Maya Patel	Checkout fails when a coupon code has trailing whitespace
+ENG-143	In Review	Maya Patel	Trim and uppercase coupon codes on the server before lookup
+ENG-140	In Review	Maya Patel	Upgrade the payments SDK to v5 before the v4 sunset
+ENG-120	In Progress	Maya Patel	Checkout v2 rollout plan
+
+--- stderr

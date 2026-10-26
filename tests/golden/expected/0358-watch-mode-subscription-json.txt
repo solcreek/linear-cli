@@ -1,0 +1,6 @@
+exit: 1
+--- stdout
+{"error":"demo mode has no live changes","usage":false}
+
+--- stderr
+linearctl: demo mode has no live changes

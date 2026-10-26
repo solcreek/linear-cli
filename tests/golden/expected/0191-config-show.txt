@@ -1,0 +1,5 @@
+exit: 1
+--- stdout
+
+--- stderr
+linearctl: <TMP>/home/config/config.json is not valid JSON: json: cannot unmarshal array into Go value of type map[string]string

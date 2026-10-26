@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"changed":true,"dryRun":true,"id":"5f1e0000-0000-4000-8000-000000000002","input":{"body":"From a file \u003cb\u003e \u0026 \"quotes\"\n","id":"5f1e0000-0000-4000-8000-000000000002","issueId":"0c2f9a92-0646-5558-ac78-3d2797476b00"}}
+
+--- stderr

@@ -1,0 +1,6 @@
+exit: 2
+--- stdout
+
+--- stderr
+linearctl: pass --stdio (the only transport so far)
+Run 'linearctl --help' for usage.

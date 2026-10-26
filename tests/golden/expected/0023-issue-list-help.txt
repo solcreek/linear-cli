@@ -1,0 +1,60 @@
+exit: 0
+--- stdout
+List issues, most recently updated first. Filters combine with AND; a repeated
+--state or --state-type matches any of its values, a repeated --label all of them;
+--any-label matches any of its values, --without-label none of them.
+--query searches titles, descriptions and comments, ranked by relevance unless
+--sort is given; Linear allows 30 searches a minute.
+--team falls back to LINEARCTL_TEAM, then to default-team in config.
+
+Fields: id, identifier, title, priority, priorityLabel, url, createdAt,
+updatedAt, state, assignee, delegate, team, project, cycle, projectMilestone,
+labels
+
+Usage:
+  linearctl issue list [flags]
+
+Examples:
+  linearctl issue list --assignee me --state-type started --json
+  linearctl issue list --team ENG --label bug --updated-since 7d --fields identifier,title --json
+  linearctl issue list --query "login timeout" --limit 10
+
+Flags:
+      --any-label NAME       only issues with label NAME (repeatable; any of)
+      --assignee WHO         only issues assigned to WHO: me, none, or an email
+      --attachment-url URL   only issues with an attachment at URL (e.g. a linked pull request)
+      --cursor CURSOR        continue after CURSOR (nextCursor from the previous page)
+      --cycle CYCLE          only issues in cycle CYCLE: current, next, or a cycle number
+      --delegate WHO         only issues delegated to the agent WHO (name or email; any; none)
+      --fields FIELDS        return only these comma-separated FIELDS (see Fields above)
+  -h, --help                 help for list
+      --id ISSUE             only the issue ISSUE (ENG-123 or a UUID; repeatable); one not
+                             found is a problem (exit 3)
+      --include-comments     with --query, also match the text of comments
+      --label NAME           only issues with label NAME (repeatable; all of)
+      --limit N              show at most N items; 0 for all (default 25)
+      --milestone NAME       only issues in project milestone NAME (none: in no milestone)
+      --priority PRIORITY    only issues of PRIORITY: 0-4 or none, urgent, high, medium, low
+                             (repeatable, any of)
+      --project NAME         only issues in project NAME
+      --query TEXT           full-text search for TEXT
+      --sort FIELD           order by FIELD: updated (default), created, priority
+      --state NAME           only issues in workflow state NAME (repeatable; any of)
+      --state-type TYPE      only issues whose state is of TYPE (repeatable): triage, backlog,
+                             unstarted, started, completed, canceled, duplicate
+      --team KEY             only issues of team KEY (e.g. ENG; repeatable, any of)
+      --updated-since WHEN   only issues updated since WHEN: a date, an RFC 3339 time, 7d or 24h
+      --without-label NAME   only issues without label NAME (repeatable; none of)
+
+Global Flags:
+      --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+      --json        print one JSON document on stdout
+      --meta        add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+      --timeout N   give up on a network request after N seconds (default 30)
+
+Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or
+Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since
+you read it; read it again)
+Run 'linearctl describe' for every command as JSON.
+
+--- stderr

@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"items":[],"nextCursor":null,"shown":0,"total":null,"truncated":false}
+
+--- stderr

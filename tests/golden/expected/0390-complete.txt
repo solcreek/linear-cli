@@ -1,0 +1,13 @@
+exit: 0
+--- stdout
+--demo	use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+--help	help for linearctl
+-h	help for linearctl
+--json	print one JSON document on stdout
+--meta	add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+--timeout	give up on a network request after `N` seconds
+--version	print the version
+:4
+
+--- stderr
+Completion ended with directive: ShellCompDirectiveNoFileComp

@@ -1,0 +1,16 @@
+exit: 0
+--- stdout
+— Aiko Tanaka, <TIME>
+Same on Android 3.4.0. The app sends the field as typed, no trimming.
+
+— Maya Patel, <TIME>
+Thanks. Then trimming on the server fixes every client at once; I'll leave the apps alone.
+
+— Daniel Okafor, <TIME>
+Careful with case too: `welcome10` fails the same way. Lookups should be case-insensitive.
+
+— Maya Patel, <TIME>
+PR #2841 trims and uppercases before the lookup. Deploying to staging after review.
+
+
+--- stderr

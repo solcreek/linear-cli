@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"changed":true,"dryRun":true,"id":"0b6c5f0e-0000-4000-8000-000000000001","input":{"assigneeId":"59844d3f-bf28-546f-aa57-48aa438b630f","id":"0b6c5f0e-0000-4000-8000-000000000001","parentId":"0c2f9a92-0646-5558-ac78-3d2797476b00","priority":2,"projectId":"70e07509-792f-5809-bc99-42f8c729824e","teamId":"681fd49c-6431-524c-8341-d16f248b011e","title":"x"}}
+
+--- stderr

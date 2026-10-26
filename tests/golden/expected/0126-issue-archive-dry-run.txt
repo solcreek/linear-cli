@@ -1,0 +1,6 @@
+exit: 2
+--- stdout
+
+--- stderr
+linearctl: accepts 1 arg(s), received 0
+Run 'linearctl --help' for usage.

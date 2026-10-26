@@ -1,0 +1,50 @@
+exit: 0
+--- stdout
+Create an issue in a team. Names (state, label, project, assignee email) are
+resolved to ids first; --dry-run prints the exact input it would send.
+
+--yes requires --id, a UUID you choose, so a rerun can never create a second
+issue: if one with that id exists, it is returned with changed: false.
+--dry-run without --id generates one and prints it as id; pass it to --yes.
+Changes things: pass --dry-run to preview, --yes to apply.
+
+Usage:
+  linearctl issue create [flags]
+
+Examples:
+  linearctl issue create --team ENG --title "Fix login timeout" --label bug --dry-run --json
+  linearctl issue create --team ENG --title "Fix login timeout" --label bug --yes --id 0b6c…
+  linearctl issue create --json-input issue.json --id 0b6c… --yes
+
+Flags:
+      --assignee WHO            assign to WHO: me, none, or an email
+      --delegate WHO            delegate to the agent (app user) WHO: its name or email, or none
+      --description TEXT        the description, Markdown TEXT
+      --description-file PATH   read the description from PATH (- for stdin)
+      --dry-run                 show what would change; change nothing
+  -h, --help                    help for create
+      --id UUID                 the new issue's UUID; required with --yes
+      --json-input PATH         read Linear's input object from PATH (- for stdin); flags win
+      --label NAME              add label NAME (repeatable)
+      --milestone NAME          project milestone NAME, or none to clear; it sets the project
+                                when the issue has none
+      --parent ISSUE            make it a sub-issue of ISSUE (none: of no issue)
+      --priority PRIORITY       PRIORITY: 0-4 or none, urgent, high, medium, low
+      --project NAME            project NAME
+      --state NAME              workflow state NAME (see 'linearctl state list')
+      --team KEY                create in team KEY (e.g. ENG)
+      --title TEXT              the title, TEXT
+      --yes                     apply the change
+
+Global Flags:
+      --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+      --json        print one JSON document on stdout
+      --meta        add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+      --timeout N   give up on a network request after N seconds (default 30)
+
+Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or
+Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since
+you read it; read it again)
+Run 'linearctl describe' for every command as JSON.
+
+--- stderr

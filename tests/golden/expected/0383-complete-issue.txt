@@ -1,0 +1,12 @@
+exit: 0
+--- stdout
+archive	Archive an issue
+create	Create an issue
+list	List issues, most recently updated first
+show	Show one issue with its description, comments, sub-issues and relations
+unarchive	Restore an archived issue
+update	Change an issue's fields
+:4
+
+--- stderr
+Completion ended with directive: ShellCompDirectiveNoFileComp

@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"items":[{"endsAt":"<TIME>","id":"64c9c94e-bbc5-5b6d-8b89-86b7ed34e7ff","isActive":false,"isNext":false,"name":null,"number":23,"startsAt":"<TIME>","team":{"key":"ENG"}},{"endsAt":"<TIME>","id":"16fc866a-a42b-5d51-8f8e-765e0fa3ea5d","isActive":true,"isNext":false,"name":null,"number":24,"startsAt":"<TIME>","team":{"key":"ENG"}},{"endsAt":"<TIME>","id":"e5e722c7-b3ca-565c-838e-267e63a0c03f","isActive":false,"isNext":true,"name":null,"number":25,"startsAt":"<TIME>","team":{"key":"ENG"}}],"nextCursor":null,"shown":3,"total":null,"truncated":false}
+
+--- stderr

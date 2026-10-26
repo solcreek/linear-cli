@@ -1,0 +1,12 @@
+exit: 0
+--- stdout
+archive
+create
+list
+show
+unarchive
+update
+:4
+
+--- stderr
+Completion ended with directive: ShellCompDirectiveNoFileComp

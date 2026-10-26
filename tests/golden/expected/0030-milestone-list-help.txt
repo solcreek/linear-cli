@@ -1,0 +1,32 @@
+exit: 0
+--- stdout
+List project milestones, the names issue create and update take for --milestone.
+progress is Linear's, from 0 to 1.
+
+Fields: id, name, targetDate, progress, project
+
+Usage:
+  linearctl milestone list [flags]
+
+Examples:
+  linearctl milestone list --project "Q4 launch" --json
+
+Flags:
+      --cursor CURSOR   continue after CURSOR (nextCursor from the previous page)
+      --fields FIELDS   return only these comma-separated FIELDS (see Fields above)
+  -h, --help            help for list
+      --limit N         show at most N items; 0 for all (default 50)
+      --project NAME    only milestones of project NAME
+
+Global Flags:
+      --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+      --json        print one JSON document on stdout
+      --meta        add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+      --timeout N   give up on a network request after N seconds (default 30)
+
+Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or
+Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since
+you read it; read it again)
+Run 'linearctl describe' for every command as JSON.
+
+--- stderr

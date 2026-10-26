@@ -1,0 +1,33 @@
+exit: 0
+--- stdout
+Generate the autocompletion script for the fish shell.
+
+To load completions in your current shell session:
+
+	linearctl completion fish | source
+
+To load completions for every new session, execute once:
+
+	linearctl completion fish > ~/.config/fish/completions/linearctl.fish
+
+You will need to start a new shell for this setup to take effect.
+
+Usage:
+  linearctl completion fish [flags]
+
+Flags:
+  -h, --help              help for fish
+      --no-descriptions   disable completion descriptions
+
+Global Flags:
+      --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+      --json        print one JSON document on stdout
+      --meta        add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+      --timeout N   give up on a network request after N seconds (default 30)
+
+Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or
+Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since
+you read it; read it again)
+Run 'linearctl describe' for every command as JSON.
+
+--- stderr

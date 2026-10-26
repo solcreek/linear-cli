@@ -1,0 +1,8 @@
+exit: 0
+--- stdout
+— Aiko Tanaka, <TIME>
+Same on Android 3.4.0. The app sends the field as typed, no trimming.
+
+
+--- stderr
+1 shown, more remain; --cursor c1 for the next page, --limit 0 for all

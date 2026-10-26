@@ -1,0 +1,6 @@
+exit: 1
+--- stdout
+{"error":"demo mode has no files: https://uploads.linear.app/a/b","usage":false}
+
+--- stderr
+linearctl: demo mode has no files: https://uploads.linear.app/a/b

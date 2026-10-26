@@ -1,0 +1,9 @@
+exit: 0
+--- stdout
+ENG-131  Show a clear error when a coupon has expired
+state: Done   assignee: Jonas Berg   priority: Low
+https://linear.app/northwind/issue/ENG-131/show-a-clear-error-when-a-coupon-has-expired
+
+"This code expired on Oct 1" instead of "This code is not valid".
+
+--- stderr

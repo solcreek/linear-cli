@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--mode must be auto, subscription or poll; got \"x\"","usage":true}
+
+--- stderr
+linearctl: --mode must be auto, subscription or poll; got "x"
+Run 'linearctl --help' for usage.

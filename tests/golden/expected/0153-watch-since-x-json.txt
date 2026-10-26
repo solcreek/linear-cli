@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--since: must be a date (<DATE>), an RFC 3339 time, or 7d / 24h; got \"x\"","usage":true}
+
+--- stderr
+linearctl: --since: must be a date (<DATE>), an RFC 3339 time, or 7d / 24h; got "x"
+Run 'linearctl --help' for usage.

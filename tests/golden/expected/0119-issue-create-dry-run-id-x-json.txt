@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--id must be a UUID; got \"x\"","usage":true}
+
+--- stderr
+linearctl: --id must be a UUID; got "x"
+Run 'linearctl --help' for usage.
