@@ -8,14 +8,17 @@ import "strings"
 
 // issueRow is what a list shows for an issue. Search results are a different
 // type with the same fields, so it is a field list, not a fragment.
+//
+// Nested objects carry their id, so a caller can join them with state, label,
+// user, team, project and cycle list: names are not unique across teams.
 const issueRow = `
 	id identifier title priority priorityLabel url createdAt updatedAt
-	state { name type }
-	assignee { name email }
-	team { key }
-	project { name }
-	cycle { number }
-	labels(first: 20) { nodes { name } }`
+	state { id name type color }
+	assignee { id name email }
+	team { id key }
+	project { id name }
+	cycle { id number }
+	labels(first: 20) { nodes { id name color } }`
 
 // issueRowFields are the keys of an issueRow item, for --fields.
 var issueRowFields = []string{"id", "identifier", "title", "priority", "priorityLabel", "url", "createdAt",
