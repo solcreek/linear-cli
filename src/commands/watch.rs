@@ -26,6 +26,10 @@ use std::time::{Duration, Instant};
 
 /// Known ids at start: up to 2,500 issues.
 const SNAPSHOT_PAGES: u64 = 10;
+/// A connection that stayed up this long was healthy: its loss starts the
+/// backoff over. One that drops sooner keeps the backoff growing, so a
+/// server that closes every connection is not asked again every second.
+const HEALTHY: Duration = Duration::from_secs(60);
 const RECONCILE_SKEW: i64 = 5 * SECOND;
 
 pub fn command() -> Cmd {
@@ -351,8 +355,12 @@ impl Watcher {
                     // The stream is down: reconnect, then replay the gap.
                     let down = time::now();
                     run.eprint(&format!("linearctl: subscription lost ({e}); reconnecting\n"));
+                    let lived = sub.as_ref().map_or(Duration::ZERO, |s| s.opened.elapsed());
                     if let Some(s) = sub.take() {
                         s.close();
+                    }
+                    if lived >= HEALTHY {
+                        backoff = SECOND;
                     }
                     for _ in 0..5 {
                         std::thread::sleep(dur(backoff));
@@ -368,7 +376,6 @@ impl Watcher {
                         next_catch_up = Instant::now() + dur(every);
                         "fallback"
                     } else {
-                        backoff = SECOND;
                         "reconnect"
                     };
                     let to = time::now();
@@ -441,6 +448,8 @@ struct Subscription {
     commands: Sender<Command>,
     /// When a message last came, in Unix ns.
     last_seen: Arc<AtomicI64>,
+    /// When it connected.
+    opened: Instant,
 }
 
 impl Subscription {
@@ -605,7 +614,7 @@ fn subscribe(run: &Run, key: &str) -> Result<Subscription, String> {
     let last_seen = Arc::new(AtomicI64::new(time::now()));
     let seen = last_seen.clone();
     std::thread::spawn(move || read(ws, events_tx, commands_rx, seen));
-    Ok(Subscription { events, commands, last_seen })
+    Ok(Subscription { events, commands, last_seen, opened: Instant::now() })
 }
 
 fn read(mut ws: Socket, events: Sender<Event>, commands: Receiver<Command>, seen: Arc<AtomicI64>) {
