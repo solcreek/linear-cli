@@ -16,6 +16,7 @@ import (
 // not run in parallel.
 
 func TestClientSendsTheKeyAndDecodes(t *testing.T) {
+	inProcess(t)
 	api := newFake(t).on("Viewer", map[string]any{"viewer": map[string]any{"id": "u1", "name": "Ada"}, "organization": map[string]any{"name": "Acme"}})
 	t.Setenv("LINEARCTL_API_URL", api.url())
 	var v viewer
@@ -29,6 +30,7 @@ func TestClientSendsTheKeyAndDecodes(t *testing.T) {
 }
 
 func TestClientSignsFileURLsWhenAsked(t *testing.T) {
+	inProcess(t)
 	api := newFake(t).on("Viewer", map[string]any{})
 	t.Setenv("LINEARCTL_API_URL", api.url())
 	c := newClientWith(testKey, "env")
@@ -40,6 +42,7 @@ func TestClientSignsFileURLsWhenAsked(t *testing.T) {
 }
 
 func TestClientMapsFailures(t *testing.T) {
+	inProcess(t)
 	reset := time.Now().Add(10 * time.Minute).Truncate(time.Millisecond)
 	cases := []struct {
 		name   string
@@ -78,6 +81,7 @@ func TestClientMapsFailures(t *testing.T) {
 }
 
 func TestClientNamesTheHostOnTransportFailures(t *testing.T) {
+	inProcess(t)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(502)
 		_, _ = w.Write([]byte("<html>bad gateway</html>"))
@@ -94,6 +98,7 @@ func TestClientNamesTheHostOnTransportFailures(t *testing.T) {
 }
 
 func TestClientTimesOut(t *testing.T) {
+	inProcess(t)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { time.Sleep(1500 * time.Millisecond) }))
 	defer srv.Close()
 	t.Setenv("LINEARCTL_API_URL", srv.URL)
@@ -106,6 +111,7 @@ func TestClientTimesOut(t *testing.T) {
 }
 
 func TestRateLimitHeaders(t *testing.T) {
+	inProcess(t)
 	c := &client{header: http.Header{}}
 	c.header.Set("X-RateLimit-Requests-Remaining", "2400")
 	c.header.Set("X-RateLimit-Requests-Limit", "2500")
@@ -122,6 +128,7 @@ func TestRateLimitHeaders(t *testing.T) {
 // A command's requests share one connection: each new one would cost a TCP
 // and TLS handshake, ~40 ms against api.linear.app (docs/performance.md).
 func TestClientReusesTheConnection(t *testing.T) {
+	inProcess(t)
 	var conns atomic.Int32
 	api := newFake(t).on("Viewer", map[string]any{})
 	api.srv.Config.ConnState = func(_ net.Conn, s http.ConnState) {

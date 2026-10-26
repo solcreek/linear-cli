@@ -3,6 +3,11 @@ package main
 // The rubric's must rules, as tests: build the binary once, run it against a
 // fake Linear (fake_test.go). Tests run in parallel; each gets its own
 // LINEARCTL_HOME, so none touches the Keychain or the user's config.
+//
+// LINEARCTL_BIN runs the same tests against another build of linearctl
+// instead (the Rust one): every test that runs the binary is then a check
+// that it behaves as this one does. Tests that call this package's code
+// in-process skip themselves (inProcess).
 
 import (
 	"bytes"
@@ -23,7 +28,17 @@ var bin string
 // binary's runs write coverage, so it counts with the in-process tests.
 var coverDir = os.Getenv("LINEARCTL_COVER_DIR")
 
+// external is the binary LINEARCTL_BIN names, "" when testing this package.
+var external = os.Getenv("LINEARCTL_BIN")
+
 func TestMain(m *testing.M) {
+	if external != "" {
+		bin = external
+		if !filepath.IsAbs(bin) { // relative to the repository, where make runs
+			bin, _ = filepath.Abs(filepath.Join("..", "..", bin))
+		}
+		os.Exit(m.Run())
+	}
 	dir, _ := os.MkdirTemp("", "linearctl")
 	bin = filepath.Join(dir, "linearctl")
 	build := []string{"build", "-o", bin}
@@ -36,6 +51,15 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	os.RemoveAll(dir)
 	os.Exit(code)
+}
+
+// inProcess skips a test that calls this package's code rather than running
+// the binary, when the binary under test is another one.
+func inProcess(t *testing.T) {
+	t.Helper()
+	if external != "" {
+		t.Skip("tests the Go code in-process, not " + external)
+	}
 }
 
 type result struct {

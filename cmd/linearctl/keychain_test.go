@@ -28,6 +28,7 @@ esac
 
 // These set package variables and the environment: not parallel.
 func TestKeychainStoreReadForget(t *testing.T) {
+	inProcess(t)
 	dir := t.TempDir()
 	tool := filepath.Join(dir, "security")
 	must(t, os.WriteFile(tool, []byte(fakeSecurity), 0o755))
@@ -73,6 +74,7 @@ func TestKeychainStoreReadForget(t *testing.T) {
 }
 
 func TestKeychainFailuresAreNamed(t *testing.T) {
+	inProcess(t)
 	dir := t.TempDir()
 	tool := filepath.Join(dir, "security")
 	must(t, os.WriteFile(tool, []byte("#!/bin/sh\necho 'User interaction is not allowed.' >&2\nexit 51\n"), 0o755))
@@ -92,6 +94,7 @@ func TestKeychainFailuresAreNamed(t *testing.T) {
 }
 
 func TestHomeFollowsXDG(t *testing.T) {
+	inProcess(t)
 	t.Setenv("LINEARCTL_HOME", "")
 	t.Setenv("HOME", "/home/ada")
 	t.Setenv("XDG_CONFIG_HOME", "/xdg/config")

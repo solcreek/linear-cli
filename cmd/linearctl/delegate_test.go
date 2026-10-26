@@ -13,6 +13,7 @@ import (
 // The resolve queries declare non-null variables that resolveVars must
 // supply; a missing one is an error only Linear reports.
 func TestResolveVarsCoverEveryVariable(t *testing.T) {
+	inProcess(t)
 	for doc, extra := range map[string][]string{qCreateResolve: {"team", "id", "withID"}, qUpdateResolve: {"id"}} {
 		q, err := parser.ParseQuery(&ast.Source{Input: doc})
 		if err != nil {
