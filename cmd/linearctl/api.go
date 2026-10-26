@@ -69,6 +69,7 @@ func addAPI(root *cobra.Command) {
 			if req.OperationName != "" {
 				body["operationName"] = req.OperationName
 			}
+			expires := cl.signedUntil()
 			resp, err := cl.send(body)
 			if err != nil {
 				return err
@@ -78,6 +79,9 @@ func addAPI(root *cobra.Command) {
 				return linearFailure(resp.Errors)
 			}
 			out := map[string]any{"data": resp.Data, "complexity": nil}
+			if expires != nil {
+				out["signedUrlsExpireAt"] = expires
+			}
 			if n, err := strconv.ParseFloat(cl.header.Get("X-Complexity"), 64); err == nil {
 				out["complexity"] = n
 			}

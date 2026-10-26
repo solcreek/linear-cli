@@ -260,6 +260,10 @@ func TestIssueShow(t *testing.T) {
 	if r.code != 0 || is["identifier"] != "ENG-12" || len(is["comments"].([]any)) != 1 || len(is["inverseRelations"].([]any)) != 1 {
 		t.Fatalf("exit %d, %q", r.code, r.out)
 	}
+	at, err := time.Parse(time.RFC3339, decode(t, r.out)["signedUrlsExpireAt"].(string))
+	if err != nil || time.Until(at) < 295*time.Second || time.Until(at) > 301*time.Second {
+		t.Errorf("signedUrlsExpireAt %v %v", at, err)
+	}
 	c := api.last("IssueShow")
 	if c.Vars["comments"] != 20.0 || c.Vars["withComments"] != true || c.Header.Get("public-file-urls-expire-in") != "300" {
 		t.Errorf("vars %v, signed %q", c.Vars, c.Header.Get("public-file-urls-expire-in"))

@@ -226,6 +226,16 @@ func (c *client) rateLimit() map[string]any {
 	return out
 }
 
+// signedUntil is when file URLs signed in the next request stop working:
+// Linear signs them for signedURLs seconds from when it answers, so the
+// time taken before sending can only make this early, never late.
+func (c *client) signedUntil() any {
+	if c.signedURLs == 0 {
+		return nil
+	}
+	return time.Now().Add(time.Duration(c.signedURLs) * time.Second).UTC().Format(time.RFC3339)
+}
+
 // linearFailure is Linear's first error, in the words it offers people.
 func linearFailure(errs []gqlError) error {
 	e := errs[0]

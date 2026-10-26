@@ -406,7 +406,7 @@ func issueShow() *cobra.Command {
 		Long: "Show one issue with its description, comments, sub-issues and relations.\n" +
 			"ISSUE is an identifier (ENG-123), a UUID, or a linear.app issue URL.\n" +
 			"--signed-urls makes file URLs in the result open without the API key for that\n" +
-			"many seconds, so a viewer can fetch images directly.\n" +
+			"many seconds, so a viewer can fetch images directly; signedUrlsExpireAt says until when.\n" +
 			"Comments are included (20 by default); give another count as --comments=N.",
 		Example: "  linearctl issue show ENG-123\n  linearctl issue view ENG-123 --signed-urls 300 --json\n" +
 			"  linearctl issue show ENG-123 --comments=0 --fields identifier,title,description --json",
@@ -439,13 +439,18 @@ func issueShow() *cobra.Command {
 			var out struct {
 				Issue map[string]any `json:"issue"`
 			}
+			expires := cl.signedUntil()
 			err = cl.query(qIssueShow, map[string]any{"id": ref, "comments": comments, "withComments": comments > 0}, &out)
 			if err != nil {
 				return notFound(err, "issue "+ref)
 			}
 			issue := flatten(out.Issue).(map[string]any)
 			if asJSON {
-				return printJSON(map[string]any{"issue": pick(issue, fields)})
+				doc := map[string]any{"issue": pick(issue, fields)}
+				if expires != nil {
+					doc["signedUrlsExpireAt"] = expires
+				}
+				return printJSON(doc)
 			}
 			w := cmd.OutOrStdout()
 			fmt.Fprintf(w, "%s  %s\n", str(issue, "identifier"), printable(str(issue, "title")))
