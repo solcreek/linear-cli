@@ -176,13 +176,14 @@ func TestIssueListPages(t *testing.T) {
 	}
 
 	// A limit above one page asks for the rest on the second.
+	// (Linear caps a page at 250.)
 	full := []any{}
 	for i := range pageSize {
 		full = append(full, issueNode(fmt.Sprintf("ENG-%d", i+1), "x"))
 	}
 	api = listFake(t, conn("c1", full...), conn("", issueNode("ENG-101", "Two")))
-	r = runWith(t, opts{api: api, key: testKey}, "issue", "list", "--limit", "150", "--json")
-	if calls := api.calls(); len(calls) != 2 || calls[1].Vars["first"] != 50.0 || decode(t, r.out)["shown"] != 101.0 {
+	r = runWith(t, opts{api: api, key: testKey}, "issue", "list", "--limit", "300", "--json")
+	if calls := api.calls(); len(calls) != 2 || calls[0].Vars["first"] != 250.0 || calls[1].Vars["first"] != 50.0 || decode(t, r.out)["shown"] != 251.0 {
 		t.Errorf("second page: %v", calls)
 	}
 }

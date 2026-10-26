@@ -26,9 +26,9 @@ import (
 const (
 	apiURL     = "https://api.linear.app/graphql"
 	uploadsURL = "https://uploads.linear.app"
-	// Linear's own cap on a page; also keeps one page's complexity well under
-	// the 10,000-point limit a query may cost.
-	pageSize = 100
+	// Linear's cap on a page ("first must not be greater than 250", verified
+	// 2026-10-26); a 250-issue page measured 12 complexity points of 10,000.
+	pageSize = 250
 )
 
 func endpoint() string {
