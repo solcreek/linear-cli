@@ -1,23 +1,29 @@
-.PHONY: build test check cover schema
+.PHONY: build release test check cover schema
 
 build:
-	go build -o linearctl ./cmd/linearctl
+	cargo build
 
-test:
-	go test ./...
+release:
+	cargo build --release
+
+# The unit tests, then the acceptance suite and the golden cases against the
+# debug build: the behavior linearctl promises, checked from the outside.
+test: build
+	cargo test --quiet
+	LINEARCTL_BIN=target/debug/linearctl go test -count=1 ./acceptance
+	python3 tests/golden/run.py check target/debug/linearctl
 
 # What CI runs: run it before every commit.
 check:
-	@test -z "$$(gofmt -l .)" || { gofmt -l .; echo "gofmt: run gofmt -w on these"; exit 1; }
+	cargo fmt --check
+	cargo clippy --all-targets -- -D warnings
+	@test -z "$$(gofmt -l acceptance bench)" || { gofmt -l acceptance bench; echo "gofmt: run gofmt -w on these"; exit 1; }
 	go vet ./...
-	go test -count=1 ./...
+	$(MAKE) test
 
-# Coverage of the in-process tests and of every binary run, merged.
+# Coverage of every test above, merged, on one instrumented binary.
 cover:
-	rm -rf .cover && mkdir -p .cover/bin .cover/unit
-	LINEARCTL_COVER_DIR=$(CURDIR)/.cover/bin go test -count=1 -cover ./cmd/linearctl -args -test.gocoverdir=$(CURDIR)/.cover/unit
-	go tool covdata textfmt -i=$$(ls -d .cover/bin/run* .cover/unit | paste -sd, -) -o .cover/profile.txt
-	go tool cover -func=.cover/profile.txt | tail -1
+	scripts/cover.sh
 
 # Refresh Linear's schema; the tests then check every query against it.
 schema:

@@ -5,9 +5,9 @@
 //! workspace, so demo output has the shapes of real output by construction.
 //! Writes are refused; --dry-run works, since it only reads.
 //!
-//! demo/workspace.json is written for people: issues name their state,
-//! labels and users, and times are relative to "anchor", which is moved to
-//! now. linear-tui drafts it; linearctl ships it.
+//! demo/workspace.json, at the repository root, is written for people:
+//! issues name their state, labels and users, and times are relative to
+//! "anchor", which is moved to now. linear-tui drafts it; linearctl ships it.
 
 use crate::client::Answer;
 use crate::gql::{self, Directive, Field, Selection};
@@ -17,7 +17,7 @@ use serde_json::{Map, Value, json};
 use std::cell::OnceCell;
 use std::collections::HashMap;
 
-const SEED: &str = include_str!("../cmd/linearctl/demo/workspace.json");
+const SEED: &str = include_str!("../demo/workspace.json");
 const ORG: &str = "northwind";
 
 /// A value in the workspace: a scalar, a node (an object others can point
