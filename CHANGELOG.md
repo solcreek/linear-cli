@@ -65,6 +65,11 @@ names are only ever added, never renamed or removed.
 
 - `issue list --team` may be repeated, matching any of the teams.
 
+### Fixed
+
+- `issue create` and `issue update` found a label only when its case matched
+  (`--label bug` missed "Bug"); they now ignore case, as `issue list` does.
+
 ## [0.1.0] - 2026-10-26
 
 ### Added

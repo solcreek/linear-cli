@@ -602,6 +602,19 @@ func readWanted(cmd *cobra.Command) (*wanted, error) {
 	return w, nil
 }
 
+// labelFilter finds labels by name, ignoring case as issue list's --label
+// does: Linear's in comparator is case-sensitive.
+func labelFilter(names []string) map[string]any {
+	or := []any{}
+	for _, n := range names {
+		or = append(or, map[string]any{"name": map[string]any{"eqIgnoreCase": n}})
+	}
+	if len(or) == 0 {
+		return map[string]any{}
+	}
+	return map[string]any{"or": or}
+}
+
 // resolveVars are the variables both resolve queries share.
 func (w *wanted) resolveVars(extraLabels []string) map[string]any {
 	labels := append(slices.Clone(w.labels), extraLabels...)
@@ -616,7 +629,7 @@ func (w *wanted) resolveVars(extraLabels []string) map[string]any {
 	return map[string]any{
 		"state": w.state, "withState": w.state != "",
 		"email": email, "withUser": email != "", "me": w.assignee == "me",
-		"labels": labels, "withLabels": len(labels) > 0,
+		"labels": labelFilter(labels), "withLabels": len(labels) > 0,
 		"project": w.project, "withProject": w.project != "",
 		"parent": parent, "withParent": w.parent != "",
 		"milestone": w.milestone, "withMilestone": w.milestone != "" && w.milestone != "none",

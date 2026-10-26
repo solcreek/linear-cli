@@ -356,6 +356,9 @@ func TestIssueCreateDryRunResolvesEverything(t *testing.T) {
 		t.Error("a dry run created")
 	}
 	v := api.last("CreateResolve").Vars
+	if got := jsonOf(v["labels"]); got != `{"or":[{"name":{"eqIgnoreCase":"bug"}},{"name":{"eqIgnoreCase":"p1"}}]}` {
+		t.Errorf("labels are found ignoring case, as issue list's: %s", got)
+	}
 	if v["team"] != "ENG" || v["withID"] != true || v["email"] != "ada@example.com" || v["me"] != false ||
 		jsonOf(v["parent"]) != `{"number":{"eq":1},"team":{"key":{"eqIgnoreCase":"ENG"}}}` {
 		t.Errorf("resolve vars %v", v)
