@@ -11,12 +11,19 @@ use std::process::Command;
 use testserver::{Response, serve};
 
 /// Runs linearctl with args against the fake at url, with no stored state:
-/// its exit code, stdout and stderr.
+/// its exit code, stdout and stderr. The environment is kept but for
+/// LINEAR* and XDG_*, as tests/golden does: Windows needs SystemRoot and
+/// the like to open a socket.
 fn linearctl(url: &str, args: &[&str]) -> (i32, String, String) {
     let home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("hints-home");
-    let out = Command::new(env!("CARGO_BIN_EXE_linearctl"))
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_linearctl"));
+    for (k, _) in std::env::vars_os() {
+        if k.to_str().is_some_and(|k| k.starts_with("LINEAR") || k.starts_with("XDG_")) {
+            cmd.env_remove(k);
+        }
+    }
+    let out = cmd
         .args(args)
-        .env_clear()
         .env("LINEAR_API_KEY", "lin_api_test0000000000000000")
         .env("LINEARCTL_API_URL", url)
         .env("LINEARCTL_HOME", &home)
