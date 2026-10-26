@@ -477,6 +477,8 @@ func TestIssueUpdateSendsOnlyWhatDiffers(t *testing.T) {
 		{[]string{"--label", "bug"}, ""},
 		{[]string{"--title", "New title"}, `{"title":"New title"}`},
 		{[]string{"--assignee", "none"}, `{"assigneeId":null}`},
+		{[]string{"--parent", "none"}, ""}, // it has no parent
+		{[]string{"--parent", "ENG-1"}, `{"parentId":"id-ENG-1"}`},
 		{[]string{"--assignee", "me", "--priority", "1"}, `{"assigneeId":"u-me","priority":1}`},
 		{[]string{"--add-label", "p1", "--remove-label", "bug"}, `{"addedLabelIds":["l-p1"],"removedLabelIds":["l-bug"]}`},
 		{[]string{"--label", "p1"}, `{"labelIds":["l-p1"]}`},
@@ -626,5 +628,16 @@ func TestIssueListByID(t *testing.T) {
 	}
 	if r := runWith(t, opts{api: api, key: testKey}, "issue", "list", "--id", "nope"); r.code != exitUsage {
 		t.Errorf("--id nope: exit %d", r.code)
+	}
+}
+
+func TestIssueUpdateDetachesFromItsParent(t *testing.T) {
+	t.Parallel()
+	is := currentIssue()
+	is["parent"] = map[string]any{"id": "id-ENG-1", "identifier": "ENG-1"}
+	api := newFake(t).on("UpdateResolve", resolveAnswer(map[string]any{"issue": is}))
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "update", "ENG-5", "--parent", "none", "--dry-run", "--json")
+	if d := decode(t, r.out); r.code != 0 || jsonOf(d["input"]) != `{"parentId":null}` || api.last("UpdateResolve").Vars["withParent"] != false {
+		t.Errorf("exit %d, %q", r.code, r.out)
 	}
 }

@@ -489,7 +489,7 @@ func issueFields(c *cobra.Command) {
 	c.Flags().String("project", "", "project `NAME`")
 	c.Flags().String("milestone", "", "project milestone `NAME`, or none to clear; it sets the project\nwhen the issue has none")
 	c.Flags().String("delegate", "", "delegate to the agent (app user) `WHO`: its name or email, or none")
-	c.Flags().String("parent", "", "make it a sub-issue of `ISSUE`")
+	c.Flags().String("parent", "", "make it a sub-issue of `ISSUE` (none: of no issue)")
 	c.Flags().String("json-input", "", "read Linear's input object from `PATH` (- for stdin); flags win")
 }
 
@@ -565,7 +565,9 @@ func readWanted(cmd *cobra.Command) (*wanted, error) {
 		}
 		w.assignee = a
 	}
-	if p, _ := cmd.Flags().GetString("parent"); p != "" {
+	if p, _ := cmd.Flags().GetString("parent"); p == "none" {
+		w.input["parentId"] = nil
+	} else if p != "" {
 		ref, err := issueRef("--parent", p)
 		if err != nil {
 			return nil, err

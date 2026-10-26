@@ -26,6 +26,7 @@ names are only ever added, never renamed or removed.
   `project update` (name, description, content). PROJECT is a URL, slugId,
   UUID or exact name; a name two projects share is an error that lists both.
 - `issue unarchive`.
+- `issue update --parent none` detaches an issue from its parent.
 - `comment create --parent COMMENT` to reply in a thread; `comment update` and
   `comment delete` (a comment that is not there is `changed: false`,
   `found: false`).
