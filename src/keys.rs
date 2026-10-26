@@ -37,7 +37,8 @@ const ACCOUNT: &str = "api-key";
 pub enum Store {
     /// The macOS Keychain, through this security(1).
     Keychain(String),
-    File,
+    /// credentials.json in this directory; "" when there is no home.
+    File(String),
 }
 
 /// The macOS Keychain, unless LINEARCTL_HOME isolates this run (tests,
@@ -48,22 +49,21 @@ pub fn store() -> Store {
     if cfg!(target_os = "macos") && !isolated && std::path::Path::new(bin).exists() {
         return Store::Keychain(bin.into());
     }
-    Store::File
+    Store::File(home("config"))
 }
 
-fn credentials_file() -> R<(String, String)> {
-    let dir = home("config");
+fn credentials_file(dir: &str) -> R<(String, String)> {
     if dir.is_empty() {
         return Err(failed("no home directory; set LINEARCTL_HOME or XDG_CONFIG_HOME"));
     }
-    Ok((dir, "credentials.json".into()))
+    Ok((dir.to_string(), "credentials.json".into()))
 }
 
 impl Store {
     pub fn name(&self) -> &'static str {
         match self {
             Store::Keychain(_) => "keychain",
-            Store::File => "file",
+            Store::File(_) => "file",
         }
     }
 
@@ -84,8 +84,8 @@ impl Store {
                     code => Err(failed(format!("cannot read the Keychain: {}", exit_status(code)))),
                 }
             }
-            Store::File => {
-                let (dir, name) = credentials_file()?;
+            Store::File(dir) => {
+                let (dir, name) = credentials_file(dir)?;
                 let path = format!("{dir}/{name}");
                 let data = match std::fs::read(&path) {
                     Ok(d) => d,
@@ -141,8 +141,8 @@ impl Store {
                     _ => Err(failed("cannot write the Keychain: the key did not read back")),
                 }
             }
-            Store::File => {
-                let (dir, name) = credentials_file()?;
+            Store::File(dir) => {
+                let (dir, name) = credentials_file(dir)?;
                 make_dir(&dir).map_err(|e| failed(format!("cannot create {dir}: {}", cause(&e))))?;
                 let data = format!("{{\n  \"apiKey\": {}\n}}\n", crate::json::marshal(&Value::String(key.into())));
                 with_lock(&dir, &name, || replace_file(&dir, &name, data.as_bytes()))
@@ -169,8 +169,8 @@ impl Store {
                     }
                 }
             }
-            Store::File => {
-                let (dir, name) = credentials_file()?;
+            Store::File(dir) => {
+                let (dir, name) = credentials_file(dir)?;
                 let path = match inside(&dir, &name) {
                     Ok(p) => p,
                     Err(_) if !std::path::Path::new(&dir).exists() => return Ok(false),
@@ -255,6 +255,42 @@ esac
         assert!(!argv.contains(KEY) && argv.contains("find-generic-password -s linearctl -a api-key -w"), "{argv}");
         assert!(k.write("has space in it 00000000").is_err());
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn file_store_read_write_forget() {
+        let dir = std::env::temp_dir().join(format!("lc-creds-{}-{}", std::process::id(), crate::util::new_id()));
+        let d = dir.join("config").to_string_lossy().into_owned();
+        let f = Store::File(d.clone());
+        assert_eq!(f.read().unwrap(), (String::new(), "file".into()));
+        assert!(!f.forget().unwrap());
+        f.write(KEY).unwrap();
+        assert_eq!(f.read().unwrap().0, KEY);
+        assert_eq!(
+            std::fs::read_to_string(format!("{d}/credentials.json")).unwrap(),
+            format!("{{\n  \"apiKey\": \"{KEY}\"\n}}\n")
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = |p: &str| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+            assert_eq!((mode(&d), mode(&format!("{d}/credentials.json"))), (0o700, 0o600));
+        }
+        assert!(f.forget().unwrap());
+        assert!(!f.forget().unwrap());
+        assert!(f.write("not a key").is_err());
+        std::fs::write(format!("{d}/credentials.json"), "{").unwrap();
+        assert!(
+            f.read()
+                .unwrap_err()
+                .to_string()
+                .ends_with("credentials.json is not valid JSON; remove it and log in again")
+        );
+        std::fs::write(format!("{d}/credentials.json"), "null").unwrap();
+        assert_eq!(f.read().unwrap().0, "");
+        std::fs::remove_dir_all(dir).unwrap();
+        let nowhere = Store::File(String::new());
+        assert!(nowhere.read().unwrap_err().to_string().starts_with("no home directory"));
     }
 
     #[test]

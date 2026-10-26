@@ -108,9 +108,13 @@ fn base_of(p: &str) -> &str {
 /// one directory; tests set it. Empty when there is no home to put them in
 /// (HOME unset, as under cron): never the current directory.
 pub fn home(kind: &str) -> String {
-    if let Ok(dir) = std::env::var("LINEARCTL_HOME")
-        && !dir.is_empty()
-    {
+    home_with(kind, &|name| std::env::var(name).unwrap_or_default())
+}
+
+/// home, reading the environment through env.
+fn home_with(kind: &str, env: &dyn Fn(&str) -> String) -> String {
+    let dir = env("LINEARCTL_HOME");
+    if !dir.is_empty() {
         return format!("{}/{kind}", abs(&dir));
     }
     let (var, sub) = match kind {
@@ -118,12 +122,12 @@ pub fn home(kind: &str) -> String {
         "cache" => ("XDG_CACHE_HOME", ".cache"),
         _ => ("XDG_STATE_HOME", ".local/state"),
     };
-    let base = std::env::var(var).unwrap_or_default();
+    let base = env(var);
     // XDG says to ignore a relative path.
     let base = if is_abs(&base) {
         base
     } else {
-        let h = user_home();
+        let h = env(if cfg!(windows) { "USERPROFILE" } else { "HOME" });
         if h.is_empty() || !is_abs(&h) {
             return String::new();
         }
@@ -132,45 +136,40 @@ pub fn home(kind: &str) -> String {
     clean(&format!("{base}/linearctl"))
 }
 
-fn user_home() -> String {
-    let var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-    std::env::var(var).unwrap_or_default()
-}
-
 /// The file an output path names, refused unless it is plainly inside
 /// root: no `..` part, no trailing slash, not the root itself, a parent
 /// that resolves inside root, and a last part that is not a symlink, so a
 /// write can never follow one.
 pub fn inside(root: &str, path: &str) -> R<String> {
     let refuse = |msg: String| failed(format!("{path}: {msg}"));
-    if path.replace('\\', "/").split('/').any(|p| p == "..") {
+    // Windows takes both separators; the checks below use /.
+    let slashed = |p: &str| if cfg!(windows) { p.replace('\\', "/") } else { p.to_string() };
+    let (root_s, path_s) = (slashed(root), slashed(path));
+    if path_s.split('/').any(|p| p == "..") {
         return Err(refuse("'..' is not allowed in an output path".into()));
     }
-    if path.ends_with('/') || path.ends_with(std::path::MAIN_SEPARATOR) {
+    if path_s.ends_with('/') {
         return Err(refuse("names a directory, not a file".into()));
     }
-    let real_root = std::fs::canonicalize(root)
-        .map_err(|e| failed(format!("lstat {root}: {}", cause(&e))))?
-        .to_string_lossy()
-        .into_owned();
-    let mut full = clean(path);
+    let real_root = std::fs::canonicalize(root).map_err(|e| failed(format!("lstat {root}: {}", cause(&e))))?;
+    let mut full = clean(&path_s);
     if !is_abs(&full) {
-        full = clean(&format!("{root}/{full}"));
+        full = clean(&format!("{root_s}/{full}"));
     }
     let dir = dir_of(&full);
     let parent = std::fs::canonicalize(&dir).map_err(|_| refuse(format!("no such directory: {dir}")))?;
-    let target = format!("{}/{}", parent.to_string_lossy().trim_end_matches('/'), base_of(&full));
+    let target = parent.join(base_of(&full));
+    let shown = real_root.to_string_lossy();
     if target == real_root {
-        return Err(refuse(format!("is {real_root} itself")));
+        return Err(refuse(format!("is {shown} itself")));
     }
-    let prefix = format!("{}/", real_root.trim_end_matches('/'));
-    if !target.starts_with(&prefix) {
-        return Err(refuse(format!("outside {real_root}")));
+    if !target.starts_with(&real_root) {
+        return Err(refuse(format!("outside {shown}")));
     }
     if std::fs::symlink_metadata(&target).is_ok_and(|m| m.file_type().is_symlink()) {
         return Err(refuse("is a symlink; refusing to write through it".into()));
     }
-    Ok(target)
+    Ok(target.to_string_lossy().into_owned())
 }
 
 /// Runs f holding the OS's lock on dir/name.lock: flock, or LockFileEx on
@@ -271,6 +270,53 @@ pub fn create_file(target: &str, data: &[u8]) -> R {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn home_follows_xdg() {
+        let env = |vars: &'static [(&'static str, &'static str)]| {
+            move |name: &str| vars.iter().find(|(k, _)| *k == name).map_or(String::new(), |(_, v)| v.to_string())
+        };
+        // XDG says to ignore a relative path.
+        let e = env(&[("HOME", "/home/ada"), ("XDG_CONFIG_HOME", "/xdg/config"), ("XDG_CACHE_HOME", "relative/cache")]);
+        assert_eq!(home_with("config", &e), "/xdg/config/linearctl");
+        assert_eq!(home_with("cache", &e), "/home/ada/.cache/linearctl");
+        assert_eq!(home_with("state", &e), "/home/ada/.local/state/linearctl");
+        assert_eq!(home_with("config", &env(&[("LINEARCTL_HOME", "/tmp/lc"), ("HOME", "/h")])), "/tmp/lc/config");
+        // No home: nowhere, never the current directory.
+        assert_eq!(home_with("state", &env(&[])), "");
+        assert_eq!(home_with("state", &env(&[("HOME", "relative")])), "");
+    }
+
+    #[test]
+    fn os_errors_in_go_words() {
+        let e = std::fs::read("/nonexistent/x").unwrap_err();
+        assert_eq!(cause(&e), "no such file or directory");
+    }
+
+    #[test]
+    fn write_failures_are_named() {
+        let dir = std::env::temp_dir().join(format!("lc-fail-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let d = dir.to_string_lossy().into_owned();
+        create_file(&format!("{d}/new"), b"x").unwrap();
+        let e = create_file(&format!("{d}/new"), b"x").unwrap_err().to_string();
+        assert!(e.starts_with("cannot create ") && e.ends_with("file exists"), "{e}");
+        let e = replace_file(&format!("{d}/missing"), "x", b"x").unwrap_err().to_string();
+        assert!(e.starts_with("lstat ") && e.ends_with("missing: no such file or directory"), "{e}");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o500)).unwrap();
+            let e = replace_file(&d, "x.json", b"x").unwrap_err().to_string();
+            assert!(e.starts_with("cannot write ") && e.ends_with("permission denied"), "{e}");
+            let e = with_lock(&d, "y.json", || Ok(())).unwrap_err().to_string();
+            assert!(e.starts_with("cannot lock "), "{e}");
+            std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700)).unwrap();
+        }
+        assert_eq!(abs("/a/./b"), "/a/b");
+        assert!(abs("x").ends_with("/x"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 
     #[test]
     fn cleans_as_go() {

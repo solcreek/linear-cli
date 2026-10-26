@@ -1,6 +1,7 @@
 //! A parser for GraphQL executable documents: what `api query` checks (is
 //! it a query?) and what demo mode answers. Errors read as gqlparser's did:
-//! "input:LINE:COL: Expected Name, found <EOF>".
+//! "input:LINE:COL: Expected Name, found <EOF>"; text that does not lex is
+//! an <Invalid> token where it went wrong.
 
 use serde_json::{Map, Value};
 
@@ -82,9 +83,25 @@ enum Tok {
     Str(String),
     BlockStr(String),
     Eof,
+    Invalid,
 }
 
 impl Tok {
+    /// The token's kind, as an expectation names what it found instead.
+    fn kind(&self) -> String {
+        match self {
+            Tok::Punct(p) => (*p).to_string(),
+            Tok::Name(_) => "Name".into(),
+            Tok::Int(_) => "Int".into(),
+            Tok::Float(_) => "Float".into(),
+            Tok::Str(_) => "String".into(),
+            Tok::BlockStr(_) => "BlockString".into(),
+            Tok::Eof => "<EOF>".into(),
+            Tok::Invalid => "<Invalid>".into(),
+        }
+    }
+
+    /// The token with its value, as "Unexpected" names it.
     fn describe(&self) -> String {
         match self {
             Tok::Punct(p) => (*p).to_string(),
@@ -94,6 +111,7 @@ impl Tok {
             Tok::Str(v) => format!("String {}", crate::json::quote_go(v)),
             Tok::BlockStr(v) => format!("BlockString {}", crate::json::quote_go(v)),
             Tok::Eof => "<EOF>".into(),
+            Tok::Invalid => "<Invalid>".into(),
         }
     }
 }
@@ -166,7 +184,7 @@ impl Lexer<'_> {
                 self.i += 3;
                 return Ok((Tok::Punct("..."), start, line, ls));
             }
-            return Err(self.err(start, line, ls, "Unexpected character \".\""));
+            return Ok((Tok::Invalid, start, line, ls));
         }
         if c == b'_' || c.is_ascii_alphabetic() {
             while self.i < self.s.len() && (self.s[self.i] == b'_' || self.s[self.i].is_ascii_alphanumeric()) {
@@ -184,8 +202,7 @@ impl Lexer<'_> {
             }
             return self.string(start, line, ls);
         }
-        let ch = String::from_utf8_lossy(&self.s[start..(start + 1).min(self.s.len())]).into_owned();
-        Err(self.err(start, line, ls, &format!("Unexpected character {}", crate::json::quote_go(&ch))))
+        Ok((Tok::Invalid, start, line, ls))
     }
 
     fn digits(&mut self) -> usize {
@@ -197,24 +214,24 @@ impl Lexer<'_> {
     }
 
     fn number(&mut self, start: usize, line: usize, ls: usize) -> Res<(Tok, usize, usize, usize)> {
-        let bad = |l: &Self| l.err(l.i, line, ls, "Invalid number");
+        let bad = |l: &Self| (Tok::Invalid, l.i, line, ls);
         if self.s[self.i] == b'-' {
             self.i += 1;
         }
         if self.s.get(self.i) == Some(&b'0') {
             self.i += 1;
             if self.s.get(self.i).is_some_and(u8::is_ascii_digit) {
-                return Err(bad(self));
+                return Ok(bad(self));
             }
         } else if self.digits() == 0 {
-            return Err(bad(self));
+            return Ok(bad(self));
         }
         let mut float = false;
         if self.s.get(self.i) == Some(&b'.') {
             float = true;
             self.i += 1;
             if self.digits() == 0 {
-                return Err(bad(self));
+                return Ok(bad(self));
             }
         }
         if matches!(self.s.get(self.i), Some(b'e' | b'E')) {
@@ -224,7 +241,7 @@ impl Lexer<'_> {
                 self.i += 1;
             }
             if self.digits() == 0 {
-                return Err(bad(self));
+                return Ok(bad(self));
             }
         }
         let v = String::from_utf8_lossy(&self.s[start..self.i]).into_owned();
@@ -235,13 +252,14 @@ impl Lexer<'_> {
         self.i += 1;
         let mut out = String::new();
         loop {
-            let Some(&c) = self.s.get(self.i) else { return Err(self.err(self.i, line, ls, "Unterminated string.")) };
+            let Some(&c) = self.s.get(self.i) else { return Ok((Tok::Invalid, self.i, line, ls)) };
             match c {
                 b'"' => {
                     self.i += 1;
-                    return Ok((Tok::Str(out), start, line, ls));
+                    // gqlparser places a string after its opening quote.
+                    return Ok((Tok::Str(out), start + 1, line, ls));
                 }
-                b'\n' | b'\r' => return Err(self.err(self.i, line, ls, "Unterminated string.")),
+                b'\n' | b'\r' => return Ok((Tok::Invalid, self.i, line, ls)),
                 b'\\' => {
                     let esc = self.s.get(self.i + 1).copied();
                     self.i += 2;
@@ -258,12 +276,12 @@ impl Lexer<'_> {
                             let hex = self.s.get(self.i..self.i + 4).and_then(|h| std::str::from_utf8(h).ok());
                             let Some(c) = hex.and_then(|h| u32::from_str_radix(h, 16).ok()).and_then(char::from_u32)
                             else {
-                                return Err(self.err(self.i - 2, line, ls, "Invalid character escape sequence"));
+                                return Ok((Tok::Invalid, self.i - 1, line, ls));
                             };
                             out.push(c);
                             self.i += 4;
                         }
-                        _ => return Err(self.err(self.i - 2, line, ls, "Invalid character escape sequence")),
+                        _ => return Ok((Tok::Invalid, self.i - 1, line, ls)),
                     }
                 }
                 _ => {
@@ -281,7 +299,7 @@ impl Lexer<'_> {
         let from = self.i;
         loop {
             if self.i >= self.s.len() {
-                return Err(self.err(self.i, line, ls, "Unterminated string."));
+                return Ok((Tok::Invalid, self.i, line, ls));
             }
             if self.s[self.i..].starts_with(b"\\\"\"\"") {
                 self.i += 4;
@@ -290,7 +308,7 @@ impl Lexer<'_> {
             if self.s[self.i..].starts_with(b"\"\"\"") {
                 let raw = String::from_utf8_lossy(&self.s[from..self.i]).replace("\\\"\"\"", "\"\"\"");
                 self.i += 3;
-                return Ok((Tok::BlockStr(raw), start, line, ls));
+                return Ok((Tok::BlockStr(raw), start + 3, line, ls));
             }
             if self.s[self.i] == b'\n' {
                 self.line += 1;
@@ -313,9 +331,6 @@ pub fn parse(src: &str) -> Res<Document> {
     let (tok, a, b, c) = lex.next()?;
     let mut p = Parser { lex, tok, at: (a, b, c) };
     let mut operations = vec![];
-    if p.tok == Tok::Eof {
-        return Err(p.unexpected());
-    }
     while p.tok != Tok::Eof {
         match p.tok.clone() {
             Tok::Punct("{") => operations.push(Operation { kind: "query".into(), selections: p.selection_set()? }),
@@ -363,7 +378,7 @@ impl Parser<'_> {
 
     fn expect(&mut self, p: &'static str) -> Res<()> {
         if self.tok != Tok::Punct(p) {
-            return Err(self.error(&format!("Expected {p}, found {}", self.tok.describe())));
+            return Err(self.error(&format!("Expected {p}, found {}", self.tok.kind())));
         }
         self.advance()
     }
@@ -374,7 +389,7 @@ impl Parser<'_> {
                 self.advance()?;
                 Ok(n)
             }
-            t => Err(self.error(&format!("Expected Name, found {}", t.describe()))),
+            t => Err(self.error(&format!("Expected Name, found {}", t.kind()))),
         }
     }
 
@@ -542,9 +557,46 @@ mod tests {
     }
 
     #[test]
+    fn lexes_every_token() {
+        let d = parse(
+            "# a comment\r\nquery Q($a: [Int!]! = [1], $b: String = \"x\") @x {\n  a(f: 1.5e3, g: -0, h: \"\\u00e9\\n\\t\\\\\\\"\\/\\b\\f\\r\", i: \"\"\"block \\\"\"\" text\"\"\", j: {k: $a})\n  ...F\n  ... on T @include(if: true) { b }\n  ... { c }\n}\nfragment F on T { d }",
+        )
+        .unwrap();
+        assert_eq!(d.operations.len(), 1);
+        let Selection::Field(f) = &d.operations[0].selections[0] else { panic!() };
+        assert_eq!(f.args[0].1.value(&Value::Null).as_f64(), Some(1500.0));
+        assert_eq!(f.args[2].1.value(&Value::Null), serde_json::json!("\u{e9}\n\t\\\"/\u{8}\u{c}\r"));
+        assert_eq!(f.args[3].1.value(&Value::Null), serde_json::json!("block \"\"\" text"));
+        assert!(matches!(d.operations[0].selections[1], Selection::Spread));
+    }
+
+    #[test]
     fn errors_as_gqlparser() {
+        // Recorded from gqlparser.
+        for (src, want) in [
+            ("query { a(x: \"open) }", "input:1:22: Unexpected <Invalid>"),
+            ("query { a(x: \"\\q\") }", "input:1:16: Unexpected <Invalid>"),
+            ("query { a(x: 01) }", "input:1:15: Unexpected <Invalid>"),
+            ("query { a(x: 1.) }", "input:1:16: Unexpected <Invalid>"),
+            ("query { a(x: 1e) }", "input:1:16: Unexpected <Invalid>"),
+            ("query { a(x: -) }", "input:1:15: Unexpected <Invalid>"),
+            ("query { a. }", "input:1:10: Expected Name, found <Invalid>"),
+            ("query { a ^ }", "input:1:11: Expected Name, found <Invalid>"),
+            ("query { a(x \"s\") }", "input:1:14: Expected :, found String"),
+            ("query { a(x: }", "input:1:14: Unexpected }"),
+            ("query Q($a Int) { a }", "input:1:12: Expected :, found Name"),
+            ("fragment F at T { a }", "input:1:12: Expected \"on\", found Name \"at\""),
+            ("nope { a }", "input:1:1: Unexpected Name \"nope\""),
+            ("query { a(x: \"\"\"open", "input:1:21: Unexpected <Invalid>"),
+            ("query {", "input:1:8: Expected Name, found <EOF>"),
+            ("{ a } x", "input:1:7: Unexpected Name \"x\""),
+            ("query { a(x: 1) ", "input:1:17: Expected Name, found <EOF>"),
+            ("query { a(x: [1 }", "input:1:17: Unexpected }"),
+        ] {
+            assert_eq!(parse(src).unwrap_err(), want, "{src}");
+        }
         assert_eq!(parse("query {").unwrap_err(), "input:1:8: Expected Name, found <EOF>");
-        assert_eq!(parse("").unwrap_err(), "input:1:1: Unexpected <EOF>");
+        assert!(parse("").unwrap().operations.is_empty());
         assert_eq!(parse("mutation { x }").unwrap().operations[0].kind, "mutation");
         assert!(parse("query { a(x: ) }").is_err());
     }

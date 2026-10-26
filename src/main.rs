@@ -10,12 +10,16 @@ mod client;
 mod commands;
 mod demo;
 mod fail;
+#[cfg(test)]
+mod generic;
 mod gql;
 mod json;
 mod keys;
 mod queries;
 mod run;
 mod state;
+#[cfg(test)]
+mod testserver;
 mod time;
 mod util;
 

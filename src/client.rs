@@ -51,6 +51,8 @@ pub struct Client {
     pub key: String,
     /// "env", "keychain", "file", "stdin" or "demo".
     pub source: String,
+    /// The GraphQL endpoint: endpoint(), or a test's server.
+    url: String,
     timeout: u64,
     demo: bool,
     /// Seconds file URLs in answers stay signed for; 0 leaves them as they are.
@@ -96,6 +98,7 @@ impl Client {
         Client {
             key: key.into(),
             source: source.into(),
+            url: endpoint(),
             timeout: run.timeout,
             demo: run.demo,
             signed_urls: Cell::new(0),
@@ -144,7 +147,7 @@ impl Client {
             return Ok(crate::demo::answer(&doc, &request["variables"]));
         }
         let body = json::marshal(&request);
-        let url = endpoint();
+        let url = self.url.clone();
         let mut req = agent()
             .post(&url)
             .config()
@@ -347,4 +350,223 @@ pub fn linear_failure(errors: &[Value]) -> Fail {
         _ => message,
     };
     Fail::Linear { msg: printable(msg), not_found: message.to_lowercase().contains("not found") }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::run::Sink;
+    use crate::testserver::{Response, serve};
+    use std::sync::atomic::Ordering;
+
+    const KEY: &str = "lin_api_test0000000000000000";
+
+    fn run() -> Run {
+        Run::new(Sink::Buf(vec![]), Sink::Buf(vec![]))
+    }
+
+    fn client(run: &Run, url: &str) -> Client {
+        let mut c = Client::with_key(run, KEY, "env");
+        c.url = url.to_string();
+        c
+    }
+
+    /// Answers like Linear: the key checked, then a fixed answer.
+    fn linear(answer: impl Fn() -> Response + Send + Sync + 'static) -> crate::testserver::Server {
+        serve(move |req| {
+            if req.header("Authorization") != Some(KEY) {
+                return Response::json(
+                    400,
+                    r#"{"errors":[{"message":"Authentication required","extensions":{"code":"AUTHENTICATION_ERROR"}}]}"#,
+                );
+            }
+            answer()
+        })
+    }
+
+    #[test]
+    fn sends_the_key_and_decodes() {
+        let api = linear(|| Response::json(200, r#"{"data":{"viewer":{"id":"u1","name":"Ada"}}}"#));
+        let mut r = run();
+        let data = client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null).unwrap();
+        assert_eq!(data["viewer"]["name"], "Ada");
+        let reqs = api.requests.lock().unwrap();
+        let h = &reqs[0];
+        assert_eq!(h.header("Authorization"), Some(KEY));
+        assert_eq!(h.header("public-file-urls-expire-in"), None);
+        assert!(h.header("User-Agent").unwrap().starts_with("linearctl/"));
+        assert_eq!(h.header("Content-Type"), Some("application/json"));
+        let body: Value = serde_json::from_str(&h.body).unwrap();
+        assert_eq!(body["query"], crate::queries::VIEWER);
+        assert!(body["variables"].is_null());
+    }
+
+    #[test]
+    fn signs_file_urls_when_asked() {
+        let api = linear(|| Response::json(200, r#"{"data":{}}"#));
+        let mut r = run();
+        let c = client(&r, &api.url);
+        c.signed_urls.set(300);
+        let until = c.signed_until();
+        c.query(&mut r, crate::queries::VIEWER, Value::Null).unwrap();
+        assert_eq!(api.requests.lock().unwrap()[0].header("public-file-urls-expire-in"), Some("300"));
+        assert!(until.as_str().unwrap().ends_with('Z'));
+    }
+
+    #[test]
+    fn maps_failures() {
+        let reset = (crate::time::now() / 1_000_000 + 600_000).to_string();
+        let mut r = run();
+        // A key Linear rejects.
+        let api = linear(|| Response::json(200, "{}"));
+        let mut c = client(&r, &api.url);
+        c.key = "lin_api_wrong000000000000000".into();
+        assert!(matches!(c.query(&mut r, crate::queries::VIEWER, Value::Null), Err(Fail::Auth(_))));
+        // Rate limited, with when it resets.
+        let at = reset.clone();
+        let api = linear(move || Response {
+            status: 400,
+            headers: vec![
+                ("X-RateLimit-Requests-Remaining".into(), "0".into()),
+                ("X-RateLimit-Requests-Reset".into(), at.clone()),
+            ],
+            body: r#"{"errors":[{"message":"Rate limit exceeded","extensions":{"code":"RATELIMITED"}}]}"#.into(),
+        });
+        match client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null) {
+            Err(Fail::Limited(msg, Some(ms))) => {
+                assert_eq!(ms.to_string(), reset);
+                assert!(msg.contains("retry after"), "{msg}");
+            }
+            other => panic!("{other:?}"),
+        }
+        let api = linear(|| Response::json(429, "{}"));
+        assert!(matches!(
+            client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null),
+            Err(Fail::Limited(..))
+        ));
+        // Linear's own error, and not found named.
+        let api = linear(|| {
+            Response::json(
+                400,
+                r#"{"errors":[{"message":"Entity not found: Issue","extensions":{"code":"INVALID_INPUT"}}]}"#,
+            )
+        });
+        let e = client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null).unwrap_err();
+        assert!(matches!(e, Fail::Linear { not_found: true, .. }));
+        assert_eq!(e.not_found("issue ENG-9").to_string(), "not found: issue ENG-9 (or this API key cannot see it)");
+        // The message offered to people, made safe for a terminal.
+        let api = linear(|| {
+            Response::json(
+                400,
+                r#"{"errors":[{"message":"x","extensions":{"userPresentableMessage":"Title is too long\u001b[31m"}}]}"#,
+            )
+        });
+        let e = client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null).unwrap_err();
+        assert_eq!(e.to_string(), "Linear: Title is too long?[31m");
+        // Errors beside data are the caller's.
+        let api = linear(|| Response::json(200, r#"{"data":{"a":1},"errors":[{"message":"partly"}]}"#));
+        let a = client(&r, &api.url).raw(&mut r, crate::queries::VIEWER, Value::Null).unwrap();
+        assert_eq!((a.data["a"].as_i64(), a.errors.len()), (Some(1), 1));
+        // An HTTP error without GraphQL errors.
+        let api = linear(|| Response::json(500, "{}"));
+        let e = client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null).unwrap_err();
+        assert_eq!(e.to_string(), "Linear answered HTTP 500");
+    }
+
+    #[test]
+    fn names_the_host_on_transport_failures() {
+        let api = serve(|_| Response { status: 502, headers: vec![], body: "<html>bad gateway</html>".into() });
+        let mut r = run();
+        let e = client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null).unwrap_err();
+        assert!(e.to_string().contains("HTTP 502 without JSON"), "{e}");
+        let e =
+            client(&r, "http://127.0.0.1:9/graphql").query(&mut r, crate::queries::VIEWER, Value::Null).unwrap_err();
+        assert!(e.to_string().starts_with("cannot reach 127.0.0.1:9: "), "{e}");
+    }
+
+    #[test]
+    fn times_out() {
+        let api = serve(|_| {
+            std::thread::sleep(Duration::from_millis(1500));
+            Response::json(200, "{}")
+        });
+        let mut r = run();
+        r.timeout = 1;
+        let e = client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null).unwrap_err();
+        assert_eq!(e.to_string(), format!("{} did not answer within 1 s; raise --timeout", host_of(&api.url)));
+    }
+
+    #[test]
+    fn says_what_it_waits_on() {
+        let api = serve(|_| {
+            std::thread::sleep(Duration::from_millis(2300));
+            Response::json(200, r#"{"data":{}}"#)
+        });
+        let mut r = run();
+        client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null).unwrap();
+        let err = std::mem::replace(&mut r.err, Sink::Buf(vec![])).into_buf();
+        assert_eq!(String::from_utf8(err).unwrap(), format!("linearctl: waiting on {}\n", host_of(&api.url)));
+    }
+
+    #[test]
+    fn reads_rate_limit_headers() {
+        let api = linear(|| Response {
+            status: 200,
+            headers: vec![
+                ("X-RateLimit-Requests-Remaining".into(), "2400".into()),
+                ("X-RateLimit-Requests-Limit".into(), "2500".into()),
+                ("X-RateLimit-Requests-Reset".into(), "1798000000000".into()),
+                ("X-RateLimit-Complexity-Remaining".into(), "nope".into()),
+                ("X-Complexity".into(), "12".into()),
+            ],
+            body: r#"{"data":{}}"#.into(),
+        });
+        let mut r = run();
+        let c = client(&r, &api.url);
+        assert!(!c.has_header());
+        c.query(&mut r, crate::queries::VIEWER, Value::Null).unwrap();
+        assert_eq!(
+            c.meta(),
+            json!({"requests": 1, "complexity": 12.0, "rateLimit": {"requests": {"remaining": 2400, "limit": 2500,
+                "resetAt": "2026-12-23T04:26:40Z"}}})
+        );
+    }
+
+    /// A command's requests share one connection: each new one would cost
+    /// a TCP and TLS handshake, ~40 ms against api.linear.app.
+    #[test]
+    fn reuses_the_connection() {
+        let api = linear(|| Response::json(200, r#"{"data":{}}"#));
+        let mut r = run();
+        let c = client(&r, &api.url);
+        for _ in 0..3 {
+            c.query(&mut r, crate::queries::VIEWER, Value::Null).unwrap();
+        }
+        assert_eq!(api.connections.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn downloads_with_the_key() {
+        let files = serve(|req| match req.header("Authorization") {
+            Some(KEY) => {
+                Response { status: 200, headers: vec![("Content-Type".into(), "image/png".into())], body: "PNG".into() }
+            }
+            _ => Response { status: 401, headers: vec![], body: String::new() },
+        });
+        let base = files.url.trim_end_matches("/graphql");
+        let mut r = run();
+        let c = client(&r, &files.url);
+        assert_eq!(c.download(&mut r, &format!("{base}/a/b")).unwrap(), (b"PNG".to_vec(), "image/png".to_string()));
+        let mut wrong = client(&r, &files.url);
+        wrong.key = "lin_api_wrong000000000000000".into();
+        assert!(matches!(wrong.download(&mut r, &format!("{base}/a/b")), Err(Fail::Auth(_))));
+        let missing = serve(|_| Response { status: 404, headers: vec![], body: String::new() });
+        let base = missing.url.trim_end_matches("/graphql");
+        let e = c.download(&mut r, &format!("{base}/x")).unwrap_err().to_string();
+        assert!(e.starts_with("not found: "), "{e}");
+        let broken = serve(|_| Response { status: 500, headers: vec![], body: String::new() });
+        let base = broken.url.trim_end_matches("/graphql");
+        let e = c.download(&mut r, &format!("{base}/x")).unwrap_err().to_string();
+        assert!(e.ends_with("answered HTTP 500"), "{e}");
+    }
 }
