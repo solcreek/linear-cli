@@ -81,7 +81,11 @@ func runWith(t *testing.T, o opts, args ...string) result {
 		env = append(env, "LINEAR_API_KEY="+o.key)
 	}
 	if coverDir != "" {
-		env = append(env, "GOCOVERDIR="+coverDir)
+		// A directory per run: runs sharing one race to write the same
+		// meta-data file and report the loss on stderr.
+		d, err := os.MkdirTemp(coverDir, "run")
+		must(t, err)
+		env = append(env, "GOCOVERDIR="+d)
 	}
 	cmd.Env = append(env, o.env...)
 	cmd.Stdin = strings.NewReader(o.stdin)

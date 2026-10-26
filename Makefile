@@ -10,7 +10,7 @@ test:
 cover:
 	rm -rf .cover && mkdir -p .cover/bin .cover/unit
 	LINEARCTL_COVER_DIR=$(CURDIR)/.cover/bin go test -count=1 -cover . -args -test.gocoverdir=$(CURDIR)/.cover/unit
-	go tool covdata textfmt -i=.cover/bin,.cover/unit -o .cover/profile.txt
+	go tool covdata textfmt -i=$$(ls -d .cover/bin/run* .cover/unit | paste -sd, -) -o .cover/profile.txt
 	go tool cover -func=.cover/profile.txt | tail -1
 
 # Refresh Linear's schema; the tests then check every query against it.
