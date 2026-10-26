@@ -16,7 +16,6 @@ const BIN: &str = env!("CARGO_BIN_EXE_linearctl");
 const KEY: &str = "lin_api_test0000000000000000";
 
 #[derive(Clone, Copy)]
-#[allow(dead_code)] // OneSubscription: its test comes with the fallback
 enum Behavior {
     /// Every connection is closed (1011) right after its subscriptions.
     CloseEverything,
@@ -59,7 +58,6 @@ impl Fake {
     }
 
     /// Tells every open socket that issue id was updated.
-    #[allow(dead_code)]
     fn push_update(&self, id: &str) {
         let msg = json!({"type": "next", "id": "updated", "payload": {"data": {"issueUpdated": {"id": id}}}});
         for ws in self.open.lock().unwrap().iter_mut() {
@@ -268,4 +266,31 @@ fn reconnects_back_off_when_every_connection_drops() {
     // Connected at 0, then after 1, 2, 4 s of backoff: 4 by 8 s (1 s apart
     // it would be 7 or more).
     assert!((3..=4).contains(&n), "{n} connections in 8 s; stderr:\n{err}");
+}
+
+/// When Linear allows one subscription, watch subscribes to updates alone,
+/// straight away, stays connected, and still sees an update.
+#[test]
+fn one_subscription_falls_back_to_updates() {
+    let fake = Fake::start(Behavior::OneSubscription);
+    let w = Watch::start(&fake);
+    w.next("ready", Duration::from_secs(10));
+    let gap = w.next("gap", Duration::from_secs(5));
+    assert_eq!(gap["reason"], "reconnect", "{gap}");
+    // The second connection subscribes to updates only, and stays.
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while fake.open.lock().unwrap().is_empty() {
+        assert!(Instant::now() < deadline, "no connection kept: {:?}", fake.connections());
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    fake.push_update("id-ENG-1");
+    let up = w.next("upsert", Duration::from_secs(5));
+    assert_eq!(up["issue"]["identifier"], "ENG-1", "{up}");
+    std::thread::sleep(Duration::from_secs(2));
+    let connections = fake.connections();
+    let err = w.stderr();
+    assert_eq!(connections.len(), 2, "{connections:?}; stderr:\n{err}");
+    assert_eq!(connections[0].len(), 2, "the first asked for more than one: {connections:?}");
+    assert_eq!(connections[1], vec!["updated"], "{connections:?}");
+    assert!(err.contains("Linear allows one subscription at a time"), "stderr:\n{err}");
 }
