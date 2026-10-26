@@ -36,6 +36,15 @@ To keep the fast path on npm 11.19 and later:
 npm install -g @solcreek/linear-cli --allow-scripts=@solcreek/linear-cli
 ```
 
+A program that depends on the npm package can run the native binary itself,
+with no Node in between. Its path is stable, the one the package's own shim
+uses:
+
+```js
+const exe = process.platform === "win32" ? "linearctl.exe" : "linearctl"
+const bin = require.resolve(`@solcreek/linear-cli-${process.platform}-${process.arch}/bin/${exe}`)
+```
+
 ## Try it without a key
 
 ```sh
