@@ -1,5 +1,6 @@
 //! The command tree, as `linearctl describe` lists it.
 
+mod api;
 mod auth;
 mod comment;
 mod config;
@@ -8,6 +9,7 @@ mod issue;
 mod lookups;
 mod project;
 mod relation;
+mod serve;
 
 use crate::cli::{self, Args, Cmd, Ctx, Flag};
 use crate::fail::R;
@@ -45,7 +47,7 @@ LINEARCTL_HOME moves config and credentials under one directory.",
         }
         subs.push(c);
     }
-    subs.extend([file::command(), config::command()]);
+    subs.extend([file::command(), config::command(), api::command(), serve::command()]);
     subs.push(
         Cmd::new("describe", "Print every command, flag and exit code as JSON")
             .example("  linearctl describe")
