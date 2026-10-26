@@ -945,7 +945,7 @@ fn one(kind: &str, word: &str, name: &str, nodes: &[Value], hint: &str) -> R<Str
 
 /// Maps label names to ids, preferring the team's own label, then a
 /// workspace label (no team). A group label cannot be put on an issue, so
-/// it never matches; a name that only a group carries is refused as such.
+/// it never matches; a name that only a group carries is not found, saying so.
 fn label_ids(names: &[String], nodes: &[Value], team_id: &str) -> R<Vec<String>> {
     let mut ids: Vec<String> = vec![];
     for n in names {
@@ -964,10 +964,11 @@ fn label_ids(names: &[String], nodes: &[Value], team_id: &str) -> R<Vec<String>>
         }
         let matched = if team.is_empty() { workspace } else { team };
         if matched.is_empty() && group {
-            return Err(usage(format!(
-                "label {} is a group; pass one of its labels (see 'linearctl label list')",
+            return Err(missing(format!(
+                "label {} is a group, which Linear cannot put on an issue; pass one of its labels (see 'linearctl label list')",
                 quote_go(n)
-            )));
+            ))
+            .with(sought("label", n)));
         }
         let id = one("label", "label", n, &matched, "'linearctl label list'")?;
         if !ids.contains(&id) {

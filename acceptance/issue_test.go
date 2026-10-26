@@ -597,7 +597,7 @@ func TestIssueRowNestsIDs(t *testing.T) {
 	api := listFake(t, conn(""))
 	runWith(t, opts{api: api, key: testKey}, "issue", "list", "--json")
 	sent := api.last("IssueList").Query
-	for _, want := range []string{"state { id name type color }", "assignee { id name email }", "team { id key }",
+	for _, want := range []string{"state { id name type color }", "assignee { id name email }", "team { id key name }",
 		"project { id name }", "cycle { id number }", "labels(first: 20) { nodes { id name color } }"} {
 		if !strings.Contains(sent, want) {
 			t.Errorf("IssueList lacks %q", want)
@@ -802,13 +802,13 @@ func TestIssueCreateSkipsGroupLabels(t *testing.T) {
 	}
 	labels := conn("", group("l-bug-group", "bug", nil), map[string]any{"id": "l-bug", "name": "bug", "isGroup": false, "team": nil},
 		group("l-area", "Area", map[string]any{"id": "team-eng"}))
-	api := createFake(t, resolveAnswer(map[string]any{"issueLabels": labels}))
+	api := createFake(t, resolveAnswer(map[string]any{"issueLabels": labels})).on("Available", map[string]any{"team": nil})
 	r := runWith(t, opts{api: api, key: testKey}, "issue", "create", "--team", "ENG", "--title", "x", "--label", "bug", "--dry-run", "--json")
 	if in, _ := decode(t, r.out)["input"].(map[string]any); r.code != 0 || jsonOf(in["labelIds"]) != `["l-bug"]` {
 		t.Errorf("a group of the same name is not a match: exit %d, %q", r.code, r.out)
 	}
 	r = runWith(t, opts{api: api, key: testKey}, "issue", "create", "--team", "ENG", "--title", "x", "--label", "area", "--dry-run", "--json")
-	if e, _ := decode(t, r.out)["error"].(string); r.code != exitUsage || !strings.Contains(e, `label "area" is a group`) {
+	if d := decode(t, r.out); r.code != exitFailed || d["code"] != "NOT_FOUND" || d["kind"] != "label" || !strings.Contains(d["error"].(string), `label "area" is a group`) {
 		t.Errorf("exit %d, %q", r.code, r.out)
 	}
 }
