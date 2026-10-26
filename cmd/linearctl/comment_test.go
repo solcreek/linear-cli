@@ -107,3 +107,48 @@ func TestCommentCreateReply(t *testing.T) {
 		t.Errorf("--parent c1: exit %d", r.code)
 	}
 }
+
+func TestCommentUpdate(t *testing.T) {
+	t.Parallel()
+	const id = "5f1e2a3b-4c5d-4e6f-8a9b-0c1d2e3f4a5b"
+	api := newFake(t).on("Comment", map[string]any{"comment": commentNode(id, "old")}).
+		on("CommentUpdate", map[string]any{"commentUpdate": map[string]any{"success": true, "comment": commentNode(id, "new")}})
+	r := runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "new", "--dry-run", "--json")
+	if d := decode(t, r.out); r.code != 0 || d["changed"] != true || slices.Contains(api.ops(), "CommentUpdate") {
+		t.Errorf("dry run: exit %d, %q", r.code, r.out)
+	}
+	r = runWith(t, opts{api: api, key: testKey, stdin: "new"}, "comment", "update", id, "--body-file", "-", "--yes", "--json")
+	if c := api.last("CommentUpdate"); r.code != 0 || c.Vars["id"] != id || c.Vars["input"].(map[string]any)["body"] != "new" {
+		t.Errorf("yes: exit %d, %q", r.code, r.out)
+	}
+	n := len(api.calls())
+	r = runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "old", "--yes", "--json")
+	if d := decode(t, r.out); r.code != 0 || d["changed"] != false || api.ops()[n] != "Comment" || len(api.calls()) != n+1 {
+		t.Errorf("same text: exit %d, %q", r.code, r.out)
+	}
+	for _, args := range [][]string{{"c1", "--body", "x"}, {id}, {id, "--body", " "}} {
+		if r := runWith(t, opts{api: api, key: testKey}, append([]string{"comment", "update", "--dry-run"}, args...)...); r.code != exitUsage {
+			t.Errorf("%v: exit %d", args, r.code)
+		}
+	}
+}
+
+func TestCommentDelete(t *testing.T) {
+	t.Parallel()
+	const id = "5f1e2a3b-4c5d-4e6f-8a9b-0c1d2e3f4a5b"
+	api := newFake(t).on("Comment", map[string]any{"comment": commentNode(id, "x")}).
+		on("CommentDelete", map[string]any{"commentDelete": map[string]any{"success": true}})
+	r := runWith(t, opts{api: api, key: testKey}, "comment", "delete", id, "--dry-run", "--json")
+	if d := decode(t, r.out); r.code != 0 || d["changed"] != true || slices.Contains(api.ops(), "CommentDelete") {
+		t.Errorf("dry run: exit %d, %q", r.code, r.out)
+	}
+	r = runWith(t, opts{api: api, key: testKey}, "comment", "delete", id, "--yes", "--json")
+	if r.code != 0 || api.last("CommentDelete").Vars["id"] != id {
+		t.Errorf("yes: exit %d, %q", r.code, r.out)
+	}
+	api = newFake(t).onFunc("Comment", linearErr("Entity not found: Comment", "INVALID_INPUT"))
+	r = runWith(t, opts{api: api, key: testKey}, "comment", "delete", id, "--yes", "--json")
+	if d := decode(t, r.out); r.code != 0 || d["changed"] != false || d["found"] != false {
+		t.Errorf("gone: exit %d, %q", r.code, r.out)
+	}
+}

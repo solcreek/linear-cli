@@ -108,6 +108,14 @@ var (
   commentCreate(input: $input) { success comment { ` + commentRow + ` } }
 }`
 
+	qComment = `query Comment($id: String!) { comment(id: $id) { ` + commentRow + ` } }`
+
+	qCommentUpdate = `mutation CommentUpdate($id: String!, $input: CommentUpdateInput!) {
+  commentUpdate(id: $id, input: $input) { success comment { ` + commentRow + ` } }
+}`
+
+	qCommentDelete = `mutation CommentDelete($id: String!) { commentDelete(id: $id) { success } }`
+
 	qTeams = `query Teams($first: Int!, $after: String) {
   teams(first: $first, after: $after) { nodes { id key name description private } ` + pageInfo + ` }
 }`
@@ -140,6 +148,7 @@ func documents() map[string]string {
 		"CreateResolve": qCreateResolve, "IssueCreate": qIssueCreate, "UpdateResolve": qUpdateResolve,
 		"IssueUpdate": qIssueUpdate, "IssueArchived": qIssueArchived, "IssueArchive": qIssueArchive, "IssueUnarchive": qIssueUnarchive,
 		"CommentList": qCommentList, "CommentResolve": qCommentResolve, "CommentCreate": qCommentCreate,
+		"Comment": qComment, "CommentUpdate": qCommentUpdate, "CommentDelete": qCommentDelete,
 		"Teams": qTeams, "States": qStates, "Labels": qLabels, "Users": qUsers, "Projects": qProjects,
 		"Cycles": qCycles,
 	}
