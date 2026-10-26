@@ -1,4 +1,4 @@
-package main
+package acceptance
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 
 // linearSchema is Linear's published schema, loaded once for the fake.
 var linearSchema = sync.OnceValue(func() *ast.Schema {
-	data, err := os.ReadFile("../../graphql/schema.graphql")
+	data, err := os.ReadFile("../graphql/schema.graphql")
 	if err != nil {
 		panic(err)
 	}
@@ -50,6 +50,7 @@ type call struct {
 	Op     string
 	Vars   map[string]any
 	Header http.Header
+	Query  string
 }
 
 // fake is a Linear GraphQL endpoint answering by operation name. An operation
@@ -138,7 +139,7 @@ func (f *fake) serve(w http.ResponseWriter, r *http.Request) {
 		f.t.Errorf("%s: Linear would reject this request: %v", op, err)
 	}
 	f.mu.Lock()
-	f.log = append(f.log, call{op, req.Variables, r.Header.Clone()})
+	f.log = append(f.log, call{op, req.Variables, r.Header.Clone(), req.Query})
 	answer := f.answers[op]
 	f.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")

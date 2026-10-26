@@ -1,13 +1,14 @@
-package main
+package acceptance
 
-// The rubric's must rules, as tests: build the binary once, run it against a
-// fake Linear (fake_test.go). Tests run in parallel; each gets its own
-// LINEARCTL_HOME, so none touches the Keychain or the user's config.
+// Package acceptance tests linearctl from the outside: it runs the binary
+// against a fake Linear (fake_test.go) that checks every request against
+// Linear's schema, and checks what the binary prints and how it exits. These
+// tests were written for the Go implementation and now hold the Rust one to
+// the same behavior. Tests run in parallel; each gets its own LINEARCTL_HOME,
+// so none touches the Keychain or the user's config.
 //
-// LINEARCTL_BIN runs the same tests against another build of linearctl
-// instead (the Rust one): every test that runs the binary is then a check
-// that it behaves as this one does. Tests that call this package's code
-// in-process skip themselves (inProcess).
+// The binary is LINEARCTL_BIN (relative to the repository), else a debug
+// build made with cargo first.
 
 import (
 	"bytes"
@@ -24,42 +25,20 @@ import (
 
 var bin string
 
-// coverDir, when LINEARCTL_COVER_DIR is set (make cover), is where the
-// binary's runs write coverage, so it counts with the in-process tests.
-var coverDir = os.Getenv("LINEARCTL_COVER_DIR")
-
-// external is the binary LINEARCTL_BIN names, "" when testing this package.
-var external = os.Getenv("LINEARCTL_BIN")
-
 func TestMain(m *testing.M) {
-	if external != "" {
-		bin = external
-		if !filepath.IsAbs(bin) { // relative to the repository, where make runs
-			bin, _ = filepath.Abs(filepath.Join("..", "..", bin))
+	bin = os.Getenv("LINEARCTL_BIN")
+	if bin == "" {
+		build := exec.Command("cargo", "build", "--quiet")
+		build.Dir = ".."
+		if out, err := build.CombinedOutput(); err != nil {
+			panic("cargo build: " + string(out))
 		}
-		os.Exit(m.Run())
+		bin = filepath.Join("target", "debug", "linearctl")
 	}
-	dir, _ := os.MkdirTemp("", "linearctl")
-	bin = filepath.Join(dir, "linearctl")
-	build := []string{"build", "-o", bin}
-	if coverDir != "" {
-		build = append(build, "-cover")
+	if !filepath.IsAbs(bin) { // relative to the repository, where make runs
+		bin, _ = filepath.Abs(filepath.Join("..", bin))
 	}
-	if out, err := exec.Command("go", append(build, ".")...).CombinedOutput(); err != nil {
-		panic(string(out))
-	}
-	code := m.Run()
-	os.RemoveAll(dir)
-	os.Exit(code)
-}
-
-// inProcess skips a test that calls this package's code rather than running
-// the binary, when the binary under test is another one.
-func inProcess(t *testing.T) {
-	t.Helper()
-	if external != "" {
-		t.Skip("tests the Go code in-process, not " + external)
-	}
+	os.Exit(m.Run())
 }
 
 type result struct {
@@ -103,13 +82,6 @@ func runWith(t *testing.T, o opts, args ...string) result {
 	env = append(env, "NO_COLOR=1", "LINEARCTL_HOME="+o.home, "LINEARCTL_API_URL="+api)
 	if o.key != "" {
 		env = append(env, "LINEAR_API_KEY="+o.key)
-	}
-	if coverDir != "" {
-		// A directory per run: runs sharing one race to write the same
-		// meta-data file and report the loss on stderr.
-		d, err := os.MkdirTemp(coverDir, "run")
-		must(t, err)
-		env = append(env, "GOCOVERDIR="+d)
 	}
 	cmd.Env = append(env, o.env...)
 	cmd.Stdin = strings.NewReader(o.stdin)

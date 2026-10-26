@@ -1,4 +1,4 @@
-package main
+package acceptance
 
 import (
 	"bufio"
@@ -34,11 +34,6 @@ func startWatch(t *testing.T, api *fake, args ...string) *stream {
 		}
 	}
 	cmd.Env = append(env, "LINEARCTL_HOME="+filepath.Join(dir, ".home"), "LINEARCTL_API_URL="+api.url(), "LINEAR_API_KEY="+testKey)
-	if coverDir != "" {
-		d, err := os.MkdirTemp(coverDir, "run")
-		must(t, err)
-		cmd.Env = append(cmd.Env, "GOCOVERDIR="+d)
-	}
 	out, err := cmd.StdoutPipe()
 	must(t, err)
 	s := &stream{t: t, cmd: cmd, lines: make(chan map[string]any, 100), err: &bytes.Buffer{}}

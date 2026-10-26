@@ -1,4 +1,4 @@
-package main
+package acceptance
 
 import (
 	"encoding/json"
@@ -588,10 +588,13 @@ func TestIssueViewAndBareComments(t *testing.T) {
 // Nested objects carry ids (and colors), so callers can join them reliably.
 func TestIssueRowNestsIDs(t *testing.T) {
 	t.Parallel()
+	api := listFake(t, conn(""))
+	runWith(t, opts{api: api, key: testKey}, "issue", "list", "--json")
+	sent := api.last("IssueList").Query
 	for _, want := range []string{"state { id name type color }", "assignee { id name email }", "team { id key }",
 		"project { id name }", "cycle { id number }", "labels(first: 20) { nodes { id name color } }"} {
-		if !strings.Contains(issueRow, want) {
-			t.Errorf("issueRow lacks %q", want)
+		if !strings.Contains(sent, want) {
+			t.Errorf("IssueList lacks %q", want)
 		}
 	}
 }

@@ -1,39 +1,9 @@
-package main
+package acceptance
 
 import (
-	"slices"
-	"sort"
 	"strings"
 	"testing"
-
-	"github.com/vektah/gqlparser/v2/ast"
-	"github.com/vektah/gqlparser/v2/parser"
 )
-
-// The resolve queries declare non-null variables that resolveVars must
-// supply; a missing one is an error only Linear reports.
-func TestResolveVarsCoverEveryVariable(t *testing.T) {
-	inProcess(t)
-	for doc, extra := range map[string][]string{qCreateResolve: {"team", "id", "withID"}, qUpdateResolve: {"id"}} {
-		q, err := parser.ParseQuery(&ast.Source{Input: doc})
-		if err != nil {
-			t.Fatal(err)
-		}
-		var declared []string
-		for _, v := range q.Operations[0].VariableDefinitions {
-			declared = append(declared, v.Variable)
-		}
-		supplied := extra
-		for k := range (&wanted{input: map[string]any{}}).resolveVars(nil) {
-			supplied = append(supplied, k)
-		}
-		sort.Strings(declared)
-		sort.Strings(supplied)
-		if !slices.Equal(declared, supplied) {
-			t.Errorf("%s:\n declared %v\n supplied %v", opName(doc), declared, supplied)
-		}
-	}
-}
 
 func TestIssueDelegate(t *testing.T) {
 	t.Parallel()
