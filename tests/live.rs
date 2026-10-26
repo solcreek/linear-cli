@@ -8,7 +8,7 @@
 
 use serde_json::Value;
 use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -35,7 +35,7 @@ fn scratch() -> PathBuf {
 
 /// linearctl against the real API: the key from the environment, nothing
 /// else of linearctl's, an empty home.
-fn command(dir: &PathBuf, args: &[&str]) -> Command {
+fn command(dir: &Path, args: &[&str]) -> Command {
     let mut c = Command::new(BIN);
     c.args(args).current_dir(dir);
     for (k, _) in std::env::vars() {
