@@ -27,6 +27,10 @@ publish() {
 		echo "skip $name@$version: already published"
 		return
 	fi
+	# A prerelease (1.2.0-rc.1) goes out under the next tag, never latest.
+	case $version in
+	*-*) set -- --tag next "$@" ;;
+	esac
 	(cd "$dir" && npm publish --access public "$@")
 	echo "published $name@$version"
 }
