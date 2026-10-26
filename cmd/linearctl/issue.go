@@ -150,6 +150,19 @@ func issueList() *cobra.Command {
 			return nil
 		},
 	}
+	filterFlags(c)
+	c.Flags().StringArray("id", nil, "only the issue `ISSUE` (ENG-123 or a UUID; repeatable); one not\nfound is a problem (exit 3)")
+	c.Flags().String("query", "", "full-text search for `TEXT`")
+	c.Flags().Bool("include-comments", false, "with --query, also match the text of comments")
+	c.Flags().String("sort", "", "order by `FIELD`: updated (default), created, priority")
+	limitFlag(c, 25)
+	cursorFlag(c)
+	addFieldsFlag(c, issueRowFields)
+	return c
+}
+
+// filterFlags are the flags listFilter reads: issue list's and watch's.
+func filterFlags(c *cobra.Command) {
 	c.Flags().StringArray("team", nil, "only issues of team `KEY` (e.g. ENG; repeatable, any of)")
 	c.Flags().StringArray("priority", nil, "only issues of `PRIORITY`: 0-4 or none, urgent, high, medium, low\n(repeatable, any of)")
 	c.Flags().String("assignee", "", "only issues assigned to `WHO`: me, none, or an email")
@@ -164,14 +177,6 @@ func issueList() *cobra.Command {
 	c.Flags().String("attachment-url", "", "only issues with an attachment at `URL` (e.g. a linked pull request)")
 	c.Flags().String("cycle", "", "only issues in cycle `CYCLE`: current, next, or a cycle number")
 	c.Flags().String("updated-since", "", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h")
-	c.Flags().StringArray("id", nil, "only the issue `ISSUE` (ENG-123 or a UUID; repeatable); one not\nfound is a problem (exit 3)")
-	c.Flags().String("query", "", "full-text search for `TEXT`")
-	c.Flags().Bool("include-comments", false, "with --query, also match the text of comments")
-	c.Flags().String("sort", "", "order by `FIELD`: updated (default), created, priority")
-	limitFlag(c, 25)
-	cursorFlag(c)
-	addFieldsFlag(c, issueRowFields)
-	return c
 }
 
 // idsFlag is issue list's --id values as Linear's id filter takes them.
