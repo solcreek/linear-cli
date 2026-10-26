@@ -9,6 +9,11 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Added
+
+- `project show` carries `health`, `createdAt`, `updatedAt`, the teams' `name`,
+  and `documents` (`id`, `title`, `url`), read in full 250 at a time.
+
 ## [0.7.0] - 2026-10-26
 
 ### Added

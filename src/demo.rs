@@ -310,6 +310,10 @@ fn build() -> World {
                 ("teams".into(), V::L(vec![team_v.clone()])),
                 ("projectMilestones".into(), V::L(vec![])),
                 ("issues".into(), V::L(vec![])),
+                ("health".into(), NULL),
+                ("documents".into(), V::L(vec![])),
+                ("createdAt".into(), at(&seed["anchor"])),
+                ("updatedAt".into(), at(&seed["anchor"])),
             ]),
         );
         projects.insert(name, id);

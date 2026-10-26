@@ -19,7 +19,11 @@ const FIELDS: &[&str] = &[
     "startDate",
     "targetDate",
     "progress",
+    "health",
+    "createdAt",
+    "updatedAt",
     "teams",
+    "documents",
     "projectMilestones",
     "issues",
 ];
@@ -77,10 +81,31 @@ fn find_project(run: &mut Run, cl: &Client, r: &str, filter: Value, issues: u64)
     }
 }
 
+/// Reads the rest of a project's documents, 250 at a time, and leaves
+/// them as {nodes} for flatten.
+fn all_documents(run: &mut Run, cl: &Client, p: &mut Value) -> R {
+    let id = str_at(p, "id");
+    while p["documents"]["pageInfo"]["hasNextPage"] == json!(true) {
+        let after = p["documents"]["pageInfo"]["endCursor"].clone();
+        let mut page = cl.query(run, queries::PROJECT_DOCUMENTS, json!({"id": id, "after": after}))?;
+        let got = &mut page["project"]["documents"];
+        let nodes = got["nodes"].as_array_mut().map(std::mem::take).unwrap_or_default();
+        if let Some(have) = p["documents"]["nodes"].as_array_mut() {
+            have.extend(nodes);
+        }
+        p["documents"]["pageInfo"] = got["pageInfo"].take();
+    }
+    if let Some(Value::Object(d)) = p.get_mut("documents") {
+        d.shift_remove("pageInfo");
+    }
+    Ok(())
+}
+
 fn show_cmd() -> Cmd {
     let c = Cmd::new("show PROJECT", "Show a project: its overview, milestones and issues")
         .long(
-            "Show a project: its description, overview (content), status, milestones and issues.\n\
+            "Show a project: its description, overview (content), status, health, documents,\n\
+milestones and issues. Documents are read in full.\n\
 PROJECT is a linear.app project URL, its slugId (the hex the URL ends with), a UUID,\n\
 or its exact name.",
         )
@@ -101,7 +126,9 @@ fn show(run: &mut Run, ctx: &Ctx) -> R {
         return Err(usage("--issues is at most 250; page with 'linearctl issue list --project'"));
     }
     let cl = run.client()?;
-    let p = flatten(find_project(run, &cl, &ctx.args[0], filter, issues)?);
+    let mut p = find_project(run, &cl, &ctx.args[0], filter, issues)?;
+    all_documents(run, &cl, &mut p)?;
+    let p = flatten(p);
     if run.json {
         return run.print_json(json!({"project": pick(p, &fields)}));
     }

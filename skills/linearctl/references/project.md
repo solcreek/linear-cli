@@ -28,12 +28,14 @@ Flags:
 ## linearctl project show
 
 ```
-Show a project: its description, overview (content), status, milestones and issues.
+Show a project: its description, overview (content), status, health, documents,
+milestones and issues. Documents are read in full.
 PROJECT is a linear.app project URL, its slugId (the hex the URL ends with), a UUID,
 or its exact name.
 
 Fields: id, name, slugId, url, description, content, status, lead, startDate,
-targetDate, progress, teams, projectMilestones, issues
+targetDate, progress, health, createdAt, updatedAt, teams, documents,
+projectMilestones, issues
 
 Usage:
   linearctl project show PROJECT [flags]

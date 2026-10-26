@@ -89,3 +89,34 @@ func TestProjectUpdate(t *testing.T) {
 		}
 	}
 }
+
+func TestProjectShowReadsEveryDocument(t *testing.T) {
+	t.Parallel()
+	doc := func(n string) map[string]any {
+		return map[string]any{"id": "d-" + n, "title": n, "url": "https://linear.app/acme/document/" + n}
+	}
+	p := projectNode("q4")
+	p["health"], p["documents"] = "atRisk", conn("d1", doc("a"))
+	p["teams"] = nodes(map[string]any{"id": "t-eng", "key": "ENG", "name": "Engineering"})
+	var after []any
+	api := newFake(t).on("ProjectFind", map[string]any{"projects": conn("", p)}).
+		onFunc("ProjectDocuments", func(v map[string]any) (int, any, map[string]string) {
+			after = append(after, v["after"])
+			return 200, map[string]any{"data": map[string]any{"project": map[string]any{"documents": conn("", doc("b"))}}}, nil
+		})
+	r := runWith(t, opts{api: api, key: testKey}, "project", "show", "q4", "--fields", "health,teams,documents", "--json")
+	got, _ := decode(t, r.out)["project"].(map[string]any)
+	if r.code != 0 || got["health"] != "atRisk" || jsonOf(got["teams"]) != `[{"id":"t-eng","key":"ENG","name":"Engineering"}]` ||
+		jsonOf(got["documents"]) != `[{"id":"d-a","title":"a","url":"https://linear.app/acme/document/a"},{"id":"d-b","title":"b","url":"https://linear.app/acme/document/b"}]` {
+		t.Fatalf("exit %d, %q", r.code, r.out)
+	}
+	if jsonOf(after) != `["d1"]` || api.last("ProjectDocuments").Vars["id"] != "p-q4" {
+		t.Errorf("follow-ups %v", after)
+	}
+	q := api.last("ProjectFind").Query
+	for _, want := range []string{"health", "createdAt", "updatedAt", "teams(first: 20) { nodes { id key name } }"} {
+		if !strings.Contains(q, want) {
+			t.Errorf("ProjectFind lacks %q", want)
+		}
+	}
+}

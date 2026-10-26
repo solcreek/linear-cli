@@ -251,8 +251,17 @@ pub const PROJECTS: &str = concat!(
 );
 
 /// first: 2 so a name two projects share shows up as ambiguous.
+/// project show: a project's documents after the first 250.
+pub const PROJECT_DOCUMENTS: &str = concat!(
+    "query ProjectDocuments($id: String!, $after: String) {\n  project(id: $id) { documents(first: 250, after: $after) { nodes { id title url } ",
+    page_info!(),
+    " } }\n}"
+);
+
 pub const PROJECT_FIND: &str = concat!(
-    "query ProjectFind($filter: ProjectFilter!, $issues: Int!, $withIssues: Boolean!) {\n  projects(filter: $filter, first: 2) { nodes {\n    id name slugId url description content startDate targetDate progress\n    status { id name type } lead { id name email }\n    teams(first: 20) { nodes { id key } }\n    projectMilestones(first: 50) { nodes { id name targetDate progress } }\n    issues(first: $issues) @include(if: $withIssues) { nodes {",
+    "query ProjectFind($filter: ProjectFilter!, $issues: Int!, $withIssues: Boolean!) {\n  projects(filter: $filter, first: 2) { nodes {\n    id name slugId url description content startDate targetDate progress health createdAt updatedAt\n    status { id name type } lead { id name email }\n    teams(first: 20) { nodes { id key name } }\n    documents(first: 250) { nodes { id title url } ",
+    page_info!(),
+    " }\n    projectMilestones(first: 50) { nodes { id name targetDate progress } }\n    issues(first: $issues) @include(if: $withIssues) { nodes {",
     issue_row!(),
     " } }\n  } }\n}"
 );
@@ -395,6 +404,7 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("Notifications", NOTIFICATIONS),
         ("Milestones", MILESTONES),
         ("ProjectFind", PROJECT_FIND),
+        ("ProjectDocuments", PROJECT_DOCUMENTS),
         ("ProjectUpdate", PROJECT_UPDATE),
     ]
 }
