@@ -12,6 +12,37 @@ macro_rules! issue_row {
     };
 }
 
+/// issue show's collections, read in full: 250 at a time, the first page
+/// in IssueShow (""), the rest in IssueShowMore ("more"), whose cursors
+/// are its variables.
+macro_rules! show_connections {
+    ("") => {
+        concat!(
+            "allLabels: labels(first: 250) { nodes { id name color } ", page_info!(), " }\n    ",
+            "children(first: 250) { nodes { identifier title state { name type } } ", page_info!(), " }\n    ",
+            "relations(first: 250) { nodes { ", relation_node!(), " } ", page_info!(), " }\n    ",
+            "inverseRelations(first: 250) { nodes { ", relation_node!(), " } ", page_info!(), " }\n    ",
+            "attachments(first: 250) { nodes { title url } ", page_info!(), " }"
+        )
+    };
+    ("more") => {
+        concat!(
+            "allLabels: labels(first: 250, after: $labels) @include(if: $withLabels) { nodes { id name color } ", page_info!(), " }\n    ",
+            "children(first: 250, after: $children) @include(if: $withChildren) { nodes { identifier title state { name type } } ", page_info!(), " }\n    ",
+            "relations(first: 250, after: $relations) @include(if: $withRelations) { nodes { ", relation_node!(), " } ", page_info!(), " }\n    ",
+            "inverseRelations(first: 250, after: $inverse) @include(if: $withInverse) { nodes { ", relation_node!(), " } ", page_info!(), " }\n    ",
+            "attachments(first: 250, after: $attachments) @include(if: $withAttachments) { nodes { title url } ", page_info!(), " }"
+        )
+    };
+}
+
+/// A relation as issue show has it: both issues, each with its title.
+macro_rules! relation_node {
+    () => {
+        "id type issue { identifier title } relatedIssue { identifier title }"
+    };
+}
+
 macro_rules! page_info {
     () => {
         "pageInfo { hasNextPage endCursor }"
@@ -84,7 +115,17 @@ pub const ISSUE_SEARCH: &str = concat!(
 pub const ISSUE_SHOW: &str = concat!(
     "query IssueShow($id: String!, $comments: Int!, $withComments: Boolean!) {\n  issue(id: $id) {",
     issue_row!(),
-    "\n    description dueDate estimate branchName startedAt completedAt canceledAt archivedAt\n    creator { name email }\n    parent { identifier title }\n    children(first: 50) { nodes { identifier title state { name type } } }\n    relations(first: 50) { nodes { id type relatedIssue { identifier title } } }\n    inverseRelations(first: 50) { nodes { id type issue { identifier title } } }\n    attachments(first: 50) { nodes { title url } }\n    comments(first: $comments) @include(if: $withComments) { nodes { id body createdAt url user { name email } parent { id } } }\n  }\n}"
+    "\n    description dueDate estimate branchName startedAt completedAt canceledAt archivedAt\n    creator { id name email }\n    cycle { name startsAt endsAt }\n    project { status { name type } }\n    parent { identifier title }\n    ",
+    show_connections!(""),
+    "\n    comments(first: $comments) @include(if: $withComments) { nodes { id body createdAt url user { name email } parent { id } } }\n  }\n}"
+);
+
+/// The pages of issue show's collections after the first, each read only
+/// while the one before said there is more.
+pub const ISSUE_SHOW_MORE: &str = concat!(
+    "query IssueShowMore($id: String!, $labels: String, $withLabels: Boolean!, $children: String, $withChildren: Boolean!,\n  $relations: String, $withRelations: Boolean!, $inverse: String, $withInverse: Boolean!,\n  $attachments: String, $withAttachments: Boolean!) {\n  issue(id: $id) {\n    ",
+    show_connections!("more"),
+    "\n  }\n}"
 );
 
 /// What issue create needs resolved, in one request: names to ids, and
@@ -302,6 +343,7 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("IssueList", ISSUE_LIST),
         ("IssueSearch", ISSUE_SEARCH),
         ("IssueShow", ISSUE_SHOW),
+        ("IssueShowMore", ISSUE_SHOW_MORE),
         ("CreateResolve", CREATE_RESOLVE),
         ("IssueCreate", ISSUE_CREATE),
         ("UpdateResolve", UPDATE_RESOLVE),

@@ -688,7 +688,7 @@ impl Resolver<'_> {
                 Selection::Field(f) => {
                     if self.included(&f.directives) {
                         let value = node.get(&f.name).map_or(Value::Null, |x| self.value(x, f));
-                        out.insert(f.key().into(), value);
+                        merge(out.entry(f.key()).or_insert(Value::Null), value);
                     }
                 }
                 Selection::Inline { on, selections } => {
@@ -897,6 +897,20 @@ const COMPARATORS: &[&str] = &[
     "lte",
     "null",
 ];
+
+/// Puts value where a field's answer goes. A field selected twice, as
+/// cycle { id } and cycle { name }, answers once with both selections, as
+/// GraphQL merges them.
+fn merge(into: &mut Value, value: Value) {
+    match (into, value) {
+        (Value::Object(have), Value::Object(more)) => {
+            for (k, v) in more {
+                merge(have.entry(k).or_insert(Value::Null), v);
+            }
+        }
+        (slot, v) => *slot = v,
+    }
+}
 
 fn only_comparators(c: &Map<String, Value>) -> bool {
     c.keys().all(|k| COMPARATORS.contains(&k.as_str()))

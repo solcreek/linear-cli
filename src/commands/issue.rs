@@ -462,7 +462,9 @@ fn show(run: &mut Run, ctx: &Ctx) -> R {
         .query(run, queries::ISSUE_SHOW, json!({"id": r, "comments": comments, "withComments": comments > 0}))
         .map_err(|e| e.not_found(&format!("issue {r}"), fail::FIND_ISSUE))?;
     let mut data = data;
-    let issue = flatten(data["issue"].take());
+    let mut issue = data["issue"].take();
+    read_all(run, &cl, &mut issue)?;
+    let issue = flatten(issue);
     if run.json {
         let mut doc = object([("issue", pick(issue, &fields))]);
         if !expires.is_null() {
@@ -494,6 +496,53 @@ fn show(run: &mut Run, ctx: &Ctx) -> R {
         }
     }
     run.print(&s)
+}
+
+/// issue show's collections: the field in the answer, and the variables
+/// IssueShowMore takes for its cursor and for whether to read it.
+const SHOW_CONNECTIONS: &[(&str, &str, &str)] = &[
+    ("allLabels", "labels", "withLabels"),
+    ("children", "children", "withChildren"),
+    ("relations", "relations", "withRelations"),
+    ("inverseRelations", "inverse", "withInverse"),
+    ("attachments", "attachments", "withAttachments"),
+];
+
+/// Reads the rest of each collection issue show has the first page of,
+/// so none is cut short, then leaves each as {nodes} for flatten. The
+/// labels come back under their own name.
+fn read_all(run: &mut Run, cl: &crate::client::Client, issue: &mut Value) -> R {
+    let more = |issue: &Value, field: &str| issue[field]["pageInfo"]["hasNextPage"] == json!(true);
+    while SHOW_CONNECTIONS.iter().any(|(field, ..)| more(issue, field)) {
+        let mut vars = json!({"id": str_at(issue, "id")});
+        for (field, cursor, with) in SHOW_CONNECTIONS {
+            let next = more(issue, field);
+            vars[*cursor] = if next { issue[*field]["pageInfo"]["endCursor"].clone() } else { Value::Null };
+            vars[*with] = json!(next);
+        }
+        let mut page = cl.query(run, queries::ISSUE_SHOW_MORE, vars)?;
+        for (field, ..) in SHOW_CONNECTIONS {
+            if !more(issue, field) {
+                continue;
+            }
+            let got = &mut page["issue"][*field];
+            let nodes = got["nodes"].as_array_mut().map(std::mem::take).unwrap_or_default();
+            if let Some(have) = issue[*field]["nodes"].as_array_mut() {
+                have.extend(nodes);
+            }
+            issue[*field]["pageInfo"] = got["pageInfo"].take();
+        }
+    }
+    let Some(m) = issue.as_object_mut() else { return Ok(()) };
+    for (field, ..) in SHOW_CONNECTIONS {
+        if let Some(Value::Object(c)) = m.get_mut(*field) {
+            c.shift_remove("pageInfo");
+        }
+    }
+    if let Some(labels) = m.shift_remove("allLabels") {
+        m.insert("labels".into(), labels);
+    }
+    Ok(())
 }
 
 /// The flags issue create and update share.

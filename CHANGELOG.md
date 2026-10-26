@@ -23,6 +23,14 @@ names are only ever added, never renamed or removed.
   two issues in either direction and lists each in `relations`. One that fails
   to delete is a partial result (exit 3) with `problems`.
 
+### Changed
+
+- `issue show` reads its labels, children, relations, inverse relations and
+  attachments in full, 250 at a time; it stopped at 50 (labels at 20). Each
+  relation names both issues with their titles. It adds `creator.id`,
+  `cycle.name`, `cycle.startsAt` and `cycle.endsAt`, and `project.status`
+  (`name`, `type`).
+
 ### Fixed
 
 - `--label`, `--add-label` and `--remove-label` never resolve to a group label,

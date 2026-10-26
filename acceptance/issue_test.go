@@ -859,3 +859,43 @@ func TestIssueCreateAmbiguousListsTheCandidates(t *testing.T) {
 		t.Error("looked up what is available for a project")
 	}
 }
+
+func TestIssueShowReadsEveryCollectionInFull(t *testing.T) {
+	t.Parallel()
+	label := func(n string) map[string]any { return map[string]any{"id": "l-" + n, "name": n} }
+	rel := func(n string) map[string]any {
+		return map[string]any{"id": "r-" + n, "type": "blocks", "issue": map[string]any{"identifier": "ENG-12", "title": "t"},
+			"relatedIssue": map[string]any{"identifier": n, "title": "t"}}
+	}
+	issue := issueNode("ENG-12", "Login times out")
+	issue["allLabels"] = conn("lab1", label("a"))
+	issue["relations"] = conn("rel1", rel("ENG-1"))
+	issue["inverseRelations"], issue["children"], issue["attachments"] = conn(""), conn(""), conn("")
+	var sent []map[string]any
+	api := newFake(t).on("IssueShow", map[string]any{"issue": issue}).
+		onFunc("IssueShowMore", func(v map[string]any) (int, any, map[string]string) {
+			sent = append(sent, v)
+			if len(sent) == 1 {
+				return 200, map[string]any{"data": map[string]any{"issue": map[string]any{
+					"allLabels": conn("", label("b")), "relations": conn("rel2", rel("ENG-2"))}}}, nil
+			}
+			return 200, map[string]any{"data": map[string]any{"issue": map[string]any{"relations": conn("", rel("ENG-3"))}}}, nil
+		})
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "show", "ENG-12", "--fields", "labels,relations,children", "--json")
+	is, _ := decode(t, r.out)["issue"].(map[string]any)
+	if r.code != 0 || jsonOf(is["labels"]) != `[{"id":"l-a","name":"a"},{"id":"l-b","name":"b"}]` ||
+		len(is["relations"].([]any)) != 3 || jsonOf(is["children"]) != `[]` {
+		t.Fatalf("exit %d, %q", r.code, r.out)
+	}
+	if len(sent) != 2 {
+		t.Fatalf("%d follow-up reads, want 2", len(sent))
+	}
+	first, second := sent[0], sent[1]
+	if first["id"] != "id-ENG-12" || first["labels"] != "lab1" || first["withLabels"] != true || first["relations"] != "rel1" ||
+		first["withChildren"] != false || first["children"] != nil {
+		t.Errorf("first follow-up %v", first)
+	}
+	if second["withLabels"] != false || second["relations"] != "rel2" || second["withRelations"] != true {
+		t.Errorf("second follow-up %v", second)
+	}
+}

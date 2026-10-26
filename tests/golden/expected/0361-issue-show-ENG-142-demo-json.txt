@@ -86,11 +86,15 @@ exit: 0
     "createdAt": "<TIME>",
     "creator": {
       "email": "jonas@northwind.example",
+      "id": "a2f6f9fa-8ddb-545b-bdc8-e9a46f8c20bc",
       "name": "Jonas Berg"
     },
     "cycle": {
+      "endsAt": "<TIME>",
       "id": "16fc866a-a42b-5d51-8f8e-765e0fa3ea5d",
-      "number": 24
+      "name": null,
+      "number": 24,
+      "startsAt": "<TIME>"
     },
     "delegate": null,
     "description": "Customers who paste a coupon code from our emails get **\"This code is not valid\"** at the last step of checkout. The pasted text ends with a space or a newline.\n\n## Steps to reproduce\n\n1. Add any item to the cart.\n2. Paste `WELCOME10 ` (with the trailing space) into *Coupon code*.\n3. Click **Pay now**.\n\nExpected: 10% off. Actual: a 422 from `POST /api/checkout/confirm`:\n\n```json\n{\n  \"error\": \"coupon_invalid\",\n  \"code\": \"WELCOME10 \"\n}\n```\n\n![checkout-error.png](https://uploads.linear.app/demo/checkout-error.png)\n\n## Scope\n\n- [x] Reproduced on web (Chrome, Safari)\n- [x] Reproduced on iOS 3.4.1\n- [ ] Check Android\n- [ ] Check the partner API\n\n\u003e Support says this is the most common checkout complaint this week: 41 tickets since Monday.\n\nThe server fix is in ENG-143; the regression test in ENG-144.",
@@ -119,12 +123,20 @@ exit: 0
     "priorityLabel": "Urgent",
     "project": {
       "id": "5dc3e15c-4273-5511-8167-baac88349ee8",
-      "name": "Checkout v2"
+      "name": "Checkout v2",
+      "status": {
+        "name": "In Progress",
+        "type": "started"
+      }
     },
     "projectMilestone": null,
     "relations": [
       {
         "id": "815d98f8-ac42-5b70-a78e-97d5aff9dc96",
+        "issue": {
+          "identifier": "ENG-142",
+          "title": "Checkout fails when a coupon code has trailing whitespace"
+        },
         "relatedIssue": {
           "identifier": "ENG-131",
           "title": "Show a clear error when a coupon has expired"
