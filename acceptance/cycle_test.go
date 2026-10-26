@@ -105,7 +105,8 @@ func TestCycleShowRefs(t *testing.T) {
 func TestCycleShowNotFoundAndAmbiguous(t *testing.T) {
 	t.Parallel()
 	r := runWith(t, opts{api: cycleFake(t), key: testKey}, "cycle", "show", "next", "--team", "ENG", "--json")
-	if e, _ := decode(t, r.out)["error"].(string); r.code != exitFailed || !strings.Contains(e, "not found: cycle next") {
+	if d := decode(t, r.out); r.code != exitFailed || !strings.Contains(d["error"].(string), "not found: cycle next") ||
+		!strings.HasPrefix(d["hint"].(string), "'linearctl cycle list") {
 		t.Errorf("none: exit %d, %q", r.code, r.out)
 	}
 	r = runWith(t, opts{api: cycleFake(t, cycleNode(23, "ENG"), cycleNode(23, "WEB")), key: testKey}, "cycle", "show", "current", "--json")

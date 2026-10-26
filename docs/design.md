@@ -63,6 +63,15 @@ HTML comment marker.
 | 4 | busy | the config or credentials lock is held; nothing changed |
 | 5 | auth | no API key, or Linear rejected it. Fix: `linearctl auth login --yes` |
 | 6 | rate-limited | Linear's request or complexity budget is spent; JSON has `retryAt` (RFC 3339) |
+| 7 | conflict | `--if-updated-at` no longer holds; read the issue again |
+
+Under `--json` a failure is `{"error": …, "usage": bool}` on stdout. It adds
+`"hint"` when there is a next step the message does not already name: the
+command that lists what was not found (an issue, comment, project or cycle), the read
+to make after a conflict, or, after a timeout, a lost connection or a 5xx, that
+rerunning is safe (a change that already applied reports `changed: false`).
+Without `--json` the hint is a `hint: …` line on stderr. `error` itself is
+unchanged by a hint, so callers that match on it keep working.
 
 ## Inputs every command treats the same way
 

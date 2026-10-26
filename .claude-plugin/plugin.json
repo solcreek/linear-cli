@@ -1,0 +1,13 @@
+{
+  "name": "linearctl",
+  "description": "Read and change Linear issues, comments, projects and relations with the linearctl CLI",
+  "author": {
+    "name": "solcreek"
+  },
+  "homepage": "https://github.com/solcreek/linear-cli",
+  "repository": "https://github.com/solcreek/linear-cli",
+  "license": "MIT",
+  "skills": [
+    "./skills/linearctl"
+  ]
+}

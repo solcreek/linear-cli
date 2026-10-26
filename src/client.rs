@@ -4,7 +4,7 @@
 //! document it sends is in queries.rs. One agent per process, so a
 //! command's requests, and serve's, share one connection.
 
-use crate::fail::{Fail, R, failed};
+use crate::fail::{self, Fail, R, failed};
 use crate::json;
 use crate::run::{Run, VERSION};
 use crate::util::printable;
@@ -171,7 +171,8 @@ impl Client {
             Ok((status, headers, data))
         })?;
         *self.header.borrow_mut() = Some(headers);
-        let data = data.map_err(|e| failed(format!("reading Linear's answer: {}", transport_cause(&e))))?;
+        let data =
+            data.map_err(|e| failed(format!("reading Linear's answer: {}", transport_cause(&e))).hint(fail::RERUN))?;
         let parsed = json::parse(&data);
         let errors: Vec<Value> = match &parsed {
             Ok(v) => v.get("errors").and_then(Value::as_array).cloned().unwrap_or_default(),
@@ -196,8 +197,10 @@ impl Client {
         match status {
             401 => return Err(rejected()),
             429 => return Err(self.limited()),
-            _ if !wellformed => return Err(failed(format!("Linear answered HTTP {status} without JSON"))),
-            s if s >= 400 && errors.is_empty() => return Err(failed(format!("Linear answered HTTP {s}"))),
+            _ if !wellformed => {
+                return Err(server(status, failed(format!("Linear answered HTTP {status} without JSON"))));
+            }
+            s if s >= 400 && errors.is_empty() => return Err(server(s, failed(format!("Linear answered HTTP {s}")))),
             _ => {}
         }
         let mut v = parsed.unwrap_or(Value::Null);
@@ -223,15 +226,20 @@ impl Client {
                 if !self.noted.swap(true, Ordering::Relaxed) {
                     run.eprint(&format!("linearctl: waiting on {host}\n"));
                 }
-                rx.recv().map_err(|_| failed(format!("cannot reach {host}: the request was lost")))?
+                rx.recv().map_err(|_| failed(format!("cannot reach {host}: the request was lost")).hint(fail::RERUN))?
             }
-            Err(mpsc::RecvTimeoutError::Disconnected) => return Err(failed(format!("cannot reach {host}"))),
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                return Err(failed(format!("cannot reach {host}")).hint(fail::RERUN));
+            }
         };
-        result.map_err(|e| match e {
-            ureq::Error::Timeout(_) => {
-                failed(format!("{host} did not answer within {} s; raise --timeout", self.timeout))
+        result.map_err(|e| {
+            match e {
+                ureq::Error::Timeout(_) => {
+                    failed(format!("{host} did not answer within {} s; raise --timeout", self.timeout))
+                }
+                e => failed(format!("cannot reach {host}: {}", transport_cause(&e))),
             }
-            e => failed(format!("cannot reach {host}: {}", transport_cause(&e))),
+            .hint(fail::RERUN)
         })
     }
 
@@ -316,7 +324,7 @@ impl Client {
             401 => return Err(rejected()),
             404 | 403 => return Err(failed(format!("not found: {url} (or this API key cannot see it)"))),
             200 => {}
-            s => return Err(failed(format!("{} answered HTTP {s}", host_of(url)))),
+            s => return Err(server(s, failed(format!("{} answered HTTP {s}", host_of(url))))),
         }
         let data = match data {
             Some(Ok(d)) => d,
@@ -331,6 +339,12 @@ impl Client {
         }
         Ok((data, kind))
     }
+}
+
+/// A failed answer; Linear's own trouble (5xx) may pass, so a rerun is worth
+/// it, and safe.
+fn server(status: u16, f: Fail) -> Fail {
+    if status >= 500 { f.hint(fail::RERUN) } else { f }
 }
 
 fn rejected() -> Fail {
@@ -457,7 +471,9 @@ mod tests {
         });
         let e = client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null).unwrap_err();
         assert!(matches!(e, Fail::Linear { not_found: true, .. }));
-        assert_eq!(e.not_found("issue ENG-9").to_string(), "not found: issue ENG-9 (or this API key cannot see it)");
+        let e = e.not_found("issue ENG-9", "find it");
+        assert_eq!(e.to_string(), "not found: issue ENG-9 (or this API key cannot see it)");
+        assert_eq!(e.hint_text(), Some("find it"));
         // The message offered to people, made safe for a terminal.
         let api = linear(|| {
             Response::json(
@@ -475,6 +491,11 @@ mod tests {
         let api = linear(|| Response::json(500, "{}"));
         let e = client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null).unwrap_err();
         assert_eq!(e.to_string(), "Linear answered HTTP 500");
+        assert_eq!(e.hint_text(), Some(fail::RERUN));
+        // A 4xx is the request's fault: a rerun would fail the same way.
+        let api = linear(|| Response::json(404, "{}"));
+        let e = client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null).unwrap_err();
+        assert_eq!((e.to_string().as_str(), e.hint_text()), ("Linear answered HTTP 404", None));
     }
 
     #[test]
@@ -483,9 +504,11 @@ mod tests {
         let mut r = run();
         let e = client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null).unwrap_err();
         assert!(e.to_string().contains("HTTP 502 without JSON"), "{e}");
+        assert_eq!(e.hint_text(), Some(fail::RERUN));
         let e =
             client(&r, "http://127.0.0.1:9/graphql").query(&mut r, crate::queries::VIEWER, Value::Null).unwrap_err();
         assert!(e.to_string().starts_with("cannot reach 127.0.0.1:9: "), "{e}");
+        assert_eq!(e.hint_text(), Some(fail::RERUN));
     }
 
     #[test]
@@ -498,6 +521,7 @@ mod tests {
         r.timeout = 1;
         let e = client(&r, &api.url).query(&mut r, crate::queries::VIEWER, Value::Null).unwrap_err();
         assert_eq!(e.to_string(), format!("{} did not answer within 1 s; raise --timeout", host_of(&api.url)));
+        assert_eq!(e.hint_text(), Some(fail::RERUN));
     }
 
     #[test]
