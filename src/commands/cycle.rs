@@ -83,7 +83,20 @@ fn cycle_filter(ctx: &Ctx, word: &str) -> R<Value> {
 /// A cycle that is not there, and where to see the ones that are.
 fn cycle_not_found(word: &str) -> Fail {
     missing(format!("not found: cycle {word} (or this API key cannot see it)"))
+        .with(sought("cycle", word))
         .hint("'linearctl cycle list --team KEY' lists a team's cycles")
+}
+
+/// A cycle word two teams' cycles fit, naming them.
+fn cycle_ambiguous(word: &str, n: &[Value]) -> Fail {
+    ambiguous(format!(
+        "cycle {} is ambiguous: teams {} and {} both have one; pass --team",
+        quote_go(word),
+        str_at(&n[0], "team.key"),
+        str_at(&n[1], "team.key")
+    ))
+    .with(sought("cycle", word))
+    .with(json!({"candidates": candidates(n)}))
 }
 
 /// The one cycle the filter finds: none is not found, and two (the same
@@ -94,12 +107,7 @@ fn find_cycle(run: &mut Run, cl: &Client, word: &str, vars: Value) -> R<Value> {
     match n.len() {
         0 => Err(cycle_not_found(word)),
         1 => super::issue::nodes(&data["cycles"]).into_iter().next().ok_or_else(|| cycle_not_found(word)),
-        _ => Err(ambiguous(format!(
-            "cycle {} is ambiguous: teams {} and {} both have one; pass --team",
-            quote_go(word),
-            str_at(&n[0], "team.key"),
-            str_at(&n[1], "team.key")
-        ))),
+        _ => Err(cycle_ambiguous(word, &n)),
     }
 }
 
@@ -277,7 +285,7 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     }
     let teams = super::issue::nodes(&r["teams"]);
     let Some(t) = teams.first() else {
-        return Err(missing(format!("no team with key {team}; see 'linearctl team list'")));
+        return Err(missing(format!("no team with key {team}; see 'linearctl team list'")).with(sought("team", &team)));
     };
     input.insert("teamId".into(), json!(str_at(t, "id")));
     input.insert("id".into(), json!(id));
@@ -298,12 +306,7 @@ fn find_one(run: &mut Run, cl: &Client, ctx: &Ctx, word: &str) -> R<Value> {
     match n.len() {
         0 => Err(cycle_not_found(word)),
         1 => Ok(n[0].clone()),
-        _ => Err(ambiguous(format!(
-            "cycle {} is ambiguous: teams {} and {} both have one; pass --team",
-            quote_go(word),
-            str_at(&n[0], "team.key"),
-            str_at(&n[1], "team.key")
-        ))),
+        _ => Err(cycle_ambiguous(word, &n)),
     }
 }
 

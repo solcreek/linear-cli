@@ -63,6 +63,7 @@ fn find_project(run: &mut Run, cl: &Client, r: &str, filter: Value, issues: u64)
     let n = super::issue::nodes(&data["projects"]);
     match n.len() {
         0 => Err(missing(format!("not found: project {r} (or this API key cannot see it)"))
+            .with(sought("project", r))
             .hint("'linearctl project list' lists the projects this key can see")),
         1 => Ok(n[0].clone()),
         _ => Err(ambiguous(format!(
@@ -70,7 +71,9 @@ fn find_project(run: &mut Run, cl: &Client, r: &str, filter: Value, issues: u64)
             quote_go(r),
             str_at(&n[0], "url"),
             str_at(&n[1], "url")
-        ))),
+        ))
+        .with(sought("project", r))
+        .with(json!({"candidates": candidates(&n)}))),
     }
 }
 

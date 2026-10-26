@@ -1,6 +1,6 @@
 exit: 1
 --- stdout
-{"code":"NOT_FOUND","error":"no label named \"nope\"; see 'linearctl label list'","usage":false}
+{"available":["Bug","Feature","Improvement","Performance","Security","Tech debt","Customer reported"],"code":"NOT_FOUND","error":"no label named \"nope\"; see 'linearctl label list'","kind":"label","name":"nope","usage":false}
 
 --- stderr
 linearctl: no label named "nope"; see 'linearctl label list'

@@ -132,7 +132,8 @@ flags and exit codes as JSON.
 - A failure is `{error, usage, code}`, plus `hint` when there is a next step:
   the command that finds what was not found, or that a rerun is safe. Branch on
   `code` (`NOT_FOUND`, `AMBIGUOUS`, `NETWORK`, …; `describe` lists them all),
-  not on the words of `error`.
+  not on the words of `error`. A name that did not resolve adds `kind` and
+  `name`, `available` (for a state or label) or `candidates` (for `AMBIGUOUS`).
 
 | exit | meaning |
 |---|---|

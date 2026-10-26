@@ -4232,12 +4232,12 @@ exit: 0
     {
       "code": "NOT_FOUND",
       "exit": 1,
-      "meaning": "what was named is not there, or this key cannot see it: look it up with a list command"
+      "meaning": "what was named is not there, or this key cannot see it: look it up with a list command; kind and name say what, available what there is"
     },
     {
       "code": "AMBIGUOUS",
       "exit": 1,
-      "meaning": "a name fits more than one thing, listed in error: name it more precisely"
+      "meaning": "a name fits more than one thing, listed in candidates: name it more precisely"
     },
     {
       "code": "LINEAR_ERROR",

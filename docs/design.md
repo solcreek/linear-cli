@@ -74,6 +74,14 @@ under `errorCodes`, with its exit code): exit 1 alone covers `NOT_FOUND`,
 command that lists what was not found (an issue, comment, project or cycle), the read
 to make after a conflict, or, after a timeout, a lost connection or a 5xx, that
 rerunning is safe (a change that already applied reports `changed: false`).
+
+A name that resolves to nothing or to more than one thing also says what was
+looked for, as `kind` (`state`, `label`, `project`, `team`, `cycle`, `issue`, …)
+and `name`. A `NOT_FOUND` state or label adds `available`, the names the
+team can use (its states; workspace labels and its own, never a group),
+found with one more request made only then. `AMBIGUOUS` adds `candidates`,
+each with `id`, `name` and whichever of `slugId`, `email`, `number`, `team`
+and `project` it has, so a caller can pick one without another lookup.
 Without `--json` the hint is a `hint: …` line on stderr. `error` itself is
 unchanged by a hint, so callers that match on it keep working.
 

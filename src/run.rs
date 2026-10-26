@@ -224,6 +224,11 @@ fn finish(run: &mut Run, args: &[String], result: R) -> i32 {
         if let Some(h) = e.hint_text() {
             doc["hint"] = json!(h);
         }
+        if let (Some(Value::Object(d)), Some(out)) = (e.detail(), doc.as_object_mut()) {
+            for (k, v) in d {
+                out.entry(k.clone()).or_insert_with(|| v.clone());
+            }
+        }
         let _ = run.print_json(doc);
     }
     e.code()

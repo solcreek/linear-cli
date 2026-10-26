@@ -105,10 +105,14 @@ fn relation(run: &mut Run, ctx: &Ctx, create: bool) -> R {
     let a_nodes = super::issue::nodes(&r["a"]);
     let b_nodes = super::issue::nodes(&r["b"]);
     let Some(a) = a_nodes.first() else {
-        return Err(missing(format!("not found: issue {from} (or this API key cannot see it)")).hint(fail::FIND_ISSUE));
+        return Err(missing(format!("not found: issue {from} (or this API key cannot see it)"))
+            .with(sought("issue", &from))
+            .hint(fail::FIND_ISSUE));
     };
     let Some(b) = b_nodes.first() else {
-        return Err(missing(format!("not found: issue {to} (or this API key cannot see it)")).hint(fail::FIND_ISSUE));
+        return Err(missing(format!("not found: issue {to} (or this API key cannot see it)"))
+            .with(sought("issue", &to))
+            .hint(fail::FIND_ISSUE));
     };
     if kind.is_empty() {
         return delete_all(run, &cl, dry, a, b);

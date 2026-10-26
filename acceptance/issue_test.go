@@ -453,7 +453,7 @@ func TestIssueCreateRefusals(t *testing.T) {
 		{[]string{"--parent", "ENG-9"}, map[string]any{"parent": conn("")}, "not found: parent issue ENG-9"},
 	}
 	for _, c := range failed {
-		api := createFake(t, resolveAnswer(c.resolve))
+		api := createFake(t, resolveAnswer(c.resolve)).on("Available", map[string]any{"team": nil})
 		args := append([]string{"issue", "create", "--team", "ENG", "--title", "x", "--dry-run", "--json"}, c.args...)
 		r := runWith(t, opts{api: api, key: testKey}, args...)
 		if e, _ := decode(t, r.out)["error"].(string); r.code != exitFailed || !strings.Contains(e, c.want) {
@@ -810,5 +810,52 @@ func TestIssueCreateSkipsGroupLabels(t *testing.T) {
 	r = runWith(t, opts{api: api, key: testKey}, "issue", "create", "--team", "ENG", "--title", "x", "--label", "area", "--dry-run", "--json")
 	if e, _ := decode(t, r.out)["error"].(string); r.code != exitUsage || !strings.Contains(e, `label "area" is a group`) {
 		t.Errorf("exit %d, %q", r.code, r.out)
+	}
+}
+
+func TestIssueCreateNotFoundNamesWhatTheTeamHas(t *testing.T) {
+	t.Parallel()
+	avail := map[string]any{
+		"team":        map[string]any{"labels": conn("", map[string]any{"name": "bug"}), "states": conn("", map[string]any{"name": "Todo"}, map[string]any{"name": "Done"})},
+		"issueLabels": conn("", map[string]any{"name": "p1"}, map[string]any{"name": "Bug"}),
+	}
+	cases := []struct {
+		flag, want string
+		states     bool
+	}{
+		{"--label", `["bug","p1"]`, false},
+		{"--state", `["Todo","Done"]`, true},
+	}
+	for _, c := range cases {
+		api := createFake(t, resolveAnswer(map[string]any{"issueLabels": conn(""),
+			"teams": conn("", map[string]any{"id": "team-eng", "key": "ENG", "states": conn("")})})).on("Available", avail)
+		r := runWith(t, opts{api: api, key: testKey}, "issue", "create", "--team", "ENG", "--title", "x", c.flag, "nope", "--dry-run", "--json")
+		d := decode(t, r.out)
+		kind := strings.TrimPrefix(c.flag, "--")
+		if r.code != exitFailed || d["code"] != "NOT_FOUND" || d["kind"] != kind || d["name"] != "nope" {
+			t.Errorf("%s: exit %d, %q", c.flag, r.code, r.out)
+		}
+		if got := jsonOf(d["available"]); got != c.want {
+			t.Errorf("%s: available %s, want %s", c.flag, got, c.want)
+		}
+		v := api.last("Available").Vars
+		if v["team"] != "team-eng" || v["states"] != c.states || v["labels"] != !c.states {
+			t.Errorf("%s: Available vars %v", c.flag, v)
+		}
+	}
+}
+
+func TestIssueCreateAmbiguousListsTheCandidates(t *testing.T) {
+	t.Parallel()
+	projects := conn("", map[string]any{"id": "p-1", "name": "Q4", "slugId": "aaa"}, map[string]any{"id": "p-2", "name": "q4", "slugId": "bbb"})
+	api := createFake(t, resolveAnswer(map[string]any{"projects": projects}))
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "create", "--team", "ENG", "--title", "x", "--project", "q4", "--dry-run", "--json")
+	d := decode(t, r.out)
+	want := `[{"id":"p-1","name":"Q4","slugId":"aaa"},{"id":"p-2","name":"q4","slugId":"bbb"}]`
+	if r.code != exitFailed || d["code"] != "AMBIGUOUS" || d["kind"] != "project" || d["name"] != "q4" || jsonOf(d["candidates"]) != want {
+		t.Errorf("exit %d, %q", r.code, r.out)
+	}
+	if slices.Contains(api.ops(), "Available") {
+		t.Error("looked up what is available for a project")
 	}
 }

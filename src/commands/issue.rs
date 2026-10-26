@@ -182,7 +182,10 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
         if doc == queries::ISSUE_LIST_VIEW {
             let found = nodes(&data["matches"]);
             match found.as_slice() {
-                [] => return Err(missing(format!("no saved view {}; see 'linearctl view list'", quote_go(&view)))),
+                [] => {
+                    return Err(missing(format!("no saved view {}; see 'linearctl view list'", quote_go(&view)))
+                        .with(sought("view", &view)));
+                }
                 [v] if str_at(v, "modelName") != "Issue" => {
                     return Err(usage(format!(
                         "view {} lists {}s, not issues",
@@ -195,7 +198,9 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
                     return Err(ambiguous(format!(
                         "more than one saved view is named {}; pass its id",
                         quote_go(&view)
-                    )));
+                    ))
+                    .with(sought("view", &view))
+                    .with(json!({"candidates": candidates(&found)})));
                 }
             }
             return Ok(Page::take(&mut data["customViews"]["nodes"][0]["issues"]));
@@ -725,13 +730,18 @@ impl Wanted {
                     return Err(missing(format!(
                         "no cycle {} in the issue's team; see 'linearctl cycle list'",
                         quote_go(&self.cycle_word)
-                    )));
+                    ))
+                    .with(sought("cycle", &self.cycle_word)));
                 }
-                _ => return Err(ambiguous(format!("more than one cycle is {}", quote_go(&self.cycle_word)))),
+                _ => {
+                    return Err(ambiguous(format!("more than one cycle is {}", quote_go(&self.cycle_word)))
+                        .with(sought("cycle", &self.cycle_word))
+                        .with(json!({"candidates": candidates(cycles)})));
+                }
             }
         }
         if !self.state.is_empty() {
-            let id = one("workflow state", &self.state, states, "'linearctl state list'")?;
+            let id = one("state", "workflow state", &self.state, states, "'linearctl state list'")?;
             self.input.insert("stateId".into(), json!(id));
         }
         if !self.state_type.is_empty() {
@@ -749,20 +759,22 @@ impl Wanted {
             "none" => _ = self.input.insert("assigneeId".into(), Value::Null),
             "me" => _ = self.input.insert("assigneeId".into(), json!(str_at(&r["viewer"], "id"))),
             a => {
-                let id = one("user with email", a, &nodes(&r["users"]), "'linearctl user list'")?;
+                let id = one("user", "user with email", a, &nodes(&r["users"]), "'linearctl user list'")?;
                 self.input.insert("assigneeId".into(), json!(id));
             }
         }
         if self.project == "none" {
             self.input.insert("projectId".into(), Value::Null);
         } else if !self.project.is_empty() {
-            let id = one("project", &self.project, &nodes(&r["projects"]), "'linearctl project list'")?;
+            let id = one("project", "project", &self.project, &nodes(&r["projects"]), "'linearctl project list'")?;
             self.input.insert("projectId".into(), json!(id));
         }
         if !self.parent.is_empty() {
             let found = nodes(&r["parent"]);
             let Some(p) = found.first() else {
-                return Err(missing(format!("not found: parent issue {}", self.parent)).hint(fail::FIND_ISSUE));
+                return Err(missing(format!("not found: parent issue {}", self.parent))
+                    .with(sought("issue", &self.parent))
+                    .hint(fail::FIND_ISSUE));
             };
             self.input.insert("parentId".into(), json!(str_at(p, "id")));
         }
@@ -779,7 +791,7 @@ impl Wanted {
                 self.input.insert("delegateId".into(), json!(str_at(&r["viewer"], "id")));
             }
             d => {
-                let id = one("agent user", d, &nodes(&r["delegates"]), "'linearctl user list --app'")?;
+                let id = one("delegate", "agent user", d, &nodes(&r["delegates"]), "'linearctl user list --app'")?;
                 self.input.insert("delegateId".into(), json!(id));
             }
         }
@@ -807,7 +819,8 @@ impl Wanted {
                         return Err(missing(format!(
                             "no milestone named {} in the issue's project; see 'linearctl milestone list'",
                             quote_go(name)
-                        )));
+                        ))
+                        .with(sought("milestone", name)));
                     }
                     1 => {}
                     n => {
@@ -815,7 +828,9 @@ impl Wanted {
                             "{n} milestones are named {} (projects: {}); pass --project",
                             quote_go(name),
                             projects.join(", ")
-                        )));
+                        ))
+                        .with(sought("milestone", name))
+                        .with(json!({"candidates": candidates(&matched)})));
                     }
                 }
                 self.input.insert("projectMilestoneId".into(), json!(str_at(&matched[0], "id")));
@@ -833,20 +848,49 @@ impl Wanted {
     }
 }
 
+/// A state or label not found, with the names the team can use instead
+/// (its states; workspace labels and its own, never a group) as
+/// available. Any other failure, or one this lookup cannot add to, is
+/// returned as it is.
+fn with_available(run: &mut Run, cl: &crate::client::Client, e: Fail, team_id: &str) -> Fail {
+    let kind = e.detail().map(|d| str_at(d, "kind")).unwrap_or_default();
+    if !matches!(e.base(), Fail::NotFound(_)) || !matches!(kind.as_str(), "state" | "label") || team_id.is_empty() {
+        return e;
+    }
+    let vars = json!({"team": team_id, "states": kind == "state", "labels": kind == "label"});
+    let Ok(r) = cl.query(run, queries::AVAILABLE, vars) else { return e };
+    let found = if kind == "state" {
+        nodes(&r["team"]["states"])
+    } else {
+        [nodes(&r["team"]["labels"]), nodes(&r["issueLabels"])].concat()
+    };
+    let mut names: Vec<String> = vec![];
+    for n in &found {
+        let name = str_at(n, "name");
+        if !names.iter().any(|have| eq_fold(have, &name)) {
+            names.push(name);
+        }
+    }
+    e.with(json!({"available": names}))
+}
+
 /// A connection's nodes, none when it is absent.
 pub fn nodes(v: &Value) -> Vec<Value> {
     v["nodes"].as_array().cloned().unwrap_or_default()
 }
 
-/// The single match for name, or an error naming what was looked for.
-fn one(kind: &str, name: &str, nodes: &[Value], hint: &str) -> R<String> {
+/// The single match for name, or an error naming what was looked for:
+/// kind as its JSON has it, word as its message does.
+fn one(kind: &str, word: &str, name: &str, nodes: &[Value], hint: &str) -> R<String> {
     match nodes.len() {
-        0 => Err(missing(format!("no {kind} named {}; see {hint}", quote_go(name)))),
+        0 => Err(missing(format!("no {word} named {}; see {hint}", quote_go(name))).with(sought(kind, name))),
         1 => Ok(str_at(&nodes[0], "id")),
         n => Err(ambiguous(format!(
-            "{n} {kind}s are named {}; rename one in Linear, or pass its id in --json-input",
+            "{n} {word}s are named {}; rename one in Linear, or pass its id in --json-input",
             quote_go(name)
-        ))),
+        ))
+        .with(sought(kind, name))
+        .with(json!({"candidates": candidates(nodes)}))),
     }
 }
 
@@ -876,7 +920,7 @@ fn label_ids(names: &[String], nodes: &[Value], team_id: &str) -> R<Vec<String>>
                 quote_go(n)
             )));
         }
-        let id = one("label", n, &matched, "'linearctl label list'")?;
+        let id = one("label", "label", n, &matched, "'linearctl label list'")?;
         if !ids.contains(&id) {
             ids.push(id);
         }
@@ -956,9 +1000,10 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     let teams = nodes(&r["teams"]);
     let Some(t) = teams.first() else {
         let by = if is_uuid(&team) { "id" } else { "key" };
-        return Err(missing(format!("no team with {by} {team}; see 'linearctl team list'")));
+        return Err(missing(format!("no team with {by} {team}; see 'linearctl team list'")).with(sought("team", &team)));
     };
-    w.apply(&r, &nodes(&t["states"]), &nodes(&t["typed"]), &nodes(&t["cycles"]), &str_at(t, "id"), "")?;
+    w.apply(&r, &nodes(&t["states"]), &nodes(&t["typed"]), &nodes(&t["cycles"]), &str_at(t, "id"), "")
+        .map_err(|e| with_available(run, &cl, e, &str_at(t, "id")))?;
     w.input.insert("teamId".into(), json!(str_at(t, "id")));
     w.input.insert("id".into(), json!(id));
     if dry {
@@ -1043,12 +1088,14 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
         &nodes(&is["team"]["cycles"]),
         &team_id,
         &current_project,
-    )?;
+    )
+    .map_err(|e| with_available(run, &cl, e, &team_id))?;
     let current: Vec<String> = nodes(&is["labels"]).iter().map(|l| str_at(l, "id")).collect();
     if !add.is_empty() || !remove.is_empty() {
         let labels = nodes(&res["issueLabels"]);
-        let add_ids = label_ids(&add, &labels, &team_id)?;
-        let remove_ids = label_ids(&remove, &labels, &team_id)?;
+        let ids = |names: &[String]| label_ids(names, &labels, &team_id);
+        let add_ids = ids(&add).map_err(|e| with_available(run, &cl, e, &team_id))?;
+        let remove_ids = ids(&remove).map_err(|e| with_available(run, &cl, e, &team_id))?;
         let added: Vec<&String> = add_ids.iter().filter(|id| !current.contains(id)).collect();
         let removed: Vec<&String> = remove_ids.iter().filter(|id| current.contains(id)).collect();
         if !added.is_empty() {

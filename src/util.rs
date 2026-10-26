@@ -514,6 +514,34 @@ pub fn rows(run: &mut Run, items: &[Value], cols: &[&str]) -> R {
     Ok(())
 }
 
+/// What a NOT_FOUND or AMBIGUOUS failure was looking for, as its JSON
+/// carries it: the kind of thing and the name given.
+pub fn sought(kind: &str, name: &str) -> Value {
+    json!({"kind": kind, "name": name})
+}
+
+/// The things a name fits, as an AMBIGUOUS failure lists them: each one's
+/// id, name, and whichever of slugId, email, number, team key and project
+/// name it has.
+pub fn candidates(nodes: &[Value]) -> Value {
+    let list = nodes.iter().map(|n| {
+        let mut c = Map::new();
+        for k in ["id", "name", "slugId", "email", "number"] {
+            if !n[k].is_null() {
+                c.insert(k.into(), n[k].clone());
+            }
+        }
+        if n["team"]["key"].is_string() {
+            c.insert("team".into(), n["team"]["key"].clone());
+        }
+        if n["project"]["name"].is_string() {
+            c.insert("project".into(), n["project"]["name"].clone());
+        }
+        Value::Object(c)
+    });
+    Value::Array(list.collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -14,6 +14,11 @@ names are only ever added, never renamed or removed.
 - `issue list --blocked` and `--blocking` (Linear's hasBlockedByRelations and
   hasBlockingRelations; Linear ignores completed and canceled blockers), and
   `--completed-since WHEN`. `watch` takes them too.
+- A `NOT_FOUND` or `AMBIGUOUS` failure from resolving a name says what was looked
+  for, as `kind` and `name`. An unknown state or label adds `available`, the
+  names the team can use (workspace labels and its own, no groups); a name that
+  fits several things adds `candidates` with each one's `id`, `name` and
+  `slugId`, `email`, `number`, `team` or `project` where it has one.
 - `relation delete ISSUE OTHER`, without TYPE, deletes every relation between the
   two issues in either direction and lists each in `relations`. One that fails
   to delete is a partial result (exit 3) with `problems`.

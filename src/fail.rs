@@ -44,6 +44,10 @@ pub enum Fail {
     /// Another failure, with the next step to take: a command to run, or
     /// whether a rerun is safe. The message is the inner one's, unchanged.
     Hinted(Box<Fail>, String),
+    /// Another failure, with fields its JSON document carries besides
+    /// error and code: what was looked for (kind, name), and what there is
+    /// instead (available, candidates).
+    Detail(Box<Fail>, serde_json::Value),
 }
 
 /// Where to find an issue's identifier when one is not found.
@@ -58,8 +62,12 @@ pub type R<T = ()> = Result<T, Fail>;
 /// and what it asks of the caller. describe lists them. Add; never rename.
 pub const ERROR_CODES: &[(&str, i32, &str)] = &[
     ("USAGE", USAGE, "the invocation is wrong: fix it, do not retry it as is"),
-    ("NOT_FOUND", FAILED, "what was named is not there, or this key cannot see it: look it up with a list command"),
-    ("AMBIGUOUS", FAILED, "a name fits more than one thing, listed in error: name it more precisely"),
+    (
+        "NOT_FOUND",
+        FAILED,
+        "what was named is not there, or this key cannot see it: look it up with a list command; kind and name say what, available what there is",
+    ),
+    ("AMBIGUOUS", FAILED, "a name fits more than one thing, listed in candidates: name it more precisely"),
     ("LINEAR_ERROR", FAILED, "Linear refused the request; error has its words"),
     ("NETWORK", FAILED, "Linear could not be reached, timed out or answered 5xx: rerunning is safe"),
     ("FAILED", FAILED, "anything else that failed; error says what"),
@@ -83,7 +91,7 @@ impl Fail {
             Fail::Auth(_) => "AUTH",
             Fail::Limited(..) => "RATE_LIMITED",
             Fail::Conflict(_) => "CONFLICT",
-            Fail::Hinted(f, _) => f.kind(),
+            Fail::Hinted(f, _) | Fail::Detail(f, _) => f.kind(),
         }
     }
 
@@ -101,26 +109,43 @@ impl Fail {
             Fail::Auth(_) => AUTH,
             Fail::Limited(..) => LIMITED,
             Fail::Conflict(_) => CONFLICT,
-            Fail::Hinted(f, _) => f.code(),
+            Fail::Hinted(f, _) | Fail::Detail(f, _) => f.code(),
         }
     }
 
     /// The same failure, with the next step to take.
     pub fn hint(self, hint: impl Into<String>) -> Fail {
-        Fail::Hinted(Box::new(self.base_owned()), hint.into())
+        match self {
+            Fail::Detail(f, d) => Fail::Detail(Box::new(f.hint(hint)), d),
+            f => Fail::Hinted(Box::new(f.base_owned()), hint.into()),
+        }
     }
 
-    /// The failure without its hint.
+    /// The same failure, its JSON carrying detail's fields too (an object).
+    /// Fields given again replace the earlier ones.
+    pub fn with(self, detail: serde_json::Value) -> Fail {
+        match self {
+            Fail::Detail(f, mut d) => {
+                if let (Some(old), serde_json::Value::Object(new)) = (d.as_object_mut(), detail) {
+                    old.extend(new);
+                }
+                Fail::Detail(f, d)
+            }
+            f => Fail::Detail(Box::new(f), detail),
+        }
+    }
+
+    /// The failure without its hint and detail.
     pub fn base(&self) -> &Fail {
         match self {
-            Fail::Hinted(f, _) => f.base(),
+            Fail::Hinted(f, _) | Fail::Detail(f, _) => f.base(),
             f => f,
         }
     }
 
     fn base_owned(self) -> Fail {
         match self {
-            Fail::Hinted(f, _) => f.base_owned(),
+            Fail::Hinted(f, _) | Fail::Detail(f, _) => f.base_owned(),
             f => f,
         }
     }
@@ -128,6 +153,16 @@ impl Fail {
     pub fn hint_text(&self) -> Option<&str> {
         match self {
             Fail::Hinted(_, h) => Some(h),
+            Fail::Detail(f, _) => f.hint_text(),
+            _ => None,
+        }
+    }
+
+    /// The fields with added, if any.
+    pub fn detail(&self) -> Option<&serde_json::Value> {
+        match self {
+            Fail::Detail(_, d) => Some(d),
+            Fail::Hinted(f, _) => f.detail(),
             _ => None,
         }
     }
@@ -159,7 +194,7 @@ impl fmt::Display for Fail {
             | Fail::Conflict(m) => f.write_str(m),
             Fail::Limited(m, _) => f.write_str(m),
             Fail::Linear { msg, .. } => write!(f, "Linear: {msg}"),
-            Fail::Hinted(inner, _) => inner.fmt(f),
+            Fail::Hinted(inner, _) | Fail::Detail(inner, _) => inner.fmt(f),
         }
     }
 }
