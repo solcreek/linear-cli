@@ -578,13 +578,12 @@ fn set(ctx: &mut Ctx, flag: &Flag, value: &str) -> Result<(), String> {
     let first = ctx.changed.insert(flag.name);
     let slot = ctx.values.entry(flag.name).or_default();
     if flag.kind == Kind::Strs {
+        // The first use replaces the default; an empty value is kept, for
+        // util::values to refuse rather than silently drop a filter.
         if first {
             slot.clear();
         }
-        // pflag reads --flag "" on an array as no value at all.
-        if (!stored.is_empty() || !first || !slot.is_empty()) && !stored.is_empty() {
-            slot.push(stored);
-        }
+        slot.push(stored);
     } else {
         *slot = vec![stored];
     }

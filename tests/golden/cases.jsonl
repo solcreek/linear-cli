@@ -391,3 +391,7 @@
 {"args": ["__complete", "-"]}
 {"args": ["__complete", "--js"]}
 {"args": ["__completeNoDesc", "issue", ""]}
+{"args": ["issue", "list", "--label", "x", "--label", "", "--json"]}
+{"args": ["issue", "list", "--state", "Todo", "--state=", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "update", "ENG-142", "--add-label", "bug", "--add-label", "", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "list", "--status", "started", "--status", "", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
