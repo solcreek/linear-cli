@@ -3,7 +3,7 @@
 
 use crate::cli::{Args, Cmd, Ctx, Flag};
 use crate::client::Client;
-use crate::fail::{R, failed, usage};
+use crate::fail::{Fail, R, failed, usage};
 use crate::json::quote_go;
 use crate::queries;
 use crate::run::{Run, dry_run};
@@ -80,17 +80,20 @@ fn cycle_filter(ctx: &Ctx, word: &str) -> R<Value> {
     Ok(f)
 }
 
+/// A cycle that is not there, and where to see the ones that are.
+fn cycle_not_found(word: &str) -> Fail {
+    failed(format!("not found: cycle {word} (or this API key cannot see it)"))
+        .hint("'linearctl cycle list --team KEY' lists a team's cycles")
+}
+
 /// The one cycle the filter finds: none is not found, and two (the same
 /// word in two teams) is an error naming them.
 fn find_cycle(run: &mut Run, cl: &Client, word: &str, vars: Value) -> R<Value> {
     let data = cl.query(run, queries::CYCLE_SHOW, vars)?;
     let n = super::issue::nodes(&data["matches"]);
     match n.len() {
-        0 => Err(failed(format!("not found: cycle {word} (or this API key cannot see it)"))),
-        1 => super::issue::nodes(&data["cycles"])
-            .into_iter()
-            .next()
-            .ok_or_else(|| failed(format!("not found: cycle {word} (or this API key cannot see it)"))),
+        0 => Err(cycle_not_found(word)),
+        1 => super::issue::nodes(&data["cycles"]).into_iter().next().ok_or_else(|| cycle_not_found(word)),
         _ => Err(failed(format!(
             "cycle {} is ambiguous: teams {} and {} both have one; pass --team",
             quote_go(word),
@@ -293,7 +296,7 @@ fn find_one(run: &mut Run, cl: &Client, ctx: &Ctx, word: &str) -> R<Value> {
     let data = cl.query(run, queries::CYCLE_FIND, json!({"filter": cycle_filter(ctx, word)?}))?;
     let n = super::issue::nodes(&data["cycles"]);
     match n.len() {
-        0 => Err(failed(format!("not found: cycle {word} (or this API key cannot see it)"))),
+        0 => Err(cycle_not_found(word)),
         1 => Ok(n[0].clone()),
         _ => Err(failed(format!(
             "cycle {} is ambiguous: teams {} and {} both have one; pass --team",

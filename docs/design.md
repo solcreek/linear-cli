@@ -67,7 +67,7 @@ HTML comment marker.
 
 Under `--json` a failure is `{"error": …, "usage": bool}` on stdout. It adds
 `"hint"` when there is a next step the message does not already name: the
-command that lists what was not found (an issue, comment or project), the read
+command that lists what was not found (an issue, comment, project or cycle), the read
 to make after a conflict, or, after a timeout, a lost connection or a 5xx, that
 rerunning is safe (a change that already applied reports `changed: false`).
 Without `--json` the hint is a `hint: …` line on stderr. `error` itself is

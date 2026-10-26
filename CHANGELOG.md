@@ -12,7 +12,7 @@ names are only ever added, never renamed or removed.
 ### Added
 
 - A failure under `--json` carries `hint` when there is a next step: the
-  command that lists what was not found (an issue, comment or project), the
+  command that lists what was not found (an issue, comment, project or cycle), the
   read to make after an `--if-updated-at` conflict, and, after a timeout, a lost
   connection or a 5xx from Linear, that rerunning the command is safe. Without
   `--json` it is a `hint: …` line on stderr. `error` and the exit codes are
