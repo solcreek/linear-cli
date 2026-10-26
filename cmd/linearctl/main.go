@@ -116,7 +116,7 @@ func newRoot() *cobra.Command {
 	root.PersistentFlags().BoolVar(&asJSON, "json", false, "print one JSON document on stdout")
 	root.PersistentFlags().Var(&timeout, "timeout", "give up on a network request after `N` seconds")
 	root.PersistentFlags().BoolVar(&demo, "demo", os.Getenv("LINEARCTL_DEMO") == "1",
-		"answer from a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1")
+		"use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1")
 	root.PersistentFlags().BoolVar(&withMeta, "meta", os.Getenv("LINEARCTL_META") == "1",
 		"add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1")
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error { return usageError{err} })
