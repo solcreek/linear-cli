@@ -134,10 +134,12 @@ exit: 0
       {
         "id": "815d98f8-ac42-5b70-a78e-97d5aff9dc96",
         "issue": {
+          "id": "0c2f9a92-0646-5558-ac78-3d2797476b00",
           "identifier": "ENG-142",
           "title": "Checkout fails when a coupon code has trailing whitespace"
         },
         "relatedIssue": {
+          "id": "34615f14-72a8-586a-9a9b-206abb5751b9",
           "identifier": "ENG-131",
           "title": "Show a clear error when a coupon has expired"
         },
@@ -153,7 +155,8 @@ exit: 0
     },
     "team": {
       "id": "681fd49c-6431-524c-8341-d16f248b011e",
-      "key": "ENG"
+      "key": "ENG",
+      "name": "Engineering"
     },
     "title": "Checkout fails when a coupon code has trailing whitespace",
     "updatedAt": "<TIME>",

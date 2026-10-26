@@ -45,7 +45,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Customers in Brazil can't pay with Pix",
       "updatedAt": "<TIME>",
@@ -94,7 +95,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Checkout fails when a coupon code has trailing whitespace",
       "updatedAt": "<TIME>",
@@ -138,7 +140,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Trim and uppercase coupon codes on the server before lookup",
       "updatedAt": "<TIME>",
@@ -187,7 +190,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Dashboard takes 4 s to load for workspaces with 10k+ projects",
       "updatedAt": "<TIME>",
@@ -231,7 +235,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Upgrade the payments SDK to v5 before the v4 sunset",
       "updatedAt": "<TIME>",
@@ -272,7 +277,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Checkout v2 rollout plan",
       "updatedAt": "<TIME>",
@@ -316,7 +322,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "iOS: push notifications arrive twice after reinstalling the app",
       "updatedAt": "<TIME>",
@@ -350,7 +357,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Search ignores accents: \"café\" does not match \"cafe\"",
       "updatedAt": "<TIME>",
@@ -384,7 +392,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Dark mode for the settings pages",
       "updatedAt": "<TIME>",
@@ -423,7 +432,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Export invoices as CSV",
       "updatedAt": "<TIME>",
@@ -467,7 +477,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Rate-limit the password reset endpoint",
       "updatedAt": "<TIME>",
@@ -511,7 +522,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Move background jobs from Redis to Postgres",
       "updatedAt": "<TIME>",
@@ -555,7 +567,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Android: offline queue drops edits made in airplane mode",
       "updatedAt": "<TIME>",
@@ -599,7 +612,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Add a regression test for whitespace in coupon codes",
       "updatedAt": "<TIME>",
@@ -642,7 +656,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Flaky test: OrderSummary renders taxes for EU addresses",
       "updatedAt": "<TIME>",
@@ -680,7 +695,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Single sign-on with Okta for enterprise workspaces",
       "updatedAt": "<TIME>",
@@ -724,7 +740,8 @@ exit: 0
       },
       "team": {
         "id": "681fd49c-6431-524c-8341-d16f248b011e",
-        "key": "ENG"
+        "key": "ENG",
+        "name": "Engineering"
       },
       "title": "Show a clear error when a coupon has expired",
       "updatedAt": "<TIME>",

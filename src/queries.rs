@@ -8,7 +8,7 @@
 /// project and cycle list: names are not unique across teams.
 macro_rules! issue_row {
     () => {
-        "\n\tid identifier title priority priorityLabel url createdAt updatedAt dueDate estimate\n\tstate { id name type color }\n\tassignee { id name email }\n\tdelegate { id name }\n\tteam { id key }\n\tproject { id name }\n\tcycle { id number }\n\tprojectMilestone { id name }\n\tlabels(first: 20) { nodes { id name color } }"
+        "\n\tid identifier title priority priorityLabel url createdAt updatedAt dueDate estimate\n\tstate { id name type color }\n\tassignee { id name email }\n\tdelegate { id name }\n\tteam { id key name }\n\tproject { id name }\n\tcycle { id number }\n\tprojectMilestone { id name }\n\tlabels(first: 20) { nodes { id name color } }"
     };
 }
 
@@ -39,7 +39,7 @@ macro_rules! show_connections {
 /// A relation as issue show has it: both issues, each with its title.
 macro_rules! relation_node {
     () => {
-        "id type issue { identifier title } relatedIssue { identifier title }"
+        "id type issue { id identifier title } relatedIssue { id identifier title }"
     };
 }
 

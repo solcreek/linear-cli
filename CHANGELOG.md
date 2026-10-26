@@ -33,12 +33,14 @@ names are only ever added, never renamed or removed.
   relation names both issues with their titles. It adds `creator.id`,
   `cycle.name`, `cycle.startsAt` and `cycle.endsAt`, and `project.status`
   (`name`, `type`).
+- Issue rows carry the team's `name` beside its `id` and `key`, and `issue show`'s
+  relations carry each issue's `id`.
 
 ### Fixed
 
 - `--label`, `--add-label` and `--remove-label` never resolve to a group label,
   which Linear cannot put on an issue: a label of the same name wins, and a name
-  only a group carries is refused as a usage error (exit 2).
+  only a group carries is `NOT_FOUND`, its `available` leaving groups out.
 
 ## [0.6.0] - 2026-10-26
 
