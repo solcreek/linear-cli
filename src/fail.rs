@@ -20,6 +20,9 @@ pub enum Fail {
     Usage(String),
     /// A result that is already printed: exit 3.
     Partial(String),
+    /// A failure whose document is already printed (api query prints
+    /// Linear's answer): exit 1, only the stderr line.
+    Reported(String),
     /// Another run holds a lock this one needs; nothing changed (exit 4).
     Busy(String),
     /// No API key, or Linear rejected it (exit 5).
@@ -47,7 +50,7 @@ pub type R<T = ()> = Result<T, Fail>;
 impl Fail {
     pub fn code(&self) -> i32 {
         match self {
-            Fail::Failed(_) | Fail::Linear { .. } => FAILED,
+            Fail::Failed(_) | Fail::Linear { .. } | Fail::Reported(_) => FAILED,
             Fail::Usage(_) => USAGE,
             Fail::Partial(_) => PARTIAL,
             Fail::Busy(_) => BUSY,
@@ -100,9 +103,13 @@ impl Fail {
 impl fmt::Display for Fail {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Fail::Failed(m) | Fail::Usage(m) | Fail::Partial(m) | Fail::Busy(m) | Fail::Auth(m) | Fail::Conflict(m) => {
-                f.write_str(m)
-            }
+            Fail::Failed(m)
+            | Fail::Usage(m)
+            | Fail::Partial(m)
+            | Fail::Reported(m)
+            | Fail::Busy(m)
+            | Fail::Auth(m)
+            | Fail::Conflict(m) => f.write_str(m),
             Fail::Limited(m, _) => f.write_str(m),
             Fail::Linear { msg, .. } => write!(f, "Linear: {msg}"),
             Fail::Hinted(inner, _) => inner.fmt(f),

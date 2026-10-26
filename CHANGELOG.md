@@ -30,6 +30,11 @@ names are only ever added, never renamed or removed.
 
 ### Fixed
 
+- `api query` prints Linear's answer when Linear answers with errors: `data`,
+  `errors` as received (message, path, extensions such as `code` and
+  `userPresentableMessage`) and `complexity`. Before, an answer without data
+  was reduced to `{"error", "usage"}`; it now carries those too, and the exit
+  codes are unchanged (1 without data, 3 with some).
 - An unknown command exits 2 even with `--help` (`linearctl nope --help`,
   `linearctl issue nope -h`, `linearctl help nope`, and one argument holding
   a space, `"api query" --help`). It printed the parent's help and exited 0, so

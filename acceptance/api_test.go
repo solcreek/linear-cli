@@ -74,3 +74,32 @@ func rawFake(t *testing.T) *fake {
 	f.raw = true
 	return f
 }
+
+// Linear's errors reach the caller as Linear sent them: message, path and
+// extensions (code, userPresentableMessage), with or without data.
+func TestAPIQueryPassesLinearsErrorsThrough(t *testing.T) {
+	t.Parallel()
+	linearError := map[string]any{"message": "Entity not found: Issue", "path": []any{"issue"},
+		"extensions": map[string]any{"type": "invalid input", "code": "INPUT_ERROR", "statusCode": 400.0, "userError": true,
+			"userPresentableMessage": "Could not find referenced Issue."}}
+	api := rawFake(t).onFunc("Gone", func(map[string]any) (int, any, map[string]string) {
+		return 200, map[string]any{"errors": []any{linearError}, "data": nil}, nil
+	}).onFunc("Half", func(map[string]any) (int, any, map[string]string) {
+		return 200, map[string]any{"errors": []any{linearError}, "data": map[string]any{"viewer": map[string]any{"name": "Ada"}, "issue": nil}}, nil
+	})
+	r := runWith(t, opts{api: api, key: testKey, stdin: `{"query":"query Gone { issue(id: \"TEACH-999\") { id } }"}`}, "api", "query", "--json-input", "-", "--json")
+	d := decode(t, r.out)
+	if r.code != exitFailed || strings.Count(r.out, "\n") != 1 {
+		t.Fatalf("no data: exit %d, %q", r.code, r.out)
+	}
+	errs, _ := d["errors"].([]any)
+	if len(errs) != 1 || jsonOf(errs[0]) != jsonOf(linearError) || d["data"] != nil || d["usage"] != false ||
+		d["error"] != "Linear: Could not find referenced Issue." {
+		t.Errorf("no data: %q", r.out)
+	}
+	r = runWith(t, opts{api: api, key: testKey, stdin: `{"query":"query Half { viewer { name } issue(id: \"X-1\") { id } }"}`}, "api", "query", "--json-input", "-")
+	d = decode(t, r.out)
+	if errs, _ := d["errors"].([]any); r.code != exitPartial || len(errs) != 1 || d["problems"] == nil || d["data"].(map[string]any)["viewer"] == nil {
+		t.Errorf("partial: exit %d, %q", r.code, r.out)
+	}
+}
