@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"slices"
 	"strconv"
@@ -95,6 +96,20 @@ func issueList() *cobra.Command {
 				return err
 			}
 			limit := cmd.Flags().Lookup("limit").Value.(*wholeNumber).n
+			ids, err := idsFlag(cmd)
+			if err != nil {
+				return err
+			}
+			if len(ids) > 0 {
+				if filter == nil {
+					filter = map[string]any{}
+					vars["filter"] = filter
+				}
+				filter["id"] = map[string]any{"in": ids}
+				if !cmd.Flags().Changed("limit") {
+					limit = 0 // the ids bound the list
+				}
+			}
 			items, next, err := collect(limit, cursor, func(first int, after string) (page, error) {
 				vars["first"], vars["after"] = first, optional(after)
 				var out map[string]page
@@ -105,10 +120,33 @@ func issueList() *cobra.Command {
 				return err
 			}
 			doc2 := listDoc(items, next, fields)
-			if asJSON {
-				return printJSON(doc2)
+			// Asked-for issues that did not come back: partial, never silent.
+			problems := []map[string]string{}
+			for _, ref := range ids {
+				found := false
+				for _, it := range items {
+					found = found || str(it, "identifier") == ref || str(it, "id") == ref
+				}
+				if !found {
+					problems = append(problems, map[string]string{"input": ref, "error": "not found (or this API key cannot see it)"})
+				}
 			}
-			rows(cmd, items, "identifier", "state.name", "assignee.name", "title")
+			if len(problems) > 0 {
+				doc2["problems"] = problems
+			}
+			if asJSON {
+				if err := printJSON(doc2); err != nil {
+					return err
+				}
+			} else {
+				rows(cmd, items, "identifier", "state.name", "assignee.name", "title")
+			}
+			for _, p := range problems {
+				fmt.Fprintf(os.Stderr, "linearctl: %s: %s\n", p["input"], p["error"])
+			}
+			if len(problems) > 0 {
+				return partialError{fmt.Errorf("%d issues not found", len(problems))}
+			}
 			return nil
 		},
 	}
@@ -125,6 +163,7 @@ func issueList() *cobra.Command {
 	c.Flags().String("delegate", "", "only issues delegated to the agent `WHO` (name or email; any; none)")
 	c.Flags().String("cycle", "", "only issues in cycle `CYCLE`: current, next, or a cycle number")
 	c.Flags().String("updated-since", "", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h")
+	c.Flags().StringArray("id", nil, "only the issue `ISSUE` (ENG-123 or a UUID; repeatable); one not\nfound is a problem (exit 3)")
 	c.Flags().String("query", "", "full-text search for `TEXT`")
 	c.Flags().Bool("include-comments", false, "with --query, also match the text of comments")
 	c.Flags().String("sort", "", "order by `FIELD`: updated (default), created, priority")
@@ -132,6 +171,28 @@ func issueList() *cobra.Command {
 	cursorFlag(c)
 	addFieldsFlag(c, issueRowFields)
 	return c
+}
+
+// idsFlag is issue list's --id values as Linear's id filter takes them.
+func idsFlag(cmd *cobra.Command) ([]string, error) {
+	vs, err := values(cmd, "id")
+	if err != nil {
+		return nil, err
+	}
+	if len(vs) > pageSize {
+		return nil, usageError{fmt.Errorf("--id takes at most %d issues; got %d", pageSize, len(vs))}
+	}
+	ids := []string{}
+	for _, v := range vs {
+		ref, err := issueRef("--id", v)
+		if err != nil {
+			return nil, err
+		}
+		if !slices.Contains(ids, ref) {
+			ids = append(ids, ref)
+		}
+	}
+	return ids, nil
 }
 
 var stateTypes = []string{"triage", "backlog", "unstarted", "started", "completed", "canceled", "duplicate"}

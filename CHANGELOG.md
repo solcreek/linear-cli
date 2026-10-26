@@ -30,6 +30,8 @@ names are only ever added, never renamed or removed.
   `comment delete` (a comment that is not there is `changed: false`,
   `found: false`).
 - `issue list --priority`, repeatable.
+- `issue list --id ISSUE`, repeatable, to read several issues in one request;
+  ids that do not come back are listed in `problems` (exit 3).
 - `issue list --query TEXT --include-comments` passes Linear's `includeComments`
   to the search.
 - Nested objects in issue rows (`state`, `assignee`, `team`, `project`,

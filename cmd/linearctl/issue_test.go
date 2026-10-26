@@ -606,3 +606,25 @@ func TestIssueUnarchive(t *testing.T) {
 		t.Errorf("not archived: exit %d, %q", r.code, r.out)
 	}
 }
+
+func TestIssueListByID(t *testing.T) {
+	t.Parallel()
+	api := listFake(t, conn("", issueNode("ENG-1", "One"), issueNode("ENG-2", "Two")))
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "list", "--id", "eng-1", "--id", "ENG-2", "--id", "ENG-1", "--json")
+	v := api.last("IssueList").Vars
+	if r.code != 0 || jsonOf(v["filter"]) != `{"id":{"in":["ENG-1","ENG-2"]}}` || v["first"] != float64(pageSize) {
+		t.Errorf("exit %d, vars %v", r.code, v)
+	}
+	r = runWith(t, opts{api: api, key: testKey}, "issue", "list", "--id", "ENG-1", "--id", "ENG-9", "--team", "ENG", "--json")
+	d := decode(t, r.out)
+	p, _ := d["problems"].([]any)
+	if r.code != exitPartial || d["shown"] != 2.0 || len(p) != 1 || p[0].(map[string]any)["input"] != "ENG-9" {
+		t.Errorf("missing: exit %d, %q", r.code, r.out)
+	}
+	if got := jsonOf(api.last("IssueList").Vars["filter"]); got != `{"id":{"in":["ENG-1","ENG-9"]},"team":{"key":{"eq":"ENG"}}}` {
+		t.Errorf("with --team: %s", got)
+	}
+	if r := runWith(t, opts{api: api, key: testKey}, "issue", "list", "--id", "nope"); r.code != exitUsage {
+		t.Errorf("--id nope: exit %d", r.code)
+	}
+}
