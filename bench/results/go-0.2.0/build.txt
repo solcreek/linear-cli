@@ -1,0 +1,7 @@
+date: 2026-10-26T16:37:13Z
+load: 23.04 11.00 7.99
+toolchain: go version go1.27.1 darwin/arm64
+clean build: 8.3 s
+incremental build (touch issue.go): 0.7 s
+test suite (go test -count=1): 5.9 s
+coverage: 90.8%

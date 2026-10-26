@@ -48,6 +48,16 @@ End to end without the network: point `LINEARCTL_API_URL` at a local fake
 that returns canned pages (the 2026-10-26 run used a 100-issue page and an
 issue with 100 comments).
 
+One binary, every scenario (start, help, describe, list and show against
+`bench/fake`, demo, 100 requests through `serve --stdio`), with peak RSS and
+size; then build and test times and coverage:
+
+    bench/run.sh ./linearctl LABEL                   # → bench/results/LABEL/
+    bench/build.sh go LABEL
+    bench/compare.py bench/results/A bench/results/B # before/after table
+
+`bench/results/go-0.2.0` is the Go implementation at 0.2.0 (`532295a`).
+
 Linear's edge for these runs was Cloudflare `DFW`, origin behind Google
 (`via: 1.1 google`); HTTP/2, and `alt-svc` offers HTTP/3.
 
