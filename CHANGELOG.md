@@ -9,6 +9,13 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Added
+
+- `issue create` and `issue update` take `--estimate POINTS`, `--due-date DATE`
+  and `--cycle CYCLE` (current, next, previous, a number or a UUID, within the
+  issue's team), each with `none` to clear. Before, only `--json-input`
+  reached them, with raw ids.
+
 ### Changed
 
 - `issue create` takes the team from Linear's own `teamId` in `--json-input`
@@ -24,6 +31,9 @@ names are only ever added, never renamed or removed.
 - `watch` backs off on a connection that drops at once (1, 2, 4 … 30 s), not
   only on one that fails to open; the backoff starts over only after a
   connection stayed up a minute.
+- `--project none`: on `issue create` and `issue update` it clears the project
+  (undo can revert setting one); on `issue list` it matches issues with no
+  project. `issue list` returned nothing for it, and update refused it.
 
 ## [0.5.0] - 2026-10-26
 

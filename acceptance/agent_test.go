@@ -77,3 +77,56 @@ func TestDelegateMe(t *testing.T) {
 		t.Errorf("list --delegate me: %s", got)
 	}
 }
+
+// Estimate, due date and cycle are settable by flag, with none to clear;
+// --cycle names a cycle of the issue's team.
+func TestIssueEstimateDueDateCycle(t *testing.T) {
+	t.Parallel()
+	team := map[string]any{"teams": conn("", map[string]any{"id": "team-eng", "key": "ENG", "states": nodes(), "typed": nodes(),
+		"cycles": nodes(map[string]any{"id": "cy-24", "number": 24.0})})}
+	api := createFake(t, resolveAnswer(team))
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "create", "--team", "ENG", "--title", "x",
+		"--estimate", "3", "--due-date", "2026-11-30", "--cycle", "current", "--dry-run", "--json")
+	in, _ := decode(t, r.out)["input"].(map[string]any)
+	if r.code != 0 || in["estimate"] != 3.0 || in["dueDate"] != "2026-11-30" || in["cycleId"] != "cy-24" {
+		t.Fatalf("create: exit %d, %q", r.code, r.out)
+	}
+	if v := api.last("CreateResolve").Vars; jsonOf(v["cycle"]) != `{"isActive":{"eq":true}}` || v["withCycle"] != true {
+		t.Errorf("vars %v", v)
+	}
+	r = runWith(t, opts{api: createFake(t, resolveAnswer(map[string]any{"teams": conn("", map[string]any{"id": "team-eng", "key": "ENG",
+		"states": nodes(), "typed": nodes(), "cycles": nodes()})})), key: testKey},
+		"issue", "create", "--team", "ENG", "--title", "x", "--cycle", "99", "--dry-run", "--json")
+	if d := decode(t, r.out); r.code != exitFailed || d["code"] != "NOT_FOUND" {
+		t.Errorf("no such cycle: exit %d, %q", r.code, r.out)
+	}
+	for _, args := range [][]string{{"--estimate", "lots"}, {"--estimate", "-1"}, {"--due-date", "tomorrow"}, {"--due-date", "2026-11-31x"}, {"--cycle", "last"}} {
+		if r := runWith(t, opts{api: newFake(t), key: testKey}, append([]string{"issue", "create", "--team", "ENG", "--title", "x", "--dry-run"}, args...)...); r.code != exitUsage {
+			t.Errorf("%v: exit %d", args, r.code)
+		}
+	}
+	// Update: values as they are send nothing (Linear's estimate is a float);
+	// none clears.
+	is := currentIssue()
+	is["estimate"], is["dueDate"], is["cycle"] = 3.0, "2026-11-30", map[string]any{"id": "cy-24"}
+	is["team"].(map[string]any)["cycles"] = nodes(map[string]any{"id": "cy-24", "number": 24.0})
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--estimate", "3", "--due-date", "2026-11-30", "--cycle", "24"}, ""},
+		{[]string{"--estimate", "none", "--due-date", "none", "--cycle", "none"}, `{"cycleId":null,"dueDate":null,"estimate":null}`},
+		{[]string{"--estimate", "5"}, `{"estimate":5}`},
+	} {
+		api := newFake(t).on("UpdateResolve", resolveAnswer(map[string]any{"issue": is}))
+		r := runWith(t, opts{api: api, key: testKey}, append([]string{"issue", "update", "ENG-5", "--dry-run", "--json"}, c.args...)...)
+		d := decode(t, r.out)
+		got := ""
+		if d["changed"] == true {
+			got = jsonOf(d["input"])
+		}
+		if r.code != 0 || got != c.want {
+			t.Errorf("%v: exit %d, input %s, want %s", c.args, r.code, got, c.want)
+		}
+	}
+}

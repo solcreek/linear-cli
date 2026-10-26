@@ -50,7 +50,7 @@ Flags:
       --poll-interval N      when polling, ask Linear every N seconds (default 60)
       --priority PRIORITY    only issues of PRIORITY: 0-4 or none, urgent, high, medium, low
                              (repeatable, any of)
-      --project NAME         only issues in project NAME
+      --project NAME         only issues in project NAME (none: in no project)
       --reconcile N          with subscriptions, catch up on missed changes every N s (default 300)
       --since WHEN           first replay changes since WHEN (a date, RFC 3339 time, 7d, 24h)
       --state NAME           only issues in workflow state NAME (repeatable; any of)

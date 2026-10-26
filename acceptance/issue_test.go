@@ -66,6 +66,7 @@ func TestIssueListFilters(t *testing.T) {
 		{[]string{"--without-label", "wontfix"}, `{"and":[{"labels":{"every":{"name":{"neqIgnoreCase":"wontfix"}}}}]}`},
 		{[]string{"--label", "bug", "--any-label", "p1", "--any-label", "p2", "--without-label", "dup"}, `{"and":[{"labels":{"some":{"name":{"eqIgnoreCase":"bug"}}}},{"or":[{"labels":{"some":{"name":{"eqIgnoreCase":"p1"}}}},{"labels":{"some":{"name":{"eqIgnoreCase":"p2"}}}}]},{"labels":{"every":{"name":{"neqIgnoreCase":"dup"}}}}]}`},
 		{[]string{"--project", "Q4 launch"}, `{"project":{"name":{"eqIgnoreCase":"Q4 launch"}}}`},
+		{[]string{"--project", "none"}, `{"project":{"null":true}}`},
 		{[]string{"--attachment-url", "https://github.com/acme/app/pull/42"}, `{"attachments":{"some":{"url":{"eq":"https://github.com/acme/app/pull/42"}}}}`},
 		{[]string{"--cycle", "current"}, `{"cycle":{"isActive":{"eq":true}}}`},
 		{[]string{"--cycle", "next"}, `{"cycle":{"isNext":{"eq":true}}}`},
@@ -712,5 +713,22 @@ func TestIssueCreateTeamFromJSONInput(t *testing.T) {
 				t.Errorf("teamId is the resolved team's: %v", in["teamId"])
 			}
 		}
+	}
+}
+
+// --project none clears the project, so undo can revert "project set".
+func TestIssueUpdateProjectNone(t *testing.T) {
+	t.Parallel()
+	is := currentIssue()
+	is["project"] = map[string]any{"id": "p-q4", "name": "Q4"}
+	api := newFake(t).on("UpdateResolve", resolveAnswer(map[string]any{"issue": is}))
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "update", "ENG-5", "--project", "none", "--dry-run", "--json")
+	if d := decode(t, r.out); r.code != 0 || jsonOf(d["input"]) != `{"projectId":null}` || api.last("UpdateResolve").Vars["withProject"] != false {
+		t.Errorf("exit %d, %q", r.code, r.out)
+	}
+	api = newFake(t).on("UpdateResolve", resolveAnswer(map[string]any{"issue": currentIssue()})) // no project
+	r = runWith(t, opts{api: api, key: testKey}, "issue", "update", "ENG-5", "--project", "none", "--dry-run", "--json")
+	if d := decode(t, r.out); r.code != 0 || d["changed"] != false {
+		t.Errorf("already none: exit %d, %q", r.code, r.out)
 	}
 }

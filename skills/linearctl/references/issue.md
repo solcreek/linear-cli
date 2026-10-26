@@ -42,10 +42,13 @@ Examples:
 
 Flags:
       --assignee WHO            assign to WHO: me, none, or an email
+      --cycle CYCLE             cycle CYCLE (current, next, previous, N, a UUID), or none
       --delegate WHO            delegate to the agent (app user) WHO: its name or email, me, or none
       --description TEXT        the description, Markdown TEXT
       --description-file PATH   read the description from PATH (- for stdin)
       --dry-run                 show what would change; change nothing
+      --due-date DATE           the due date, DATE (2026-11-30), or none
+      --estimate POINTS         the estimate, POINTS (a whole number), or none
   -h, --help                    help for create
       --id UUID                 the new issue's UUID; required with --yes
       --json-input PATH         read Linear's input object from PATH (- for stdin); flags win
@@ -54,7 +57,7 @@ Flags:
                                 when the issue has none
       --parent ISSUE            make it a sub-issue of ISSUE (none: of no issue)
       --priority PRIORITY       PRIORITY: 0-4 or none, urgent, high, medium, low
-      --project NAME            project NAME
+      --project NAME            project NAME, or none to clear it
       --state NAME              workflow state NAME (see 'linearctl state list')
       --state-type TYPE         the team's first workflow state of TYPE (e.g. started)
       --team KEY                create in team KEY (e.g. ENG)
@@ -101,7 +104,7 @@ Flags:
       --milestone NAME       only issues in project milestone NAME (none: in no milestone)
       --priority PRIORITY    only issues of PRIORITY: 0-4 or none, urgent, high, medium, low
                              (repeatable, any of)
-      --project NAME         only issues in project NAME
+      --project NAME         only issues in project NAME (none: in no project)
       --query TEXT           full-text search for TEXT
       --sort FIELD           order by FIELD: updated (default), created, priority
       --state NAME           only issues in workflow state NAME (repeatable; any of)
@@ -185,10 +188,13 @@ Examples:
 Flags:
       --add-label NAME          add label NAME (repeatable)
       --assignee WHO            assign to WHO: me, none, or an email
+      --cycle CYCLE             cycle CYCLE (current, next, previous, N, a UUID), or none
       --delegate WHO            delegate to the agent (app user) WHO: its name or email, me, or none
       --description TEXT        the description, Markdown TEXT
       --description-file PATH   read the description from PATH (- for stdin)
       --dry-run                 show what would change; change nothing
+      --due-date DATE           the due date, DATE (2026-11-30), or none
+      --estimate POINTS         the estimate, POINTS (a whole number), or none
   -h, --help                    help for update
       --if-updated-at TIME      change it only if its updatedAt is still TIME (else exit 7)
       --json-input PATH         read Linear's input object from PATH (- for stdin); flags win
@@ -197,7 +203,7 @@ Flags:
                                 when the issue has none
       --parent ISSUE            make it a sub-issue of ISSUE (none: of no issue)
       --priority PRIORITY       PRIORITY: 0-4 or none, urgent, high, medium, low
-      --project NAME            project NAME
+      --project NAME            project NAME, or none to clear it
       --remove-label NAME       remove label NAME (repeatable)
       --state NAME              workflow state NAME (see 'linearctl state list')
       --state-type TYPE         the team's first workflow state of TYPE (e.g. started)

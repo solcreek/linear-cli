@@ -1720,6 +1720,13 @@ exit: 0
             },
             {
               "default": null,
+              "description": "cycle CYCLE (current, next, previous, N, a UUID), or none",
+              "name": "cycle",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
               "description": "delegate to the agent (app user) WHO: its name or email, me, or none",
               "name": "delegate",
               "short": null,
@@ -1745,6 +1752,20 @@ exit: 0
               "name": "dry-run",
               "short": null,
               "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "the due date, DATE (<DATE>), or none",
+              "name": "due-date",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "the estimate, POINTS (a whole number), or none",
+              "name": "estimate",
+              "short": null,
+              "type": "string"
             },
             {
               "default": null,
@@ -1797,7 +1818,7 @@ exit: 0
             },
             {
               "default": null,
-              "description": "project NAME",
+              "description": "project NAME, or none to clear it",
               "name": "project",
               "short": null,
               "type": "string"
@@ -1981,7 +2002,7 @@ exit: 0
             },
             {
               "default": null,
-              "description": "only issues in project NAME",
+              "description": "only issues in project NAME (none: in no project)",
               "name": "project",
               "short": null,
               "type": "string"
@@ -2250,6 +2271,13 @@ exit: 0
             },
             {
               "default": null,
+              "description": "cycle CYCLE (current, next, previous, N, a UUID), or none",
+              "name": "cycle",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
               "description": "delegate to the agent (app user) WHO: its name or email, me, or none",
               "name": "delegate",
               "short": null,
@@ -2275,6 +2303,20 @@ exit: 0
               "name": "dry-run",
               "short": null,
               "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "the due date, DATE (<DATE>), or none",
+              "name": "due-date",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "the estimate, POINTS (a whole number), or none",
+              "name": "estimate",
+              "short": null,
+              "type": "string"
             },
             {
               "default": null,
@@ -2327,7 +2369,7 @@ exit: 0
             },
             {
               "default": null,
-              "description": "project NAME",
+              "description": "project NAME, or none to clear it",
               "name": "project",
               "short": null,
               "type": "string"
@@ -3868,7 +3910,7 @@ exit: 0
         },
         {
           "default": null,
-          "description": "only issues in project NAME",
+          "description": "only issues in project NAME (none: in no project)",
           "name": "project",
           "short": null,
           "type": "string"
