@@ -212,10 +212,23 @@ struct Watch {
 }
 
 impl Watch {
+    /// Watch against the fake. The environment is kept but for LINEAR* and
+    /// XDG_* (LINEARCTL_DEMO would poll demo data instead), and *_PROXY,
+    /// which would send the request for 127.0.0.1 to a proxy, as in
+    /// tests/hints.rs.
     fn start(fake: &Fake) -> Watch {
         let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
         let home = std::env::temp_dir().join(format!("linearctl-watch-{}-{nanos}", std::process::id()));
-        let mut child = Command::new(BIN)
+        let mut cmd = Command::new(BIN);
+        for (k, _) in std::env::vars_os() {
+            let steers = |k: &str| {
+                k.starts_with("LINEAR") || k.starts_with("XDG_") || k.to_ascii_uppercase().ends_with("_PROXY")
+            };
+            if k.to_str().is_some_and(steers) {
+                cmd.env_remove(k);
+            }
+        }
+        let mut child = cmd
             .args(["watch", "--json", "--batch-ms", "50", "--heartbeat", "60"])
             .env("LINEARCTL_API_URL", &fake.url)
             .env("LINEAR_API_KEY", KEY)
