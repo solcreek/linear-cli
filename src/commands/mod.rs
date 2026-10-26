@@ -2,6 +2,8 @@
 
 mod comment;
 mod issue;
+mod lookups;
+mod project;
 mod relation;
 
 use crate::cli::{self, Args, Cmd, Ctx, Flag};
@@ -33,6 +35,13 @@ LINEARCTL_HOME moves config and credentials under one directory.",
             .default_to(env_on("LINEARCTL_META")),
     ];
     let mut subs: Vec<Cmd> = vec![issue::command(), comment::command(), relation::command()];
+    for mut c in lookups::commands() {
+        if c.name() == "project" {
+            c.short = "List, show and update projects".into();
+            c.subs.extend(project::commands());
+        }
+        subs.push(c);
+    }
     subs.push(
         Cmd::new("describe", "Print every command, flag and exit code as JSON")
             .example("  linearctl describe")
