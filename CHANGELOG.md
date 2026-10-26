@@ -9,6 +9,13 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Added
+
+- `issue create` and `issue update` take `--estimate POINTS`, `--due-date DATE`
+  and `--cycle CYCLE` (current, next, previous, a number or a UUID, within the
+  issue's team), each with `none` to clear. Before, only `--json-input`
+  reached them, with raw ids.
+
 ### Changed
 
 - `issue create` takes the team from Linear's own `teamId` in `--json-input`

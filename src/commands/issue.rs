@@ -403,6 +403,9 @@ fn issue_fields(c: Cmd) -> Cmd {
         .flag(Flag::str("assignee", "assign to `WHO`: me, none, or an email"))
         .flag(Flag::str("state", "workflow state `NAME` (see 'linearctl state list')"))
         .flag(Flag::str("state-type", "the team's first workflow state of `TYPE` (e.g. started)"))
+        .flag(Flag::str("estimate", "the estimate, `POINTS` (a whole number), or none"))
+        .flag(Flag::str("due-date", "the due date, `DATE` (2026-11-30), or none"))
+        .flag(Flag::str("cycle", "cycle `CYCLE` (current, next, previous, N, a UUID), or none"))
         .flag(Flag::str("priority", "`PRIORITY`: 0-4 or none, urgent, high, medium, low"))
         .flag(Flag::str("project", "project `NAME`, or none to clear it"))
         .flag(Flag::str(
@@ -460,6 +463,9 @@ pub struct Wanted {
     delegate: String,
     /// A state type (started, …): the team's first state of it.
     state_type: String,
+    /// --cycle as a cycle filter, found among the issue's team's cycles.
+    cycle: Option<Value>,
+    cycle_word: String,
 }
 
 fn read_wanted(ctx: &Ctx) -> R<Wanted> {
@@ -521,6 +527,40 @@ fn read_wanted(ctx: &Ctx) -> R<Wanted> {
         }
         w.state_type = st;
     }
+    let est = ctx.str("estimate");
+    if ctx.changed("estimate") {
+        let v = match est.as_str() {
+            "none" => Value::Null,
+            n if !n.is_empty() && n.len() <= 6 && n.bytes().all(|c| c.is_ascii_digit()) => {
+                json!(n.parse::<i64>().unwrap_or(0))
+            }
+            _ => {
+                return Err(usage(format!(
+                    "--estimate must be a whole number of points, or none; got {}",
+                    quote_go(&est)
+                )));
+            }
+        };
+        w.input.insert("estimate".into(), v);
+    }
+    let due = ctx.str("due-date");
+    if ctx.changed("due-date") {
+        let v = match due.as_str() {
+            "none" => Value::Null,
+            d if d.len() == 10 && crate::time::parse_date(d).is_some() => json!(d),
+            _ => return Err(usage(format!("--due-date must be a date (2026-11-30), or none; got {}", quote_go(&due)))),
+        };
+        w.input.insert("dueDate".into(), v);
+    }
+    let cy = ctx.str("cycle");
+    if ctx.changed("cycle") {
+        if cy == "none" {
+            w.input.insert("cycleId".into(), Value::Null);
+        } else {
+            w.cycle = Some(super::cycle::cycle_ref("--cycle", &cy)?);
+            w.cycle_word = cy;
+        }
+    }
     let p = ctx.str("parent");
     if p == "none" {
         w.input.insert("parentId".into(), Value::Null);
@@ -558,6 +598,7 @@ impl Wanted {
             "milestone": self.milestone, "withMilestone": !self.milestone.is_empty() && self.milestone != "none",
             "delegate": self.delegate, "withDelegate": !matches!(self.delegate.as_str(), "" | "none" | "me"),
             "stateType": self.state_type, "withStateType": !self.state_type.is_empty(),
+            "cycle": self.cycle.clone().unwrap_or(json!({})), "withCycle": self.cycle.is_some(),
         });
         match v {
             Value::Object(m) => m,
@@ -571,7 +612,28 @@ impl Wanted {
     /// when several projects have one of that name.
     /// typed are the team's states of --state-type: the one with the lowest
     /// position is the first, as Linear's agent guide picks "started".
-    fn apply(&mut self, r: &Value, states: &[Value], typed: &[Value], team_id: &str, project_id: &str) -> R {
+    /// cycles are the team's cycles --cycle names.
+    fn apply(
+        &mut self,
+        r: &Value,
+        states: &[Value],
+        typed: &[Value],
+        cycles: &[Value],
+        team_id: &str,
+        project_id: &str,
+    ) -> R {
+        if self.cycle.is_some() {
+            match cycles {
+                [one] => _ = self.input.insert("cycleId".into(), json!(str_at(one, "id"))),
+                [] => {
+                    return Err(missing(format!(
+                        "no cycle {} in the issue's team; see 'linearctl cycle list'",
+                        quote_go(&self.cycle_word)
+                    )));
+                }
+                _ => return Err(ambiguous(format!("more than one cycle is {}", quote_go(&self.cycle_word)))),
+            }
+        }
         if !self.state.is_empty() {
             let id = one("workflow state", &self.state, states, "'linearctl state list'")?;
             self.input.insert("stateId".into(), json!(id));
@@ -791,7 +853,7 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
         let by = if is_uuid(&team) { "id" } else { "key" };
         return Err(missing(format!("no team with {by} {team}; see 'linearctl team list'")));
     };
-    w.apply(&r, &nodes(&t["states"]), &nodes(&t["typed"]), &str_at(t, "id"), "")?;
+    w.apply(&r, &nodes(&t["states"]), &nodes(&t["typed"]), &nodes(&t["cycles"]), &str_at(t, "id"), "")?;
     w.input.insert("teamId".into(), json!(str_at(t, "id")));
     w.input.insert("id".into(), json!(id));
     if dry {
@@ -869,7 +931,14 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     }
     let team_id = str_at(is, "team.id");
     let current_project = if is["project"].is_object() { str_at(is, "project.id") } else { String::new() };
-    w.apply(&res, &nodes(&is["team"]["states"]), &nodes(&is["team"]["typed"]), &team_id, &current_project)?;
+    w.apply(
+        &res,
+        &nodes(&is["team"]["states"]),
+        &nodes(&is["team"]["typed"]),
+        &nodes(&is["team"]["cycles"]),
+        &team_id,
+        &current_project,
+    )?;
     let current: Vec<String> = nodes(&is["labels"]).iter().map(|l| str_at(l, "id")).collect();
     if !add.is_empty() || !remove.is_empty() {
         let labels = nodes(&res["issueLabels"]);
@@ -900,6 +969,10 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
         ("parentId", id(&is["parent"])),
         ("projectMilestoneId", id(&is["projectMilestone"])),
         ("delegateId", id(&is["delegate"])),
+        ("cycleId", id(&is["cycle"])),
+        ("dueDate", is["dueDate"].clone()),
+        // Linear answers estimate as a float; the input is an Int.
+        ("estimate", is["estimate"].as_f64().map_or(Value::Null, |e| json!(e as i64))),
     ];
     for (k, v) in now {
         if w.input.get(k).is_some_and(|got| marshal(got) == marshal(&v)) {
