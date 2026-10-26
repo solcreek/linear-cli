@@ -8,7 +8,7 @@ use std::net::{TcpListener, TcpStream};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{Receiver, channel};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tungstenite::protocol::CloseFrame;
 use tungstenite::protocol::frame::coding::CloseCode;
 
@@ -209,7 +209,8 @@ struct Watch {
 
 impl Watch {
     fn start(fake: &Fake) -> Watch {
-        let home = std::env::temp_dir().join(format!("linearctl-watch-{}-{:?}", std::process::id(), Instant::now()));
+        let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let home = std::env::temp_dir().join(format!("linearctl-watch-{}-{nanos}", std::process::id()));
         let mut child = Command::new(BIN)
             .args(["watch", "--json", "--batch-ms", "50", "--heartbeat", "60"])
             .env("LINEARCTL_API_URL", &fake.url)
