@@ -22,6 +22,9 @@ names are only ever added, never renamed or removed.
 - Agent delegation: `--delegate NAME|EMAIL|none` on `issue create` and
   `issue update` (app users only), `issue list --delegate` (also `any`,
   `none`), `delegate` in issue rows, and `user list --app`.
+- `project show PROJECT` (overview content, status, milestones, issues) and
+  `project update` (name, description, content). PROJECT is a URL, slugId,
+  UUID or exact name; a name two projects share is an error that lists both.
 - `issue unarchive`.
 - `comment create --parent COMMENT` to reply in a thread; `comment update` and
   `comment delete` (a comment that is not there is `changed: false`,

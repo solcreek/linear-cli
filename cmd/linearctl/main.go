@@ -107,6 +107,7 @@ func newRoot() *cobra.Command {
 	addComment(root)
 	addRelation(root)
 	addLookups(root)
+	addProject(root)
 	addFile(root)
 	addConfig(root)
 	addAPI(root)

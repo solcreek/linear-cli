@@ -162,6 +162,21 @@ var (
   projects(filter: $filter, first: $first, after: $after) { nodes { id name url targetDate status { name type } lead { name email } } ` + pageInfo + ` }
 }`
 
+	// first: 2 so a name two projects share shows up as ambiguous.
+	qProjectFind = `query ProjectFind($filter: ProjectFilter!, $issues: Int!, $withIssues: Boolean!) {
+  projects(filter: $filter, first: 2) { nodes {
+    id name slugId url description content startDate targetDate progress
+    status { id name type } lead { id name email }
+    teams(first: 20) { nodes { id key } }
+    projectMilestones(first: 50) { nodes { id name targetDate progress } }
+    issues(first: $issues) @include(if: $withIssues) { nodes {` + issueRow + ` } }
+  } }
+}`
+
+	qProjectUpdate = `mutation ProjectUpdate($id: String!, $input: ProjectUpdateInput!) {
+  projectUpdate(id: $id, input: $input) { success }
+}`
+
 	qMilestones = `query Milestones($filter: ProjectMilestoneFilter, $first: Int!, $after: String) {
   projectMilestones(filter: $filter, first: $first, after: $after) { nodes { id name targetDate progress project { id name } } ` + pageInfo + ` }
 }`
@@ -181,7 +196,7 @@ func documents() map[string]string {
 		"RelationResolve": qRelationResolve, "RelationCreate": qRelationCreate, "RelationDelete": qRelationDelete,
 		"Comment": qComment, "CommentUpdate": qCommentUpdate, "CommentDelete": qCommentDelete,
 		"Teams": qTeams, "States": qStates, "Labels": qLabels, "Users": qUsers, "Projects": qProjects,
-		"Cycles": qCycles, "Milestones": qMilestones,
+		"Cycles": qCycles, "Milestones": qMilestones, "ProjectFind": qProjectFind, "ProjectUpdate": qProjectUpdate,
 	}
 }
 
