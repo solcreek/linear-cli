@@ -74,6 +74,7 @@ func addComment(root *cobra.Command) {
 			"--yes requires --id, a UUID you choose, so a rerun can never post twice: if a\n" +
 			"comment with that id exists, it is returned with changed: false.\n" +
 			"--dry-run without --id generates one and prints it as id; pass it to --yes.\n" +
+			"--parent replies in a comment's thread.\n" +
 			"Changes things: pass --dry-run to preview, --yes to apply.",
 		Example: "  linearctl comment create ENG-123 --body \"Fixed in #42\" --dry-run --json\n" +
 			"  git log -1 --format=%B | linearctl comment create ENG-123 --body-file - --id 5f1e… --yes",
@@ -101,6 +102,10 @@ func addComment(root *cobra.Command) {
 			if !set || strings.TrimSpace(body) == "" {
 				return usageError{errors.New("pass --body TEXT or --body-file PATH (- for stdin), not empty")}
 			}
+			parent, _ := cmd.Flags().GetString("parent")
+			if parent != "" && !uuidPattern.MatchString(parent) {
+				return usageError{fmt.Errorf("--parent must be a comment id (a UUID, as comment list shows); got %q", parent)}
+			}
 			cl, err := newClient()
 			if err != nil {
 				return err
@@ -121,6 +126,9 @@ func addComment(root *cobra.Command) {
 					"exists "+str(it, "url"))
 			}
 			input := map[string]any{"id": id, "issueId": r.Issue.ID, "body": body}
+			if parent != "" {
+				input["parentId"] = strings.ToLower(parent)
+			}
 			if dryRun {
 				return output(cmd, map[string]any{"changed": true, "dryRun": true, "id": id, "input": input},
 					fmt.Sprintf("would comment on %s\nid: %s (pass --id %s --yes)", r.Issue.Identifier, id, id))
@@ -140,6 +148,7 @@ func addComment(root *cobra.Command) {
 	create.Flags().String("body", "", "the comment, Markdown `TEXT`")
 	create.Flags().String("body-file", "", "read the comment from `PATH` (- for stdin)")
 	create.Flags().String("id", "", "the new comment's `UUID`; required with --yes")
+	create.Flags().String("parent", "", "reply in the thread of comment `ID`")
 	mutating(create)
 
 	comment.AddCommand(list, create)

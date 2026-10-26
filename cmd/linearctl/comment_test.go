@@ -94,3 +94,16 @@ func TestCommentCreateRefusals(t *testing.T) {
 		t.Errorf("called Linear: %v", api.ops())
 	}
 }
+
+func TestCommentCreateReply(t *testing.T) {
+	t.Parallel()
+	api := commentFake(t)
+	parent := "5F1E2A3B-4C5D-4E6F-8A9B-0C1D2E3F4A5B"
+	r := runWith(t, opts{api: api, key: testKey}, "comment", "create", "ENG-5", "--body", "+1", "--parent", parent, "--id", newIssueID, "--yes", "--json")
+	if in := api.last("CommentCreate").Vars["input"].(map[string]any); r.code != 0 || in["parentId"] != strings.ToLower(parent) {
+		t.Errorf("exit %d, sent %v", r.code, in)
+	}
+	if r := runWith(t, opts{api: api, key: testKey}, "comment", "create", "ENG-5", "--body", "+1", "--parent", "c1", "--dry-run"); r.code != exitUsage {
+		t.Errorf("--parent c1: exit %d", r.code)
+	}
+}
