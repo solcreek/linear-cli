@@ -453,8 +453,10 @@ mod tests {
             marshal(&v),
             r#"{"a":"\u003cx\u003e \u0026 \u2028\u001b\"\n","b":1,"c":[],"d":{},"e":[1.5,1e+21,1e-7,2,-0,12345678901234567000]}"#
         );
-        assert_eq!(encode(&json!({"a": [1, {}], "b": {"c": null}}), true, &[]),
-            "{\n  \"a\": [\n    1,\n    {}\n  ],\n  \"b\": {\n    \"c\": null\n  }\n}\n");
+        assert_eq!(
+            encode(&json!({"a": [1, {}], "b": {"c": null}}), true, &[]),
+            "{\n  \"a\": [\n    1,\n    {}\n  ],\n  \"b\": {\n    \"c\": null\n  }\n}\n"
+        );
     }
 
     #[test]

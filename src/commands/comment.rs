@@ -10,7 +10,11 @@ use serde_json::json;
 const FIELDS: &[&str] = &["id", "body", "createdAt", "url", "user", "parent"];
 
 pub fn command() -> Cmd {
-    Cmd::group("comment", "List and create comments on an issue", vec![list_cmd(), create_cmd(), update_cmd(), delete_cmd()])
+    Cmd::group(
+        "comment",
+        "List and create comments on an issue",
+        vec![list_cmd(), create_cmd(), update_cmd(), delete_cmd()],
+    )
 }
 
 fn list_cmd() -> Cmd {
@@ -199,4 +203,3 @@ fn delete(run: &mut Run, ctx: &Ctx) -> R {
     let verb = if dry { "would delete " } else { "deleted " };
     run.output(json!({"changed": true, "dryRun": dry, "id": id, "found": true, "url": url}), &format!("{verb}{url}"))
 }
-

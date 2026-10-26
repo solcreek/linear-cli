@@ -123,68 +123,83 @@ fn build() -> World {
         w.nodes.len() - 1
     };
     let url_key = seed["organization"]["urlKey"].as_str().unwrap_or("").to_string();
-    w.org = add(&mut w, HashMap::from([
-        ("id".into(), s(&demo_id("org", ORG))),
-        ("name".into(), V::S(seed["organization"]["name"].clone())),
-        ("urlKey".into(), V::S(seed["organization"]["urlKey"].clone())),
-    ]));
+    w.org = add(
+        &mut w,
+        HashMap::from([
+            ("id".into(), s(&demo_id("org", ORG))),
+            ("name".into(), V::S(seed["organization"]["name"].clone())),
+            ("urlKey".into(), V::S(seed["organization"]["urlKey"].clone())),
+        ]),
+    );
     let viewer = seed["viewer"].as_str().unwrap_or("").to_string();
     let mut users: HashMap<String, usize> = HashMap::new();
     for u in seed["users"].as_array().into_iter().flatten() {
         let email = u["email"].as_str().unwrap_or("").to_string();
-        let id = add(&mut w, HashMap::from([
-            ("__typename".into(), s("User")),
-            ("id".into(), s(&demo_id("user", &email))),
-            ("name".into(), V::S(u["name"].clone())),
-            ("displayName".into(), V::S(u["displayName"].clone())),
-            ("email".into(), s(&email)),
-            ("active".into(), V::S(json!(true))),
-            ("admin".into(), V::S(json!(u["admin"] == json!(true)))),
-            ("guest".into(), V::S(json!(false))),
-            ("app".into(), V::S(json!(false))),
-            ("isMe".into(), V::S(json!(email == viewer))),
-        ]));
+        let id = add(
+            &mut w,
+            HashMap::from([
+                ("__typename".into(), s("User")),
+                ("id".into(), s(&demo_id("user", &email))),
+                ("name".into(), V::S(u["name"].clone())),
+                ("displayName".into(), V::S(u["displayName"].clone())),
+                ("email".into(), s(&email)),
+                ("active".into(), V::S(json!(true))),
+                ("admin".into(), V::S(json!(u["admin"] == json!(true)))),
+                ("guest".into(), V::S(json!(false))),
+                ("app".into(), V::S(json!(false))),
+                ("isMe".into(), V::S(json!(email == viewer))),
+            ]),
+        );
         users.insert(email, id);
         w.root.entry("users".into()).or_default().push(V::N(id));
     }
     w.viewer = users.get(&viewer).copied().unwrap_or(0);
     let mut team = usize::MAX;
     for t in seed["teams"].as_array().into_iter().flatten() {
-        team = add(&mut w, HashMap::from([
-            ("id".into(), s(&demo_id("team", t["key"].as_str().unwrap_or("")))),
-            ("key".into(), V::S(t["key"].clone())),
-            ("name".into(), V::S(t["name"].clone())),
-            ("description".into(), V::S(t["description"].clone())),
-            ("private".into(), V::S(json!(t["private"] == json!(true)))),
-        ]));
+        team = add(
+            &mut w,
+            HashMap::from([
+                ("id".into(), s(&demo_id("team", t["key"].as_str().unwrap_or("")))),
+                ("key".into(), V::S(t["key"].clone())),
+                ("name".into(), V::S(t["name"].clone())),
+                ("description".into(), V::S(t["description"].clone())),
+                ("private".into(), V::S(json!(t["private"] == json!(true)))),
+            ]),
+        );
         w.root.entry("teams".into()).or_default().push(V::N(team));
     }
     let team_v = if team == usize::MAX { NULL } else { V::N(team) };
     let mut states: HashMap<String, usize> = HashMap::new();
     for (i, st) in seed["states"].as_array().into_iter().flatten().enumerate() {
         let name = st["name"].as_str().unwrap_or("").to_string();
-        let id = add(&mut w, HashMap::from([
-            ("id".into(), s(&demo_id("state", &name))),
-            ("name".into(), s(&name)),
-            ("type".into(), V::S(st["type"].clone())),
-            ("color".into(), V::S(st["color"].clone())),
-            ("position".into(), V::S(num(i as f64))),
-            ("team".into(), team_v.clone()),
-        ]));
+        let id = add(
+            &mut w,
+            HashMap::from([
+                ("id".into(), s(&demo_id("state", &name))),
+                ("name".into(), s(&name)),
+                ("type".into(), V::S(st["type"].clone())),
+                ("color".into(), V::S(st["color"].clone())),
+                ("position".into(), V::S(num(i as f64))),
+                ("team".into(), team_v.clone()),
+            ]),
+        );
         states.insert(name, id);
         w.root.entry("workflowStates".into()).or_default().push(V::N(id));
     }
     let mut labels: HashMap<String, usize> = HashMap::new();
     for l in seed["labels"].as_array().into_iter().flatten() {
         let name = l["name"].as_str().unwrap_or("").to_string();
-        let id = add(&mut w, HashMap::from([
-            ("id".into(), s(&demo_id("label", &name))),
-            ("name".into(), s(&name)),
-            ("color".into(), V::S(l["color"].clone())),
-            ("isGroup".into(), V::S(json!(false))),
-            ("team".into(), NULL),
-            ("parent".into(), NULL),
-        ]));
+        let id = add(
+            &mut w,
+            HashMap::from([
+                ("id".into(), s(&demo_id("label", &name))),
+                ("name".into(), s(&name)),
+                ("color".into(), V::S(l["color"].clone())),
+                ("isGroup".into(), V::S(json!(false))),
+                ("team".into(), NULL),
+                ("parent".into(), NULL),
+            ]),
+        );
         labels.insert(name, id);
         w.root.entry("issueLabels".into()).or_default().push(V::N(id));
     }
@@ -196,16 +211,19 @@ fn build() -> World {
         let (st, en) = (text(&starts), text(&ends));
         let (sn, enn) = (time::parse_rfc3339(&st).unwrap_or(0), time::parse_rfc3339(&en).unwrap_or(0));
         let number = sprint(&c["number"]);
-        let id = add(&mut w, HashMap::from([
-            ("id".into(), s(&demo_id("cycle", &number))),
-            ("number".into(), V::S(c["number"].clone())),
-            ("name".into(), NULL),
-            ("startsAt".into(), starts),
-            ("endsAt".into(), ends),
-            ("isActive".into(), V::S(json!(now >= sn && now < enn))),
-            ("isNext".into(), V::S(json!(false))),
-            ("team".into(), team_v.clone()),
-        ]));
+        let id = add(
+            &mut w,
+            HashMap::from([
+                ("id".into(), s(&demo_id("cycle", &number))),
+                ("number".into(), V::S(c["number"].clone())),
+                ("name".into(), NULL),
+                ("startsAt".into(), starts),
+                ("endsAt".into(), ends),
+                ("isActive".into(), V::S(json!(now >= sn && now < enn))),
+                ("isNext".into(), V::S(json!(false))),
+                ("team".into(), team_v.clone()),
+            ]),
+        );
         if now < sn && next.as_ref().is_none_or(|(_, ns)| st < *ns) {
             next = Some((id, st.clone()));
         }
@@ -223,8 +241,14 @@ fn build() -> World {
         w.nodes[team].insert("labels".into(), V::L(vec![]));
         w.nodes[team].insert("cycles".into(), V::L(cycles_list));
     }
-    let status_names = [("backlog", "Backlog"), ("planned", "Planned"), ("started", "In Progress"), ("paused", "Paused"),
-        ("completed", "Completed"), ("canceled", "Canceled")];
+    let status_names = [
+        ("backlog", "Backlog"),
+        ("planned", "Planned"),
+        ("started", "In Progress"),
+        ("paused", "Paused"),
+        ("completed", "Completed"),
+        ("canceled", "Canceled"),
+    ];
     let mut projects: HashMap<String, usize> = HashMap::new();
     for p in seed["projects"].as_array().into_iter().flatten() {
         let name = p["name"].as_str().unwrap_or("").to_string();
@@ -232,28 +256,34 @@ fn build() -> World {
         let slug_id = full[24..].to_string();
         let kind = p["status"].as_str().unwrap_or("").to_string();
         let status_name = status_names.iter().find(|(k, _)| *k == kind).map_or("", |(_, n)| n);
-        let status = add(&mut w, HashMap::from([
-            ("id".into(), s(&demo_id("status", &kind))),
-            ("name".into(), s(status_name)),
-            ("type".into(), s(&kind)),
-        ]));
+        let status = add(
+            &mut w,
+            HashMap::from([
+                ("id".into(), s(&demo_id("status", &kind))),
+                ("name".into(), s(status_name)),
+                ("type".into(), s(&kind)),
+            ]),
+        );
         let lead = users.get(&sprint(&p["lead"])).map_or(NULL, |u| V::N(*u));
-        let id = add(&mut w, HashMap::from([
-            ("id".into(), s(&full)),
-            ("name".into(), s(&name)),
-            ("slugId".into(), s(&slug_id)),
-            ("url".into(), s(&format!("https://linear.app/{url_key}/project/{}-{slug_id}", slug(&name)))),
-            ("description".into(), s("")),
-            ("content".into(), s("")),
-            ("startDate".into(), NULL),
-            ("targetDate".into(), at(&p["targetDate"])),
-            ("progress".into(), V::S(num(0.0))),
-            ("status".into(), V::N(status)),
-            ("lead".into(), lead),
-            ("teams".into(), V::L(vec![team_v.clone()])),
-            ("projectMilestones".into(), V::L(vec![])),
-            ("issues".into(), V::L(vec![])),
-        ]));
+        let id = add(
+            &mut w,
+            HashMap::from([
+                ("id".into(), s(&full)),
+                ("name".into(), s(&name)),
+                ("slugId".into(), s(&slug_id)),
+                ("url".into(), s(&format!("https://linear.app/{url_key}/project/{}-{slug_id}", slug(&name)))),
+                ("description".into(), s("")),
+                ("content".into(), s("")),
+                ("startDate".into(), NULL),
+                ("targetDate".into(), at(&p["targetDate"])),
+                ("progress".into(), V::S(num(0.0))),
+                ("status".into(), V::N(status)),
+                ("lead".into(), lead),
+                ("teams".into(), V::L(vec![team_v.clone()])),
+                ("projectMilestones".into(), V::L(vec![])),
+                ("issues".into(), V::L(vec![])),
+            ]),
+        );
         projects.insert(name, id);
         w.root.entry("projects".into()).or_default().push(V::N(id));
     }
@@ -280,7 +310,10 @@ fn build() -> World {
             ("priority".into(), V::S(num(prio as f64))),
             ("priorityLabel".into(), s(priority_labels.get(prio).copied().unwrap_or(""))),
             ("url".into(), s(&url)),
-            ("branchName".into(), s(&format!("{}/{}-{}", who.split('@').next().unwrap_or(""), ident.to_lowercase(), slug(&title)))),
+            (
+                "branchName".into(),
+                s(&format!("{}/{}-{}", who.split('@').next().unwrap_or(""), ident.to_lowercase(), slug(&title))),
+            ),
             ("createdAt".into(), at(&sd["createdAt"])),
             ("updatedAt".into(), at(&sd["updatedAt"])),
             ("startedAt".into(), at(&sd["startedAt"])),
@@ -317,12 +350,15 @@ fn build() -> World {
         m.insert("labels".into(), V::L(ls));
         let id = add(&mut w, m);
         for a in sd["attachments"].as_array().into_iter().flatten() {
-            let att = add(&mut w, HashMap::from([
-                ("id".into(), s(&demo_id("attachment", &sprint(&a["url"])))),
-                ("title".into(), V::S(a["title"].clone())),
-                ("url".into(), V::S(a["url"].clone())),
-                ("issue".into(), V::N(id)),
-            ]));
+            let att = add(
+                &mut w,
+                HashMap::from([
+                    ("id".into(), s(&demo_id("attachment", &sprint(&a["url"])))),
+                    ("title".into(), V::S(a["title"].clone())),
+                    ("url".into(), V::S(a["url"].clone())),
+                    ("issue".into(), V::N(id)),
+                ]),
+            );
             push(&mut w.nodes[id], "attachments", V::N(att));
             w.root.entry("attachments".into()).or_default().push(V::N(att));
         }
@@ -335,15 +371,18 @@ fn build() -> World {
                 }
                 None => NULL,
             };
-            let cm = add(&mut w, HashMap::from([
-                ("id".into(), s(&cid)),
-                ("body".into(), V::S(c["body"].clone())),
-                ("createdAt".into(), at(&c["createdAt"])),
-                ("url".into(), s(&format!("{url}#comment-{}", &cid[..8]))),
-                ("user".into(), users.get(&sprint(&c["user"])).map_or(NULL, |u| V::N(*u))),
-                ("issue".into(), V::N(id)),
-                ("parent".into(), parent),
-            ]));
+            let cm = add(
+                &mut w,
+                HashMap::from([
+                    ("id".into(), s(&cid)),
+                    ("body".into(), V::S(c["body"].clone())),
+                    ("createdAt".into(), at(&c["createdAt"])),
+                    ("url".into(), s(&format!("{url}#comment-{}", &cid[..8]))),
+                    ("user".into(), users.get(&sprint(&c["user"])).map_or(NULL, |u| V::N(*u))),
+                    ("issue".into(), V::N(id)),
+                    ("parent".into(), parent),
+                ]),
+            );
             push(&mut w.nodes[id], "comments", V::N(cm));
             w.root.entry("comments".into()).or_default().push(V::N(cm));
         }
@@ -363,12 +402,15 @@ fn build() -> World {
             let Some(&other) = issues.get(&sprint(&r["issue"])) else { continue };
             let ident = sd["identifier"].as_str().unwrap_or("");
             let other_ident = text_of(&w.nodes[other], "identifier");
-            let rel = add(&mut w, HashMap::from([
-                ("id".into(), s(&demo_id("relation", &format!("{ident}{}{other_ident}", sprint(&r["type"]))))),
-                ("type".into(), V::S(r["type"].clone())),
-                ("issue".into(), V::N(id)),
-                ("relatedIssue".into(), V::N(other)),
-            ]));
+            let rel = add(
+                &mut w,
+                HashMap::from([
+                    ("id".into(), s(&demo_id("relation", &format!("{ident}{}{other_ident}", sprint(&r["type"]))))),
+                    ("type".into(), V::S(r["type"].clone())),
+                    ("issue".into(), V::N(id)),
+                    ("relatedIssue".into(), V::N(other)),
+                ]),
+            );
             push(&mut w.nodes[id], "relations", V::N(rel));
             push(&mut w.nodes[other], "inverseRelations", V::N(rel));
         }
@@ -395,7 +437,10 @@ fn text_of(n: &Node, k: &str) -> String {
 /// Resolves a GraphQL request against the demo workspace, as Linear would
 /// answer it.
 pub fn answer(query: &str, variables: &Value) -> Answer {
-    let fail = |msg: String| Answer { data: Value::Null, errors: vec![json!({"message": msg, "extensions": {"code": "DEMO"}})] };
+    let fail = |msg: String| Answer {
+        data: Value::Null,
+        errors: vec![json!({"message": msg, "extensions": {"code": "DEMO"}})],
+    };
     let doc = match gql::parse(query) {
         Ok(d) => d,
         Err(e) => return fail(e),
@@ -485,14 +530,15 @@ impl Resolver<'_> {
                     let node = &self.w.nodes[*i];
                     let mut text = format!("{} {}", text_of(node, "title"), text_of(node, "description"));
                     if args.get("includeComments") == Some(&json!(true))
-                        && let Some(V::L(cs)) = node.get("comments") {
-                            for c in cs {
-                                if let V::N(ci) = c {
-                                    text.push(' ');
-                                    text.push_str(&text_of(&self.w.nodes[*ci], "body"));
-                                }
+                        && let Some(V::L(cs)) = node.get("comments")
+                    {
+                        for c in cs {
+                            if let V::N(ci) = c {
+                                text.push(' ');
+                                text.push_str(&text_of(&self.w.nodes[*ci], "body"));
                             }
                         }
+                    }
                     if text.to_lowercase().contains(&term) {
                         hits.push(n.clone());
                     }
@@ -573,9 +619,10 @@ impl Resolver<'_> {
                 }
                 Selection::Inline { on, selections } => {
                     if on.as_ref().is_none_or(|t| *t == text_of(node, "__typename"))
-                        && let Value::Object(m) = self.object(v, selections) {
-                            out.extend(m);
-                        }
+                        && let Value::Object(m) = self.object(v, selections)
+                    {
+                        out.extend(m);
+                    }
                 }
                 Selection::Spread => {}
             }
@@ -594,9 +641,10 @@ impl Resolver<'_> {
                 }
             }
             if let Some(Value::Object(f)) = args.get("filter")
-                && !self.matches(Some(n), f) {
-                    continue;
-                }
+                && !self.matches(Some(n), f)
+            {
+                continue;
+            }
             items.push(n.clone());
         }
         let key = |n: &V, k: &str| match n {
@@ -614,7 +662,13 @@ impl Resolver<'_> {
                     _ => 0.0,
                 };
                 // No priority sorts after low, whichever way.
-                if p == 0.0 { 5.0 } else if desc { p } else { -p }
+                if p == 0.0 {
+                    5.0
+                } else if desc {
+                    p
+                } else {
+                    -p
+                }
             };
             items.sort_by(|a, b| rank(a).partial_cmp(&rank(b)).unwrap_or(std::cmp::Ordering::Equal));
         } else if let Some(o) = args.get("orderBy").filter(|o| !o.is_null()) {
@@ -648,13 +702,23 @@ impl Resolver<'_> {
         for (k, cond) in filter {
             match k.as_str() {
                 "and" => {
-                    if !cond.as_array().into_iter().flatten().all(|f| self.matches(node, f.as_object().unwrap_or(&Map::new()))) {
+                    if !cond
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .all(|f| self.matches(node, f.as_object().unwrap_or(&Map::new())))
+                    {
                         return false;
                     }
                     continue;
                 }
                 "or" => {
-                    if !cond.as_array().into_iter().flatten().any(|f| self.matches(node, f.as_object().unwrap_or(&Map::new()))) {
+                    if !cond
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .any(|f| self.matches(node, f.as_object().unwrap_or(&Map::new())))
+                    {
                         return false;
                     }
                     continue;
@@ -731,10 +795,9 @@ impl Resolver<'_> {
                         return false;
                     }
                 }
-                "length"
-                    if !compare(&num(items.len() as f64), sub) => {
-                        return false;
-                    }
+                "length" if !compare(&num(items.len() as f64), sub) => {
+                    return false;
+                }
                 _ => {}
             }
         }
@@ -742,8 +805,24 @@ impl Resolver<'_> {
     }
 }
 
-const COMPARATORS: &[&str] = &["eq", "neq", "in", "nin", "eqIgnoreCase", "neqIgnoreCase", "contains", "containsIgnoreCase",
-    "notContains", "startsWith", "endsWith", "gt", "gte", "lt", "lte", "null"];
+const COMPARATORS: &[&str] = &[
+    "eq",
+    "neq",
+    "in",
+    "nin",
+    "eqIgnoreCase",
+    "neqIgnoreCase",
+    "contains",
+    "containsIgnoreCase",
+    "notContains",
+    "startsWith",
+    "endsWith",
+    "gt",
+    "gte",
+    "lt",
+    "lte",
+    "null",
+];
 
 fn only_comparators(c: &Map<String, Value>) -> bool {
     c.keys().all(|k| COMPARATORS.contains(&k.as_str()))
@@ -804,7 +883,10 @@ mod tests {
     #[test]
     fn ids_and_slugs_as_before() {
         // Recorded from the Go implementation.
-        assert_eq!(slug("Checkout fails when a coupon code has trailing whitespace"), "checkout-fails-when-a-coupon-code-has-trailing-whitespace");
+        assert_eq!(
+            slug("Checkout fails when a coupon code has trailing whitespace"),
+            "checkout-fails-when-a-coupon-code-has-trailing-whitespace"
+        );
         assert_eq!(slug("  Ünïcode & co!  "), "n-code-co");
         assert_eq!(demo_id("team", "ENG").len(), 36);
         assert_eq!(&demo_id("team", "ENG")[14..15], "5");

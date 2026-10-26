@@ -26,8 +26,22 @@ macro_rules! comment_row {
 
 /// The keys of an issue_row item, for --fields.
 pub const ISSUE_ROW_FIELDS: &[&str] = &[
-    "id", "identifier", "title", "priority", "priorityLabel", "url", "createdAt", "updatedAt", "state", "assignee",
-    "delegate", "team", "project", "cycle", "projectMilestone", "labels",
+    "id",
+    "identifier",
+    "title",
+    "priority",
+    "priorityLabel",
+    "url",
+    "createdAt",
+    "updatedAt",
+    "state",
+    "assignee",
+    "delegate",
+    "team",
+    "project",
+    "cycle",
+    "projectMilestone",
+    "labels",
 ];
 
 pub const VIEWER: &str = "query Viewer { viewer { id name email } organization { name urlKey } }";
@@ -77,7 +91,8 @@ pub const ISSUE_UPDATE: &str = concat!(
     " } }\n}"
 );
 
-pub const ISSUE_ARCHIVED: &str = "query IssueArchived($id: String!) { issue(id: $id) { id identifier title url archivedAt } }";
+pub const ISSUE_ARCHIVED: &str =
+    "query IssueArchived($id: String!) { issue(id: $id) { id identifier title url archivedAt } }";
 
 pub const ISSUE_ARCHIVE: &str = "mutation IssueArchive($id: String!) { issueArchive(id: $id) { success } }";
 
@@ -199,17 +214,43 @@ pub const CYCLES: &str = concat!(
 #[cfg(test)]
 pub fn documents() -> Vec<(&'static str, &'static str)> {
     vec![
-        ("Viewer", VIEWER), ("IssueList", ISSUE_LIST), ("IssueSearch", ISSUE_SEARCH), ("IssueShow", ISSUE_SHOW),
-        ("CreateResolve", CREATE_RESOLVE), ("IssueCreate", ISSUE_CREATE), ("UpdateResolve", UPDATE_RESOLVE),
-        ("IssueUpdate", ISSUE_UPDATE), ("IssueArchived", ISSUE_ARCHIVED), ("IssueArchive", ISSUE_ARCHIVE),
-        ("IssueUnarchive", ISSUE_UNARCHIVE), ("CommentList", COMMENT_LIST), ("CommentResolve", COMMENT_RESOLVE),
-        ("CommentCreate", COMMENT_CREATE), ("RelationResolve", RELATION_RESOLVE), ("RelationCreate", RELATION_CREATE),
-        ("RelationDelete", RELATION_DELETE), ("Comment", COMMENT), ("CommentUpdate", COMMENT_UPDATE),
-        ("CommentDelete", COMMENT_DELETE), ("Teams", TEAMS), ("States", STATES), ("Labels", LABELS), ("Users", USERS),
-        ("Projects", PROJECTS), ("Cycles", CYCLES), ("WatchIDs", WATCH_IDS), ("WatchGone", WATCH_GONE),
-        ("WatchChanged", WATCH_CHANGED), ("WatchCreated", WATCH_CREATED), ("WatchUpdated", WATCH_UPDATED),
-        ("WatchArchived", WATCH_ARCHIVED), ("WatchUnarchived", WATCH_UNARCHIVED), ("Notifications", NOTIFICATIONS),
-        ("Milestones", MILESTONES), ("ProjectFind", PROJECT_FIND), ("ProjectUpdate", PROJECT_UPDATE),
+        ("Viewer", VIEWER),
+        ("IssueList", ISSUE_LIST),
+        ("IssueSearch", ISSUE_SEARCH),
+        ("IssueShow", ISSUE_SHOW),
+        ("CreateResolve", CREATE_RESOLVE),
+        ("IssueCreate", ISSUE_CREATE),
+        ("UpdateResolve", UPDATE_RESOLVE),
+        ("IssueUpdate", ISSUE_UPDATE),
+        ("IssueArchived", ISSUE_ARCHIVED),
+        ("IssueArchive", ISSUE_ARCHIVE),
+        ("IssueUnarchive", ISSUE_UNARCHIVE),
+        ("CommentList", COMMENT_LIST),
+        ("CommentResolve", COMMENT_RESOLVE),
+        ("CommentCreate", COMMENT_CREATE),
+        ("RelationResolve", RELATION_RESOLVE),
+        ("RelationCreate", RELATION_CREATE),
+        ("RelationDelete", RELATION_DELETE),
+        ("Comment", COMMENT),
+        ("CommentUpdate", COMMENT_UPDATE),
+        ("CommentDelete", COMMENT_DELETE),
+        ("Teams", TEAMS),
+        ("States", STATES),
+        ("Labels", LABELS),
+        ("Users", USERS),
+        ("Projects", PROJECTS),
+        ("Cycles", CYCLES),
+        ("WatchIDs", WATCH_IDS),
+        ("WatchGone", WATCH_GONE),
+        ("WatchChanged", WATCH_CHANGED),
+        ("WatchCreated", WATCH_CREATED),
+        ("WatchUpdated", WATCH_UPDATED),
+        ("WatchArchived", WATCH_ARCHIVED),
+        ("WatchUnarchived", WATCH_UNARCHIVED),
+        ("Notifications", NOTIFICATIONS),
+        ("Milestones", MILESTONES),
+        ("ProjectFind", PROJECT_FIND),
+        ("ProjectUpdate", PROJECT_UPDATE),
     ]
 }
 

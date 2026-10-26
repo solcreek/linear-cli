@@ -31,9 +31,10 @@ fn serve(run: &mut Run, ctx: &Ctx) -> R {
         return Err(usage("pass --stdio (the only transport so far)"));
     }
     if let Ok((key, source)) = api_key()
-        && !key.is_empty() {
-            SERVED.with(|s| *s.borrow_mut() = Some((key, source)));
-        }
+        && !key.is_empty()
+    {
+        SERVED.with(|s| *s.borrow_mut() = Some((key, source)));
+    }
     let stdin = std::io::stdin();
     let mut lines = stdin.lock();
     let mut line = Vec::new();

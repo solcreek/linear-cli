@@ -165,7 +165,19 @@ const LOOKUPS: &[Lookup] = &[
         example: "  linearctl notification list --limit 20 --json",
         doc: queries::NOTIFICATIONS,
         conn: "notifications",
-        fields: &["id", "type", "title", "subtitle", "url", "createdAt", "readAt", "snoozedUntilAt", "actor", "issue", "comment"],
+        fields: &[
+            "id",
+            "type",
+            "title",
+            "subtitle",
+            "url",
+            "createdAt",
+            "readAt",
+            "snoozedUntilAt",
+            "actor",
+            "issue",
+            "comment",
+        ],
         cols: &["createdAt", "type", "issue.identifier", "title"],
         team: false,
         filter: Some(|ctx, _| {
@@ -206,7 +218,9 @@ fn command(l: &Lookup) -> Cmd {
         "user" => list
             .flag(Flag::bool("active", "only active users"))
             .flag(Flag::bool("app", "only app users: the agents issues can be delegated to")),
-        "notification" => list.flag(Flag::str("type", "only notifications of `TYPE` as Linear names them (e.g. issueAssignedToYou)")),
+        "notification" => {
+            list.flag(Flag::str("type", "only notifications of `TYPE` as Linear names them (e.g. issueAssignedToYou)"))
+        }
         "milestone" => list.flag(Flag::str("project", "only milestones of project `NAME`")),
         "project" => list.flag(Flag::strs(
             "status",

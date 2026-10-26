@@ -32,7 +32,9 @@ fn upload_path(s: &str) -> R<String> {
     let origin = uploads_origin();
     let o = parse_url(&origin);
     match (parse_url(s), o) {
-        (Some(u), Some(o)) if u.scheme == o.scheme && u.host == o.host && !u.has_user && !u.path.trim_matches('/').is_empty() => {
+        (Some(u), Some(o))
+            if u.scheme == o.scheme && u.host == o.host && !u.has_user && !u.path.trim_matches('/').is_empty() =>
+        {
             Ok(u.path)
         }
         _ => Err(usage(format!("URL must be a file on {origin}; got {}", quote_go(s)))),

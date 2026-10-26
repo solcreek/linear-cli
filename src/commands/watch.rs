@@ -240,7 +240,11 @@ impl Watcher {
         let filter = self.and(gte.clone());
         let cl = self.cl.clone();
         let (items, _) = collect(PAGE_SIZE * SNAPSHOT_PAGES, String::new(), |first, after| {
-            let data = cl.query(run, queries::ISSUE_LIST, json!({"filter": filter, "first": first, "after": optional(after)}))?;
+            let data = cl.query(
+                run,
+                queries::ISSUE_LIST,
+                json!({"filter": filter, "first": first, "after": optional(after)}),
+            )?;
             Ok(Page::from(&data["issues"]))
         })?;
         let mut matched = std::collections::HashSet::new();
@@ -265,14 +269,26 @@ impl Watcher {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn run(&mut self, run: &mut Run, mode: &str, since: Option<i64>, heartbeat: i64, reconcile: i64, poll: i64, batch: i64) -> R {
+    fn run(
+        &mut self,
+        run: &mut Run,
+        mode: &str,
+        since: Option<i64>,
+        heartbeat: i64,
+        reconcile: i64,
+        poll: i64,
+        batch: i64,
+    ) -> R {
         let start = time::now();
         let mut sub = None;
         if mode != "poll" {
             match subscribe(run, &self.cl.key) {
                 Ok(s) => sub = Some(s),
                 Err(e) if mode == "subscription" => return Err(failed(e)),
-                Err(e) => run.eprint(&format!("linearctl: subscriptions unavailable ({e}); polling every {}\n", time::duration(poll))),
+                Err(e) => run.eprint(&format!(
+                    "linearctl: subscriptions unavailable ({e}); polling every {}\n",
+                    time::duration(poll)
+                )),
             }
         }
         self.mode = if sub.is_some() { "subscription" } else { "poll" }.into();
@@ -492,7 +508,9 @@ fn connect(url: &str, timeout: Duration) -> Result<Stream, String> {
     };
     let host_port = rest.split('/').next().unwrap_or("");
     let (host, port) = match host_port.rsplit_once(':') {
-        Some((h, p)) if !h.ends_with(']') || h.starts_with('[') => (h.trim_matches(['[', ']']), p.parse().map_err(|_| format!("bad port in {url}"))?),
+        Some((h, p)) if !h.ends_with(']') || h.starts_with('[') => {
+            (h.trim_matches(['[', ']']), p.parse().map_err(|_| format!("bad port in {url}"))?)
+        }
         _ => (host_port, if tls { 443 } else { 80 }),
     };
     let addrs: Vec<_> = (host, port).to_socket_addrs().map_err(|e| e.to_string())?.collect();
@@ -562,7 +580,8 @@ fn subscribe(run: &Run, key: &str) -> Result<Subscription, String> {
         .body(())
         .map_err(|e| e.to_string())?;
     let config = tungstenite::protocol::WebSocketConfig::default().max_message_size(Some(1 << 20));
-    let (mut ws, _) = tungstenite::client::client_with_config(request, stream, Some(config)).map_err(|e| e.to_string())?;
+    let (mut ws, _) =
+        tungstenite::client::client_with_config(request, stream, Some(config)).map_err(|e| e.to_string())?;
     send(&mut ws, &json!({"type": "connection_init", "payload": {}}))?;
     let acked = match ws.read() {
         Ok(tungstenite::Message::Text(t)) => json::parse(t.as_bytes()).is_ok_and(|v| v["type"] == "connection_ack"),
@@ -619,7 +638,8 @@ fn read(mut ws: Socket, events: Sender<Event>, commands: Receiver<Command>, seen
             tungstenite::Message::Text(t) => t.to_string(),
             tungstenite::Message::Binary(b) => String::from_utf8_lossy(&b).into_owned(),
             tungstenite::Message::Close(f) => {
-                let why = f.map(|f| format!("status = {}, reason = {}", u16::from(f.code), f.reason)).unwrap_or_default();
+                let why =
+                    f.map(|f| format!("status = {}, reason = {}", u16::from(f.code), f.reason)).unwrap_or_default();
                 let _ = events.send(Event::Failed(format!("closed: {why}")));
                 return;
             }

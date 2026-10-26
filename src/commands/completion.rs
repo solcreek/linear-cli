@@ -78,14 +78,15 @@ to your powershell profile.\n",
             |run, ctx| script(run, ctx, POWERSHELL),
         ),
     ];
-    let mut complete = Cmd::new("__complete [command-line]", "Request shell completion choices for the specified command-line")
-        .long(
-            "__complete is a special command that is used by the shell completion logic\n\
+    let mut complete =
+        Cmd::new("__complete [command-line]", "Request shell completion choices for the specified command-line")
+            .long(
+                "__complete is a special command that is used by the shell completion logic\n\
 to request completion choices for the specified command-line.",
-        )
-        .alias("__completeNoDesc")
-        .args(Args::AtLeast(1))
-        .run(complete);
+            )
+            .alias("__completeNoDesc")
+            .args(Args::AtLeast(1))
+            .run(complete);
     complete.hidden = true;
     complete.parse_flags = false;
     complete.flags_in_use_line = false;

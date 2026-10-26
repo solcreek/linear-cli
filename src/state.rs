@@ -109,9 +109,10 @@ fn base_of(p: &str) -> &str {
 /// (HOME unset, as under cron): never the current directory.
 pub fn home(kind: &str) -> String {
     if let Ok(dir) = std::env::var("LINEARCTL_HOME")
-        && !dir.is_empty() {
-            return format!("{}/{kind}", abs(&dir));
-        }
+        && !dir.is_empty()
+    {
+        return format!("{}/{kind}", abs(&dir));
+    }
     let (var, sub) = match kind {
         "config" => ("XDG_CONFIG_HOME", ".config"),
         "cache" => ("XDG_CACHE_HOME", ".cache"),
@@ -273,7 +274,9 @@ mod tests {
 
     #[test]
     fn cleans_as_go() {
-        for (p, want) in [("a/../b", "b"), ("/a/./b/", "/a/b"), ("", "."), ("../a", "../a"), ("/..", "/"), ("a//b", "a/b")] {
+        for (p, want) in
+            [("a/../b", "b"), ("/a/./b/", "/a/b"), ("", "."), ("../a", "../a"), ("/..", "/"), ("a//b", "a/b")]
+        {
             assert_eq!(clean(p), want, "{p}");
         }
     }
@@ -286,8 +289,13 @@ mod tests {
         let real = std::fs::canonicalize(&dir).unwrap().to_string_lossy().into_owned();
         assert_eq!(inside(&root, "f.txt").unwrap(), format!("{real}/f.txt"));
         assert_eq!(inside(&root, "sub/f.txt").unwrap(), format!("{real}/sub/f.txt"));
-        for (p, msg) in [("../x", "'..' is not allowed"), ("sub/", "names a directory"), ("nope/f", "no such directory"),
-            ("/etc/passwd", "outside"), (".", "itself")] {
+        for (p, msg) in [
+            ("../x", "'..' is not allowed"),
+            ("sub/", "names a directory"),
+            ("nope/f", "no such directory"),
+            ("/etc/passwd", "outside"),
+            (".", "itself"),
+        ] {
             let e = inside(&root, p).unwrap_err().to_string();
             assert!(e.contains(msg), "{p}: {e}");
         }

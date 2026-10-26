@@ -85,7 +85,9 @@ impl Client {
         }
         let (key, source) = crate::keys::api_key()?;
         if key.is_empty() {
-            return Err(Fail::Auth("no API key: set LINEAR_API_KEY, or pipe one to 'linearctl auth login --yes'".into()));
+            return Err(Fail::Auth(
+                "no API key: set LINEAR_API_KEY, or pipe one to 'linearctl auth login --yes'".into(),
+            ));
         }
         Ok(Client::with_key(run, &key, &source))
     }
@@ -112,13 +114,7 @@ impl Client {
     }
 
     fn header(&self, name: &str) -> String {
-        self.header
-            .borrow()
-            .as_ref()
-            .and_then(|h| h.get(name))
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("")
-            .to_string()
+        self.header.borrow().as_ref().and_then(|h| h.get(name)).and_then(|v| v.to_str().ok()).unwrap_or("").to_string()
     }
 
     /// Sends doc and returns its data. Any GraphQL error fails it.
@@ -185,7 +181,9 @@ impl Client {
         // it understood.
         let wellformed = match &parsed {
             Ok(Value::Null) => true,
-            Ok(Value::Object(m)) => m.get("errors").is_none_or(|e| e.is_null() || e.as_array().is_some_and(|a| a.iter().all(|x| x.is_object() || x.is_null()))),
+            Ok(Value::Object(m)) => m.get("errors").is_none_or(|e| {
+                e.is_null() || e.as_array().is_some_and(|a| a.iter().all(|x| x.is_object() || x.is_null()))
+            }),
             _ => false,
         };
         match status {
@@ -223,7 +221,9 @@ impl Client {
             Err(mpsc::RecvTimeoutError::Disconnected) => return Err(failed(format!("cannot reach {host}"))),
         };
         result.map_err(|e| match e {
-            ureq::Error::Timeout(_) => failed(format!("{host} did not answer within {} s; raise --timeout", self.timeout)),
+            ureq::Error::Timeout(_) => {
+                failed(format!("{host} did not answer within {} s; raise --timeout", self.timeout))
+            }
             e => failed(format!("cannot reach {host}: {}", transport_cause(&e))),
         })
     }
@@ -237,9 +237,10 @@ impl Client {
                 continue;
             }
             if let Ok(ms) = self.header(&format!("X-RateLimit-{kind}-Reset")).parse::<i64>()
-                && at.is_none_or(|a| ms > a) {
-                    at = Some(ms);
-                }
+                && at.is_none_or(|a| ms > a)
+            {
+                at = Some(ms);
+            }
         }
         let mut msg = "Linear's rate limit is spent".to_string();
         if let Some(ms) = at {
@@ -297,7 +298,11 @@ impl Client {
             let mut res = req.call()?;
             let status = res.status().as_u16();
             let kind = res.headers().get("Content-Type").and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
-            let data = if status == 200 { Some(res.body_mut().with_config().limit(MAX_DOWNLOAD + 1).read_to_vec()) } else { None };
+            let data = if status == 200 {
+                Some(res.body_mut().with_config().limit(MAX_DOWNLOAD + 1).read_to_vec())
+            } else {
+                None
+            };
             Ok((status, kind, data))
         })?;
         match status {

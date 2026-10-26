@@ -8,8 +8,20 @@ use crate::util::*;
 use serde_json::{Map, Value, json};
 
 const FIELDS: &[&str] = &[
-    "id", "name", "slugId", "url", "description", "content", "status", "lead", "startDate", "targetDate", "progress",
-    "teams", "projectMilestones", "issues",
+    "id",
+    "name",
+    "slugId",
+    "url",
+    "description",
+    "content",
+    "status",
+    "lead",
+    "startDate",
+    "targetDate",
+    "progress",
+    "teams",
+    "projectMilestones",
+    "issues",
 ];
 
 /// show and update, added to the project command project list made.
@@ -46,7 +58,8 @@ fn project_filter(s: &str) -> R<Value> {
 /// The one project PROJECT names: none is not found, and a name two
 /// projects share is an error listing them.
 fn find_project(run: &mut Run, cl: &Client, r: &str, filter: Value, issues: u64) -> R<Value> {
-    let data = cl.query(run, queries::PROJECT_FIND, json!({"filter": filter, "issues": issues, "withIssues": issues > 0}))?;
+    let data =
+        cl.query(run, queries::PROJECT_FIND, json!({"filter": filter, "issues": issues, "withIssues": issues > 0}))?;
     let n = super::issue::nodes(&data["projects"]);
     match n.len() {
         0 => Err(failed(format!("not found: project {r} (or this API key cannot see it)"))),
@@ -88,7 +101,12 @@ fn show(run: &mut Run, ctx: &Ctx) -> R {
     if run.json {
         return run.print_json(json!({"project": pick(p, &fields)}));
     }
-    let mut s = format!("{}  ({})\n{}\n", printable(&str_at(&p, "name")), printable(&str_at(&p, "status.name")), str_at(&p, "url"));
+    let mut s = format!(
+        "{}  ({})\n{}\n",
+        printable(&str_at(&p, "name")),
+        printable(&str_at(&p, "status.name")),
+        str_at(&p, "url")
+    );
     let d = str_at(&p, "description");
     if !d.is_empty() {
         s.push_str(&format!("\n{}\n", printable(&d)));

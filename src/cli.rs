@@ -335,7 +335,10 @@ pub fn parse<'a>(root: &'a Cmd, args: &[String]) -> Outcome<'a> {
         // cobra's legacyArgs: a root with subcommands refuses an unknown one.
         let stripped = strip_flags(&rest, &found.all_flags());
         if !cmd.subs.is_empty() && found.is_root() && !stripped.is_empty() {
-            return Outcome::Usage(format!("unknown command {} for {}", quote_go(&stripped[0]), quote_go(&found.path())), None);
+            return Outcome::Usage(
+                format!("unknown command {} for {}", quote_go(&stripped[0]), quote_go(&found.path())),
+                None,
+            );
         }
     }
     let flags = found.all_flags();
@@ -579,10 +582,9 @@ fn set(ctx: &mut Ctx, flag: &Flag, value: &str) -> Result<(), String> {
             slot.clear();
         }
         // pflag reads --flag "" on an array as no value at all.
-        if (!stored.is_empty() || !first || !slot.is_empty())
-            && !stored.is_empty() {
-                slot.push(stored);
-            }
+        if (!stored.is_empty() || !first || !slot.is_empty()) && !stored.is_empty() {
+            slot.push(stored);
+        }
     } else {
         *slot = vec![stored];
     }
@@ -683,11 +685,12 @@ fn sorted_subs(c: &Cmd) -> Vec<&Cmd> {
 /// pflag's UnquoteUsage: the `NAME` in a usage line, or the type's name.
 fn unquote_usage(f: &Flag) -> (String, String) {
     if let Some(i) = f.usage.find('`')
-        && let Some(j) = f.usage[i + 1..].find('`') {
-            let name = &f.usage[i + 1..i + 1 + j];
-            let usage = format!("{}{}{}", &f.usage[..i], name, &f.usage[i + 2 + j..]);
-            return (name.to_string(), usage);
-        }
+        && let Some(j) = f.usage[i + 1..].find('`')
+    {
+        let name = &f.usage[i + 1..i + 1 + j];
+        let usage = format!("{}{}{}", &f.usage[..i], name, &f.usage[i + 2 + j..]);
+        return (name.to_string(), usage);
+    }
     let name = match f.kind {
         Kind::Bool => "",
         k => Flag::new("", k, "", "").type_name(),
@@ -782,8 +785,11 @@ pub fn describe(found: &Found, version: &str) -> serde_json::Value {
     d.insert("commands".into(), Value::Array(subs));
     if found.is_root() {
         d.insert("version".into(), json!(version));
-        d.insert("exitCodes".into(), json!({"ok": 0, "failed": 1, "usage": 2, "partial": 3, "busy": 4, "auth": 5,
-            "rateLimited": 6, "conflict": 7}));
+        d.insert(
+            "exitCodes".into(),
+            json!({"ok": 0, "failed": 1, "usage": 2, "partial": 3, "busy": 4, "auth": 5,
+            "rateLimited": 6, "conflict": 7}),
+        );
         return Value::Object(d);
     }
     let args: Vec<Value> = c

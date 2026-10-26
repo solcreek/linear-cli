@@ -10,8 +10,21 @@ use serde_json::{Map, Value, json};
 pub fn show_fields() -> Vec<&'static str> {
     let mut f = ISSUE_ROW_FIELDS.to_vec();
     f.extend([
-        "description", "dueDate", "estimate", "branchName", "startedAt", "completedAt", "canceledAt", "archivedAt",
-        "creator", "parent", "children", "relations", "inverseRelations", "attachments", "comments",
+        "description",
+        "dueDate",
+        "estimate",
+        "branchName",
+        "startedAt",
+        "completedAt",
+        "canceledAt",
+        "archivedAt",
+        "creator",
+        "parent",
+        "children",
+        "relations",
+        "inverseRelations",
+        "attachments",
+        "comments",
     ]);
     f
 }
@@ -39,7 +52,10 @@ fn list_cmd() -> Cmd {
         )
         .run(list);
     let mut c = filter_flags(c)
-        .flag(Flag::strs("id", "only the issue `ISSUE` (ENG-123 or a UUID; repeatable); one not\nfound is a problem (exit 3)"))
+        .flag(Flag::strs(
+            "id",
+            "only the issue `ISSUE` (ENG-123 or a UUID; repeatable); one not\nfound is a problem (exit 3)",
+        ))
         .flag(Flag::str("query", "full-text search for `TEXT`"))
         .flag(Flag::bool("include-comments", "with --query, also match the text of comments"))
         .flag(Flag::str("sort", "order by `FIELD`: updated (default), created, priority"))
@@ -194,7 +210,11 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
     if !types.is_empty() {
         for t in &types {
             if !STATE_TYPES.contains(&t.as_str()) {
-                return Err(usage(format!("--state-type must be one of {}; got {}", STATE_TYPES.join(", "), quote_go(t))));
+                return Err(usage(format!(
+                    "--state-type must be one of {}; got {}",
+                    STATE_TYPES.join(", "),
+                    quote_go(t)
+                )));
             }
         }
         state.insert("type".into(), json!({"in": types}));
@@ -207,7 +227,8 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
     }
     let any_of = values(ctx, "any-label")?;
     if !any_of.is_empty() {
-        let or: Vec<Value> = any_of.iter().map(|l| json!({"labels": {"some": {"name": {"eqIgnoreCase": l}}}})).collect();
+        let or: Vec<Value> =
+            any_of.iter().map(|l| json!({"labels": {"some": {"name": {"eqIgnoreCase": l}}}})).collect();
         and.push(json!({"or": or}));
     }
     // "every label differs" also holds for an issue with no labels.
@@ -236,7 +257,9 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
         let f = match d.as_str() {
             "none" => json!({"null": true}),
             "any" => json!({"null": false}),
-            _ => json!({"or": [{"name": {"eqIgnoreCase": d}}, {"displayName": {"eqIgnoreCase": d}}, {"email": {"eqIgnoreCase": d}}]}),
+            _ => {
+                json!({"or": [{"name": {"eqIgnoreCase": d}}, {"displayName": {"eqIgnoreCase": d}}, {"email": {"eqIgnoreCase": d}}]})
+            }
         };
         filter.insert("delegate".into(), f);
     }
@@ -276,7 +299,10 @@ fn user_filter(flag: &str, who: &str) -> R<Value> {
 /// --updated-since as an RFC 3339 time: a date, a time, or 7d / 24h.
 pub fn when(s: &str) -> R<String> {
     let b = s.as_bytes();
-    if (2..=5).contains(&b.len()) && b[..b.len() - 1].iter().all(u8::is_ascii_digit) && matches!(b[b.len() - 1], b'd' | b'h') {
+    if (2..=5).contains(&b.len())
+        && b[..b.len() - 1].iter().all(u8::is_ascii_digit)
+        && matches!(b[b.len() - 1], b'd' | b'h')
+    {
         let n: i64 = s[..s.len() - 1].parse().unwrap_or(0);
         let unit = if b[b.len() - 1] == b'd' { 24 * time::HOUR } else { time::HOUR };
         return Ok(time::rfc3339(time::now() - n * unit));
@@ -380,7 +406,10 @@ fn issue_fields(c: Cmd) -> Cmd {
         .flag(Flag::str("state", "workflow state `NAME` (see 'linearctl state list')"))
         .flag(Flag::str("priority", "`PRIORITY`: 0-4 or none, urgent, high, medium, low"))
         .flag(Flag::str("project", "project `NAME`"))
-        .flag(Flag::str("milestone", "project milestone `NAME`, or none to clear; it sets the project\nwhen the issue has none"))
+        .flag(Flag::str(
+            "milestone",
+            "project milestone `NAME`, or none to clear; it sets the project\nwhen the issue has none",
+        ))
         .flag(Flag::str("delegate", "delegate to the agent (app user) `WHO`: its name or email, or none"))
         .flag(Flag::str("parent", "make it a sub-issue of `ISSUE` (none: of no issue)"))
         .flag(Flag::str("json-input", "read Linear's input object from `PATH` (- for stdin); flags win"))
@@ -768,18 +797,20 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     extra.extend(remove.iter().cloned());
     let mut vars = w.resolve_vars(&extra);
     vars.insert("id".into(), json!(r));
-    let res = cl.query(run, queries::UPDATE_RESOLVE, Value::Object(vars)).map_err(|e| e.not_found(&format!("issue {r}")))?;
+    let res =
+        cl.query(run, queries::UPDATE_RESOLVE, Value::Object(vars)).map_err(|e| e.not_found(&format!("issue {r}")))?;
     let is = &res["issue"];
     let identifier = str_at(is, "identifier");
     let updated_at = str_at(is, "updatedAt");
     if !since.is_empty() && !updated_at.is_empty() {
         let then = time::parse_rfc3339(&since);
         if let Some(now) = time::parse_rfc3339(&updated_at)
-            && Some(now) != then {
-                return Err(Fail::Conflict(format!(
-                    "{identifier} changed at {updated_at}, not {since} as --if-updated-at expects; read it again"
-                )));
-            }
+            && Some(now) != then
+        {
+            return Err(Fail::Conflict(format!(
+                "{identifier} changed at {updated_at}, not {since} as --if-updated-at expects; read it again"
+            )));
+        }
     }
     let team_id = str_at(is, "team.id");
     let current_project = if is["project"].is_object() { str_at(is, "project.id") } else { String::new() };
@@ -821,15 +852,16 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
         }
     }
     if !w.labels.is_empty()
-        && let Some(ids) = w.input.get("labelIds").and_then(Value::as_array) {
-            let mut a: Vec<String> = ids.iter().filter_map(|x| x.as_str().map(String::from)).collect();
-            let mut b = current.clone();
-            a.sort();
-            b.sort();
-            if a == b {
-                w.input.shift_remove("labelIds");
-            }
+        && let Some(ids) = w.input.get("labelIds").and_then(Value::as_array)
+    {
+        let mut a: Vec<String> = ids.iter().filter_map(|x| x.as_str().map(String::from)).collect();
+        let mut b = current.clone();
+        a.sort();
+        b.sort();
+        if a == b {
+            w.input.shift_remove("labelIds");
         }
+    }
     let changed = !w.input.is_empty();
     let mut doc = json!({"changed": changed, "dryRun": dry, "identifier": identifier, "input": w.input});
     if !changed {
@@ -858,7 +890,8 @@ fn archive_cmd(archive: bool) -> Cmd {
         .example(&format!("  linearctl issue {verb} ENG-123 --dry-run\n  linearctl issue {verb} ENG-123 --yes --json"))
         .args(Args::Exact(1))
         .mutating();
-    c.run = Some(if archive { |run, ctx| archive_run(run, ctx, true) } else { |run, ctx| archive_run(run, ctx, false) });
+    c.run =
+        Some(if archive { |run, ctx| archive_run(run, ctx, true) } else { |run, ctx| archive_run(run, ctx, false) });
     c
 }
 
@@ -867,7 +900,8 @@ fn archive_run(run: &mut Run, ctx: &Ctx, archive: bool) -> R {
     let dry = dry_run(ctx)?;
     let r = issue_ref("ISSUE", &ctx.args[0])?;
     let cl = run.client()?;
-    let res = cl.query(run, queries::ISSUE_ARCHIVED, json!({"id": r})).map_err(|e| e.not_found(&format!("issue {r}")))?;
+    let res =
+        cl.query(run, queries::ISSUE_ARCHIVED, json!({"id": r})).map_err(|e| e.not_found(&format!("issue {r}")))?;
     let is = &res["issue"];
     let changed = is["archivedAt"].is_null() == archive;
     if changed && !dry {
@@ -894,10 +928,14 @@ mod tests {
     /// must supply; a missing one is an error only Linear reports.
     #[test]
     fn resolve_vars_cover_every_variable() {
-        for (doc, extra) in [(queries::CREATE_RESOLVE, vec!["team", "id", "withID"]), (queries::UPDATE_RESOLVE, vec!["id"])] {
+        for (doc, extra) in
+            [(queries::CREATE_RESOLVE, vec!["team", "id", "withID"]), (queries::UPDATE_RESOLVE, vec!["id"])]
+        {
             let header = &doc[doc.find('(').unwrap() + 1..doc.find(") {").unwrap()];
-            let mut declared: Vec<String> =
-                header.split(',').map(|v| v.trim().trim_start_matches('$').split(':').next().unwrap().to_string()).collect();
+            let mut declared: Vec<String> = header
+                .split(',')
+                .map(|v| v.trim().trim_start_matches('$').split(':').next().unwrap().to_string())
+                .collect();
             let mut supplied: Vec<String> = Wanted::default().resolve_vars(&[]).keys().cloned().collect();
             supplied.extend(extra.iter().map(|s| s.to_string()));
             declared.sort();

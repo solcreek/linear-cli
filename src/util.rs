@@ -110,7 +110,8 @@ pub struct Url {
 
 pub fn parse_url(s: &str) -> Option<Url> {
     let (scheme, rest) = s.split_once("://")?;
-    if scheme.is_empty() || !scheme.starts_with(|c: char| c.is_ascii_alphabetic())
+    if scheme.is_empty()
+        || !scheme.starts_with(|c: char| c.is_ascii_alphabetic())
         || !scheme.chars().all(|c| c.is_ascii_alphanumeric() || "+-.".contains(c))
     {
         return None;
@@ -129,9 +130,11 @@ pub fn parse_url(s: &str) -> Option<Url> {
         return None;
     }
     if let Some((_, port)) = host.rsplit_once(':')
-        && !host.ends_with(']') && !port.bytes().all(|c| c.is_ascii_digit()) {
-            return None;
-        }
+        && !host.ends_with(']')
+        && !port.bytes().all(|c| c.is_ascii_digit())
+    {
+        return None;
+    }
     Some(Url { scheme: scheme.to_ascii_lowercase(), has_user, host: host.to_string(), path: unescape(path)? })
 }
 
@@ -172,7 +175,10 @@ pub fn issue_ref(what: &str, s: &str) -> R<String> {
     if is_uuid(s) {
         return Ok(s.to_lowercase());
     }
-    Err(usage(format!("{what} must be an identifier like ENG-123, a UUID, or a linear.app issue URL; got {}", quote_go(s))))
+    Err(usage(format!(
+        "{what} must be an identifier like ENG-123, a UUID, or a linear.app issue URL; got {}",
+        quote_go(s)
+    )))
 }
 
 /// Finds one issue by ref without failing when there is none: issue(id:)
@@ -300,7 +306,10 @@ pub fn read_input(what: &str, path: &str) -> R<Vec<u8>> {
             return Err(usage(format!("{what} -: pipe the input; stdin is a terminal")));
         }
         let mut data = vec![];
-        std::io::stdin().take(16 << 20).read_to_end(&mut data).map_err(|e| failed(format!("cannot read stdin: {e}")))?;
+        std::io::stdin()
+            .take(16 << 20)
+            .read_to_end(&mut data)
+            .map_err(|e| failed(format!("cannot read stdin: {e}")))?;
         return Ok(data);
     }
     plain(what, path)?;
@@ -447,7 +456,10 @@ pub fn collect(limit: u64, mut cursor: String, mut fetch: impl FnMut(u64, &str) 
 pub fn list_doc(run: &mut Run, items: &[Value], next: &str, fields: &[String]) -> Value {
     let out: Vec<Value> = items.iter().map(|it| pick(flatten(it.clone()), fields)).collect();
     if !next.is_empty() {
-        run.eprint(&format!("{} shown, more remain; --cursor {next} for the next page, --limit 0 for all\n", items.len()));
+        run.eprint(&format!(
+            "{} shown, more remain; --cursor {next} for the next page, --limit 0 for all\n",
+            items.len()
+        ));
     }
     json!({"items": out, "total": null, "shown": out.len(), "truncated": !next.is_empty(), "nextCursor": optional(next)})
 }
@@ -484,9 +496,17 @@ mod tests {
 
     #[test]
     fn patterns() {
-        assert!(is_ident("ENG-123") && is_ident("a_1-1") && !is_ident("1ENG-1") && !is_ident("ENG-") && !is_ident("ENG-1234567890"));
+        assert!(
+            is_ident("ENG-123")
+                && is_ident("a_1-1")
+                && !is_ident("1ENG-1")
+                && !is_ident("ENG-")
+                && !is_ident("ENG-1234567890")
+        );
         assert!(is_uuid("0b6c5f0e-0000-4000-8000-000000000001") && !is_uuid("0b6c5f0e00004000800000000000000001"));
-        assert!(is_email("a@b.co") && !is_email("a@b") && !is_email("a b@c.d") && !is_email("a@@b.c") && !is_email("@b.c"));
+        assert!(
+            is_email("a@b.co") && !is_email("a@b") && !is_email("a b@c.d") && !is_email("a@@b.c") && !is_email("@b.c")
+        );
         assert!(is_email("a@b.c.d") && !is_email("a@.b") && is_email("a@x.b"));
     }
 

@@ -69,7 +69,11 @@ fn login(run: &mut Run, ctx: &Ctx) -> R {
         printable(&str_at(&user, "name")),
         printable(&str_at(&org, "name"))
     );
-    output_ordered(run, json!({"changed": changed, "dryRun": dry, "store": source, "user": user, "organization": org}), &text)
+    output_ordered(
+        run,
+        json!({"changed": changed, "dryRun": dry, "store": source, "user": user, "organization": org}),
+        &text,
+    )
 }
 
 /// --json output where user and organization keep their field order.
@@ -118,10 +122,15 @@ fn logout(run: &mut Run, ctx: &Ctx) -> R {
 /// dropped, never empty. Errors name the input, never its content.
 fn secret_from_stdin() -> R<String> {
     if std::io::stdin().is_terminal() {
-        return Err(usage("pipe the API key on stdin (e.g. pbpaste | linearctl auth login --yes); stdin is a terminal"));
+        return Err(usage(
+            "pipe the API key on stdin (e.g. pbpaste | linearctl auth login --yes); stdin is a terminal",
+        ));
     }
     let mut data = vec![];
-    std::io::stdin().take(4096).read_to_end(&mut data).map_err(|e| failed(format!("cannot read stdin: {}", cause(&e))))?;
+    std::io::stdin()
+        .take(4096)
+        .read_to_end(&mut data)
+        .map_err(|e| failed(format!("cannot read stdin: {}", cause(&e))))?;
     let s = String::from_utf8_lossy(&data).into_owned();
     let key = s.strip_suffix('\n').unwrap_or(&s);
     let key = key.strip_suffix('\r').unwrap_or(key).to_string();

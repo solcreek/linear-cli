@@ -77,5 +77,8 @@ fn set(run: &mut Run, ctx: &Ctx) -> R {
         (true, false) => "set",
         (false, _) => "already",
     };
-    run.output(json!({"changed": changed, "dryRun": dry, "key": key, "value": value}), &format!("{verb} {key} = {value}"))
+    run.output(
+        json!({"changed": changed, "dryRun": dry, "key": key, "value": value}),
+        &format!("{verb} {key} = {value}"),
+    )
 }

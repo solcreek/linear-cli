@@ -23,9 +23,10 @@ pub fn api_key() -> R<(String, String)> {
         return Ok(k);
     }
     if let Ok(k) = std::env::var("LINEAR_API_KEY")
-        && !k.is_empty() {
-            return Ok((k.trim().to_string(), "env".into()));
-        }
+        && !k.is_empty()
+    {
+        return Ok((k.trim().to_string(), "env".into()));
+    }
     store().read()
 }
 
@@ -94,11 +95,13 @@ impl Store {
                 let invalid = || failed(format!("{path} is not valid JSON; remove it and log in again"));
                 let v = crate::json::parse(&data).map_err(|_| invalid())?;
                 let key = match &v {
-                    Value::Object(m) => match m.iter().find(|(k, _)| k.eq_ignore_ascii_case("apiKey")).map(|(_, v)| v) {
-                        None | Some(Value::Null) => String::new(),
-                        Some(Value::String(s)) => s.clone(),
-                        Some(_) => return Err(invalid()),
-                    },
+                    Value::Object(m) => {
+                        match m.iter().find(|(k, _)| k.eq_ignore_ascii_case("apiKey")).map(|(_, v)| v) {
+                            None | Some(Value::Null) => String::new(),
+                            Some(Value::String(s)) => s.clone(),
+                            Some(_) => return Err(invalid()),
+                        }
+                    }
                     Value::Null => String::new(),
                     _ => return Err(invalid()),
                 };
@@ -124,7 +127,9 @@ impl Store {
                 if let Some(mut stdin) = child.stdin.take() {
                     let _ = writeln!(stdin, "add-generic-password -U -s {SERVICE} -a {ACCOUNT} -w {key}");
                 }
-                let out = child.wait_with_output().map_err(|e| failed(format!("cannot write the Keychain: {}", cause(&e))))?;
+                let out = child
+                    .wait_with_output()
+                    .map_err(|e| failed(format!("cannot write the Keychain: {}", cause(&e))))?;
                 if !out.status.success() {
                     let mut text = String::from_utf8_lossy(&out.stdout).into_owned();
                     text.push_str(&String::from_utf8_lossy(&out.stderr));

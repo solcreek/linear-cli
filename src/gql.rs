@@ -256,7 +256,8 @@ impl Lexer<'_> {
                         Some(b't') => out.push('\t'),
                         Some(b'u') => {
                             let hex = self.s.get(self.i..self.i + 4).and_then(|h| std::str::from_utf8(h).ok());
-                            let Some(c) = hex.and_then(|h| u32::from_str_radix(h, 16).ok()).and_then(char::from_u32) else {
+                            let Some(c) = hex.and_then(|h| u32::from_str_radix(h, 16).ok()).and_then(char::from_u32)
+                            else {
                                 return Err(self.err(self.i - 2, line, ls, "Invalid character escape sequence"));
                             };
                             out.push(c);
@@ -550,7 +551,8 @@ mod tests {
 
     #[test]
     fn values_with_variables() {
-        let d = parse("query Q($n: Int!) { issues(first: $n, filter: { a: [1, \"x\", true, null, E] }) { id } }").unwrap();
+        let d =
+            parse("query Q($n: Int!) { issues(first: $n, filter: { a: [1, \"x\", true, null, E] }) { id } }").unwrap();
         let Selection::Field(f) = &d.operations[0].selections[0] else { panic!() };
         let vars = serde_json::json!({"n": 3});
         assert_eq!(f.args[0].1.value(&vars), serde_json::json!(3));

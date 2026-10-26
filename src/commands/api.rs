@@ -108,10 +108,8 @@ fn query(run: &mut Run, ctx: &Ctx) -> R {
             .errors
             .iter()
             .map(|e| {
-                let path: Vec<String> = e["path"]
-                    .as_array()
-                    .map(|p| p.iter().map(sprint).collect())
-                    .unwrap_or_default();
+                let path: Vec<String> =
+                    e["path"].as_array().map(|p| p.iter().map(sprint).collect()).unwrap_or_default();
                 let where_ = if path.is_empty() { "query".to_string() } else { path.join(".") };
                 json!({"input": where_, "error": e["message"].as_str().unwrap_or("")})
             })
