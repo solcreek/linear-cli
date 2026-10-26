@@ -1,7 +1,7 @@
 exit: 2
 --- stdout
-{"code":"USAGE","error":"pass --team KEY (or set LINEARCTL_TEAM, or default-team with 'linearctl config set')","usage":true}
+{"code":"USAGE","error":"pass --team KEY, or teamId in --json-input (or set LINEARCTL_TEAM, or default-team with 'linearctl config set')","usage":true}
 
 --- stderr
-linearctl: pass --team KEY (or set LINEARCTL_TEAM, or default-team with 'linearctl config set')
+linearctl: pass --team KEY, or teamId in --json-input (or set LINEARCTL_TEAM, or default-team with 'linearctl config set')
 Run 'linearctl --help' for usage.

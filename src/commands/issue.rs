@@ -753,16 +753,28 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     let dry = dry_run(ctx)?;
     let id = chosen_id(ctx, dry, "create a second issue")?;
     let mut w = read_wanted(ctx)?;
+    // The team: --team (or its fallbacks), else Linear's own teamId in
+    // --json-input; flags win, as they do over every input field.
     let team = team_flag(ctx)?;
-    if team.is_empty() {
-        return Err(usage("pass --team KEY (or set LINEARCTL_TEAM, or default-team with 'linearctl config set')"));
-    }
+    let input_team = w.input.get("teamId").and_then(Value::as_str).unwrap_or("").to_string();
+    let team_filter = if !team.is_empty() {
+        json!({"key": {"eqIgnoreCase": team}})
+    } else if is_uuid(&input_team) {
+        json!({"id": {"eq": input_team.to_lowercase()}})
+    } else if !input_team.is_empty() {
+        return Err(usage(format!("teamId in --json-input must be a team's UUID; got {}", quote_go(&input_team))));
+    } else {
+        return Err(usage(
+            "pass --team KEY, or teamId in --json-input (or set LINEARCTL_TEAM, or default-team with 'linearctl config set')",
+        ));
+    };
+    let team = if team.is_empty() { input_team } else { team };
     if w.input.get("title").and_then(Value::as_str).unwrap_or("").is_empty() {
         return Err(usage("pass --title (or title in --json-input)"));
     }
     let cl = run.client()?;
     let mut vars = w.resolve_vars(&[]);
-    vars.insert("team".into(), json!(team));
+    vars.insert("team".into(), team_filter);
     vars.insert("id".into(), json!(id));
     vars.insert("withID".into(), json!(true));
     let r = cl.query(run, queries::CREATE_RESOLVE, Value::Object(vars))?;
@@ -773,7 +785,8 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     }
     let teams = nodes(&r["teams"]);
     let Some(t) = teams.first() else {
-        return Err(missing(format!("no team with key {team}; see 'linearctl team list'")));
+        let by = if is_uuid(&team) { "id" } else { "key" };
+        return Err(missing(format!("no team with {by} {team}; see 'linearctl team list'")));
     };
     w.apply(&r, &nodes(&t["states"]), &nodes(&t["typed"]), &str_at(t, "id"), "")?;
     w.input.insert("teamId".into(), json!(str_at(t, "id")));

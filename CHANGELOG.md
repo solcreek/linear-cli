@@ -9,6 +9,11 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Changed
+
+- `issue create` takes the team from Linear's own `teamId` in `--json-input`
+  when `--team` is not given (`--team` still wins). It used to demand `--team`.
+
 ## [0.5.0] - 2026-10-26
 
 ### Added
