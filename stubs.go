@@ -7,4 +7,3 @@ func addLookups(*cobra.Command) {}
 func addFile(*cobra.Command)    {}
 func addConfig(*cobra.Command)  {}
 func addAPI(*cobra.Command)     {}
-func addComment(*cobra.Command) {}
