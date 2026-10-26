@@ -30,6 +30,11 @@ Installed from npm (0.1.0, measured 2026-10-26): 4.0 ms a run when the
 install script replaced the shim with the binary, 34.3 ms through the Node
 shim when install scripts were skipped.
 
+Many calls from one program (measured 2026-10-26, live API, 15 sequential
+`issue list --limit 1`): through one `serve --stdio` process, median 141 ms a
+call (the first, which opens the connection, 484 ms); one process per call,
+median 220 ms. serve saves ~80 ms a call: start-up, TCP and TLS.
+
 Requests per command: reads 1; `issue create`/`update`/`archive` and
 `comment create` 2 (resolve, then mutate) on one connection; `--limit 0`
 one per page of 100.
@@ -70,6 +75,3 @@ rate-limited to 30/min and may be slower).
   an `issueRow` is ~30 points (20 of them `labels(first: 20)`), so 250 per
   page is ~7,400. Linear checks auth before arguments, so this cannot be
   probed without a key.
-- A persistent connection (`serve --stdio`, as crispctl has) would save the
-  TCP + TLS setup, ~40 ms of each ~150 ms command, for a caller making many
-  requests (the TUI, a long agent session).

@@ -11,6 +11,10 @@ names are only ever added, never renamed or removed.
 
 ### Added
 
+- `serve --stdio`: answers linearctl invocations as JSON lines, `{id, argv}` in
+  and `{id, exit, result, stdout, stderr}` out, from one process with one
+  connection pool and one key read: ~80 ms less per call than starting
+  linearctl each time (measured live).
 - `watch`: streams changes to the issues an `issue list` filter matches, one
   JSON line per event (`ready`, `upsert`, `remove` with a reason, `heartbeat`
   with the rate limit left, `gap` with a replay after a reconnect or a fall

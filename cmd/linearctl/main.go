@@ -128,6 +128,7 @@ func newRoot() *cobra.Command {
 	addConfig(root)
 	addAPI(root)
 	addWatch(root)
+	addServe(root)
 
 	root.AddCommand(&cobra.Command{
 		Use:     "describe",

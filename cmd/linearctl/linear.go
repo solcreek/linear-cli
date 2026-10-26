@@ -288,6 +288,9 @@ var keyPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{16,256}$`)
 // apiKey is LINEAR_API_KEY, else the stored key. An empty key with no error
 // means none is set anywhere.
 func apiKey() (key, source string, err error) {
+	if servedKey != nil {
+		return servedKey.key, servedKey.source, nil
+	}
 	if k := os.Getenv("LINEAR_API_KEY"); k != "" {
 		return strings.TrimSpace(k), "env", nil
 	}
