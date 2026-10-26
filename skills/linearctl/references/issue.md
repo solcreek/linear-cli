@@ -116,6 +116,7 @@ Flags:
                              unstarted, started, completed, canceled, duplicate
       --team KEY             only issues of team KEY (e.g. ENG; repeatable, any of)
       --updated-since WHEN   only issues updated since WHEN: a date, an RFC 3339 time, 7d or 24h
+      --view VIEW            only issues in Linear's saved custom view VIEW (a name or its id)
       --without-label NAME   only issues without label NAME (repeatable; none of)
 ```
 

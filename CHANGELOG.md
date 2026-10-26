@@ -11,6 +11,9 @@ names are only ever added, never renamed or removed.
 
 ### Added
 
+- Linear's saved custom views: `view list`, and `issue list --view VIEW` (a name
+  or id) for an issue view's issues, Linear applying the view's own filter with
+  any other flags on top. A project view is refused as such.
 - `issue list --sort due-date|title|state` and `--reverse` (undated issues last
   either way); `--creator WHO`; `--due-before` and `--due-after DATE`. Issue rows
   carry `dueDate` and `estimate`. The default order sends the same request as

@@ -56,6 +56,7 @@ fn list_cmd() -> Cmd {
         ))
         .flag(Flag::str("query", "full-text search for `TEXT`"))
         .flag(Flag::bool("include-comments", "with --query, also match the text of comments"))
+        .flag(Flag::str("view", "only issues in Linear's saved custom view `VIEW` (a name or its id)"))
         .flag(Flag::str("sort", "`FIELD`: updated (default), created, priority, due-date, title, state"))
         .flag(Flag::bool("reverse", "reverse the order of --sort"))
         .flag(limit_flag(25))
@@ -136,6 +137,20 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
         vars.insert("sort".into(), json!([{ field: spec }]));
     }
     let (mut doc, mut conn) = (queries::ISSUE_LIST, "issues");
+    let view = ctx.str("view");
+    if ctx.changed("view") {
+        plain("--view", &view)?;
+        if !query.is_empty() {
+            return Err(usage("--view lists a saved view's issues; it does not search: drop --query"));
+        }
+        let by = if is_uuid(&view) {
+            json!({"id": {"eq": view.to_lowercase()}})
+        } else {
+            json!({"name": {"eqIgnoreCase": view}})
+        };
+        vars.insert("view".into(), by);
+        doc = queries::ISSUE_LIST_VIEW;
+    }
     let with_comments = ctx.bool("include-comments");
     if with_comments && query.is_empty() {
         return Err(usage("--include-comments searches comments too, so it needs --query"));
@@ -161,6 +176,27 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
         vars.insert("first".into(), json!(first));
         vars.insert("after".into(), optional(after));
         let mut data = cl.query(run, doc, Value::Object(vars.clone()))?;
+        if doc == queries::ISSUE_LIST_VIEW {
+            let found = nodes(&data["matches"]);
+            match found.as_slice() {
+                [] => return Err(missing(format!("no saved view {}; see 'linearctl view list'", quote_go(&view)))),
+                [v] if str_at(v, "modelName") != "Issue" => {
+                    return Err(usage(format!(
+                        "view {} lists {}s, not issues",
+                        quote_go(&str_at(v, "name")),
+                        str_at(v, "modelName").to_lowercase()
+                    )));
+                }
+                [_] => {}
+                _ => {
+                    return Err(ambiguous(format!(
+                        "more than one saved view is named {}; pass its id",
+                        quote_go(&view)
+                    )));
+                }
+            }
+            return Ok(Page::take(&mut data["customViews"]["nodes"][0]["issues"]));
+        }
         Ok(Page::take(&mut data[conn]))
     })?;
     // Asked-for issues that did not come back: partial, never silent.

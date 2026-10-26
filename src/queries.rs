@@ -48,6 +48,23 @@ pub const ISSUE_ROW_FIELDS: &[&str] = &[
 
 pub const VIEWER: &str = "query Viewer { viewer { id name email } organization { name urlKey } }";
 
+/// The issues a saved custom view matches, its own filter applied by Linear
+/// and $filter on top. matches asks for two views, to catch a name two views
+/// share; the issues come from the first one only (first multiplies cost).
+pub const ISSUE_LIST_VIEW: &str = concat!(
+    "query IssueListView($view: CustomViewFilter!, $filter: IssueFilter, $first: Int!, $after: String,\n  $orderBy: PaginationOrderBy, $sort: [IssueSortInput!]) {\n  matches: customViews(filter: $view, first: 2) { nodes { id name modelName } }\n  customViews(filter: $view, first: 1) { nodes { issues(filter: $filter, first: $first, after: $after, orderBy: $orderBy, sort: $sort) { nodes {",
+    issue_row!(),
+    " } ",
+    page_info!(),
+    " } } }\n}"
+);
+
+pub const VIEWS: &str = concat!(
+    "query Views($filter: CustomViewFilter, $first: Int!, $after: String) {\n  customViews(filter: $filter, first: $first, after: $after) { nodes { id name description slugId modelName shared team { id key } owner { id name } updatedAt } ",
+    page_info!(),
+    " }\n}"
+);
+
 pub const ISSUE_LIST: &str = concat!(
     "query IssueList($filter: IssueFilter, $first: Int!, $after: String, $orderBy: PaginationOrderBy, $sort: [IssueSortInput!]) {\n  issues(filter: $filter, first: $first, after: $after, orderBy: $orderBy, sort: $sort) { nodes {",
     issue_row!(),
@@ -300,6 +317,8 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("Users", USERS),
         ("Projects", PROJECTS),
         ("Cycles", CYCLES),
+        ("IssueListView", ISSUE_LIST_VIEW),
+        ("Views", VIEWS),
         ("CycleShow", CYCLE_SHOW),
         ("CycleFind", CYCLE_FIND),
         ("CycleCreateResolve", CYCLE_CREATE_RESOLVE),

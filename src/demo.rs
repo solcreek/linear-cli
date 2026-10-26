@@ -444,7 +444,7 @@ fn build() -> World {
         }
     }
     cycle_issues(&mut w);
-    for k in ["projectMilestones", "notifications", "attachments", "comments", "cycles", "projects"] {
+    for k in ["projectMilestones", "notifications", "attachments", "comments", "cycles", "projects", "customViews"] {
         w.root.entry(k.into()).or_default();
     }
     w

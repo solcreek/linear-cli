@@ -29,6 +29,7 @@ exit: 0
 --state-type	only issues whose state is of `TYPE` (repeatable): triage, backlog,
 --team	only issues of team `KEY` (e.g. ENG; repeatable, any of)
 --updated-since	only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h
+--view	only issues in Linear's saved custom view `VIEW` (a name or its id)
 --without-label	only issues without label `NAME` (repeatable; none of)
 :4
 

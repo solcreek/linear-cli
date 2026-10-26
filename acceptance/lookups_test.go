@@ -91,3 +91,48 @@ func TestNotificationList(t *testing.T) {
 		t.Errorf("exit %d, %q, %v", r.code, r.out, api.last("Notifications").Vars)
 	}
 }
+
+// issue list --view: Linear applies the saved view's filter; other flags
+// add to it. view list shows what each view lists.
+func TestSavedViews(t *testing.T) {
+	t.Parallel()
+	answer := func(matches ...any) *fake {
+		return newFake(t).on("IssueListView", map[string]any{"matches": conn("", matches...),
+			"customViews": conn("", map[string]any{"issues": conn("", issueNode("ENG-1", "One"))})})
+	}
+	view := func(name, model string) map[string]any {
+		return map[string]any{"id": "v-" + name, "name": name, "modelName": model}
+	}
+	api := answer(view("Bugs", "Issue"))
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "list", "--view", "bugs", "--assignee", "me", "--json")
+	v := api.last("IssueListView").Vars
+	if d := decode(t, r.out); r.code != 0 || d["shown"] != 1.0 || jsonOf(v["view"]) != `{"name":{"eqIgnoreCase":"bugs"}}` ||
+		jsonOf(v["filter"]) != `{"assignee":{"isMe":{"eq":true}}}` {
+		t.Errorf("by name: exit %d, %q, vars %v", r.code, r.out, v)
+	}
+	runWith(t, opts{api: api, key: testKey}, "issue", "list", "--view", "5F1E2A3B-4C5D-4E6F-8A9B-0C1D2E3F4A5B")
+	if got := jsonOf(api.last("IssueListView").Vars["view"]); got != `{"id":{"eq":"5f1e2a3b-4c5d-4e6f-8a9b-0c1d2e3f4a5b"}}` {
+		t.Errorf("by id: %s", got)
+	}
+	for _, c := range []struct {
+		api  *fake
+		code string
+		exit int
+	}{
+		{answer(), "NOT_FOUND", exitFailed},
+		{answer(view("Bugs", "Issue"), view("bugs", "Issue")), "AMBIGUOUS", exitFailed},
+		{answer(view("Roadmap", "Project")), "USAGE", exitUsage},
+	} {
+		r := runWith(t, opts{api: c.api, key: testKey}, "issue", "list", "--view", "x", "--json")
+		if d := decode(t, r.out); r.code != c.exit || d["code"] != c.code {
+			t.Errorf("%s: exit %d, %q", c.code, r.code, r.out)
+		}
+	}
+	if r := runWith(t, opts{api: newFake(t), key: testKey}, "issue", "list", "--view", "Bugs", "--query", "x"); r.code != exitUsage {
+		t.Errorf("--view with --query: exit %d", r.code)
+	}
+	api = newFake(t).on("Views", map[string]any{"customViews": conn("", map[string]any{"id": "v1", "name": "Bugs", "modelName": "Issue", "team": nil})})
+	if r := runWith(t, opts{api: api, key: testKey}, "view", "list"); r.code != 0 || r.out != "Issue\tBugs\t-\n" {
+		t.Errorf("view list: exit %d, %q", r.code, r.out)
+	}
+}

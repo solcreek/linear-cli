@@ -133,6 +133,7 @@ asks for the following. They are the caller's to do, built from these commands:
 | [`linearctl state list`](references/state.md) | List workflow states, by team and position |  |
 | [`linearctl team list`](references/team.md) | List teams |  |
 | [`linearctl user list`](references/user.md) | List users in the workspace |  |
+| [`linearctl view list`](references/view.md) | List saved custom views |  |
 | [`linearctl watch`](references/watch.md) | Stream changes to the issues a filter matches, one JSON line each |  |
 
 Global flags, on every command: `--demo`, `--json`, `--meta`, `--timeout`.
@@ -160,4 +161,5 @@ binary: when a flag here is refused (exit 2), the installed binary's
 - [state](references/state.md): list
 - [team](references/team.md): list
 - [user](references/user.md): list
+- [view](references/view.md): list
 - [watch](references/watch.md): watch

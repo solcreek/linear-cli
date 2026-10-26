@@ -34,6 +34,7 @@ Available Commands:
   state        List workflow states, by team and position
   team         List teams
   user         List users in the workspace
+  view         List saved custom views
   watch        Stream changes to the issues a filter matches, one JSON line each
 
 Flags:
