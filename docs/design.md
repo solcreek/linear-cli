@@ -112,7 +112,7 @@ Example: `pbpaste | linearctl auth login --yes`
     linearctl state list   [--team KEY]       # workflow states, ordered by position
     linearctl label list   [--team KEY] [--limit N]
     linearctl user list    [--active] [--limit N]
-    linearctl project list [--team KEY] [--state planned|started|completed|canceled] [--limit N]
+    linearctl project list [--team KEY] [--status TYPE]... [--limit N]
     linearctl cycle list   [--team KEY] [--limit N]
 
 ### Files
