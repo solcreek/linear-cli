@@ -10,6 +10,8 @@ use serde_json::Value;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -65,6 +67,9 @@ fn at<'a>(v: &'a Value, path: &str) -> &'a str {
 struct Watch {
     child: Child,
     lines: Receiver<Value>,
+    /// It said Linear allows one subscription: it watches updates alone and
+    /// catches creates and archives up every 60 s.
+    single: Arc<AtomicBool>,
 }
 
 impl Watch {
@@ -75,7 +80,7 @@ impl Watch {
             &["watch", "--team", team, "--json", "--batch-ms", "200", "--heartbeat", "5", "--reconcile", "86400"],
         )
         .stdout(Stdio::piped())
-        .stderr(Stdio::inherit())
+        .stderr(Stdio::piped())
         .spawn()
         .unwrap();
         let out = child.stdout.take().unwrap();
@@ -88,7 +93,32 @@ impl Watch {
                 }
             }
         });
-        Watch { child, lines }
+        let err = child.stderr.take().unwrap();
+        let single = Arc::new(AtomicBool::new(false));
+        let s = single.clone();
+        std::thread::spawn(move || {
+            for line in BufReader::new(err).lines().map_while(Result::ok) {
+                if line.contains("allows one subscription") {
+                    s.store(true, Ordering::SeqCst);
+                }
+                eprintln!("{line}");
+            }
+        });
+        Watch { child, lines, single }
+    }
+
+    /// Lets the first seconds pass, gaps and all: when Linear allows one
+    /// subscription, watch learns it from the first connection and
+    /// reconnects with updates alone.
+    fn settle(&self, d: Duration) {
+        let deadline = Instant::now() + d;
+        while let Ok(v) = self.lines.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
+            eprintln!("live: settling: {v}");
+        }
+    }
+
+    fn single(&self) -> bool {
+        self.single.load(Ordering::SeqCst)
     }
 
     /// The first line with this event for which ok holds, within limit. A
@@ -150,8 +180,10 @@ fn new_id() -> String {
     format!("{}-{}-{}-{}-{}", &h[..8], &h[8..12], &h[12..16], &h[16..20], &h[20..])
 }
 
-/// A change made in Linear reaches watch through its subscription: an issue
-/// created, its title changed, then archived, each seen as it happens.
+/// A change made in Linear reaches watch: an issue created, its title
+/// changed, then archived. With every subscription each is seen as it
+/// happens. When Linear allows one, the title change still is (issueUpdated),
+/// and the create and archive come by the catch-up within its 60 s.
 #[test]
 #[cfg(unix)]
 fn watch_sees_changes_as_they_happen() {
@@ -159,6 +191,9 @@ fn watch_sees_changes_as_they_happen() {
     let w = Watch::start(&team);
     let ready = w.wait("ready", Duration::from_secs(60), |_| true);
     assert_eq!(ready["mode"], "subscription", "ready {ready}");
+    w.settle(Duration::from_secs(5));
+    let single = w.single();
+    eprintln!("live: {}", if single { "one subscription: updates alone" } else { "every subscription" });
 
     let title = format!("linearctl live test {}", SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
     let created = live(&["issue", "create", "--team", &team, "--title", &title, "--id", &new_id(), "--yes"]);
@@ -166,7 +201,9 @@ fn watch_sees_changes_as_they_happen() {
     let mut cleanup = Archive(ident.clone(), false);
     eprintln!("live: created {ident}");
     let of_issue = |v: &Value| at(v, "issue.identifier") == ident;
-    let limit = Duration::from_secs(30);
+    // Through a subscription: 30 s is generous. By catch-up: up to 60 s.
+    let fast = Duration::from_secs(30);
+    let limit = if single { Duration::from_secs(90) } else { fast };
 
     let start = Instant::now();
     let up = w.wait("upsert", limit, of_issue);
@@ -176,7 +213,7 @@ fn watch_sees_changes_as_they_happen() {
     let renamed = format!("{title} (updated)");
     let start = Instant::now();
     live(&["issue", "update", &ident, "--title", &renamed, "--yes"]);
-    w.wait("upsert", limit, |v| of_issue(v) && at(v, "issue.title") == renamed);
+    w.wait("upsert", fast, |v| of_issue(v) && at(v, "issue.title") == renamed);
     eprintln!("live: update seen after {:?}", start.elapsed());
 
     let start = Instant::now();
