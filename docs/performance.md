@@ -2,8 +2,9 @@
 
 ## Current state (verified 2026-10-26)
 
-linearctl is the Rust build after 0.2.0. Measured on a MacBook Air M3 (load
-average ~4–5), Rust 1.98.1, against 0.2.0 built as it was released (Go
+linearctl is the Rust build after 0.2.1. Measured on a MacBook Air M3 (load
+average ~4–5), Rust 1.98.1, against 0.2.0 (0.2.1 differs only in its version
+string) built as it was released (Go
 1.27.1, `-trimpath -s -w`), back to back in one session; 300 runs a scenario,
 medians. Raw results: `bench/results/go-0.2.0-release` and `bench/results/rust`.
 A command's time is still almost all network: one request to api.linear.app

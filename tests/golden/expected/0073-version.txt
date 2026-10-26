@@ -1,5 +1,5 @@
 exit: 0
 --- stdout
-linearctl 0.2.0
+linearctl 0.2.1
 
 --- stderr

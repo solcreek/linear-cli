@@ -12,11 +12,12 @@ names are only ever added, never renamed or removed.
 ### Changed
 
 - linearctl is now written in Rust. Commands, flags, `--help`, `describe`,
-  `--json` output, error messages and exit codes are those of 0.2.0: 397
-  outputs recorded from 0.2.0 (help, usage errors, config and credentials,
+  `--json` output, error messages and exit codes are those of 0.2.1: 397
+  outputs recorded from 0.2.1 (help, usage errors, config and credentials,
   every read and dry run in demo mode, `serve`, completion) match byte for
-  byte (`tests/golden`), and the 0.2.0 tests that run the binary against a
-  fake Linear pass unchanged (`acceptance/`). Against 0.2.0 as released, on
+  byte (`tests/golden`), and the 0.2.1 tests that run the binary against a
+  fake Linear pass unchanged (`acceptance/`). Against 0.2.0 as released (0.2.1
+  changed only its version string), on
   one machine in one session: 1.6× faster to start (2.7 vs 4.3 ms), 1.7× for
   a 100-issue `issue list` (4.0 vs 6.7 ms), 2× for 100 requests through
   `serve --stdio` (133 vs 270 ms), half the memory, and a 2.5 MiB binary
