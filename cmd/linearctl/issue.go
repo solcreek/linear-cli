@@ -23,7 +23,7 @@ func addIssue(root *cobra.Command) {
 		Args:  usageArgs(cobra.NoArgs),
 		RunE:  func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
 	}
-	issue.AddCommand(issueList(), issueShow(), issueCreate(), issueUpdate(), issueArchive())
+	issue.AddCommand(issueList(), issueShow(), issueCreate(), issueUpdate(), issueArchive(true), issueArchive(false))
 	root.AddCommand(issue)
 }
 
@@ -868,13 +868,16 @@ func sameSet(a, b []string) bool {
 	return slices.Equal(x, y)
 }
 
-func issueArchive() *cobra.Command {
+// issueArchive is issue archive, or with archive false issue unarchive.
+func issueArchive(archive bool) *cobra.Command {
+	verbs := map[bool][2]string{true: {"archive", "archived"}, false: {"unarchive", "unarchived"}}[archive]
+	doc := map[bool]string{true: qIssueArchive, false: qIssueUnarchive}[archive]
 	c := &cobra.Command{
-		Use:   "archive ISSUE",
-		Short: "Archive an issue",
-		Long: "Archive an issue. An issue already archived is changed: false.\n" +
+		Use:   verbs[0] + " ISSUE",
+		Short: map[bool]string{true: "Archive an issue", false: "Restore an archived issue"}[archive],
+		Long: fmt.Sprintf("%s an issue. An issue already %s is changed: false.\n", strings.ToUpper(verbs[0][:1])+verbs[0][1:], verbs[1]) +
 			"Changes things: pass --dry-run to preview, --yes to apply.",
-		Example: "  linearctl issue archive ENG-123 --dry-run\n  linearctl issue archive ENG-123 --yes --json",
+		Example: fmt.Sprintf("  linearctl issue %[1]s ENG-123 --dry-run\n  linearctl issue %[1]s ENG-123 --yes --json", verbs[0]),
 		Args:    usageArgs(cobra.ExactArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dryRun, _ := change(cmd)
@@ -898,15 +901,15 @@ func issueArchive() *cobra.Command {
 			if err := cl.query(qIssueArchived, map[string]any{"id": ref}, &r); err != nil {
 				return notFound(err, "issue "+ref)
 			}
-			changed := r.Issue.ArchivedAt == nil
+			changed := (r.Issue.ArchivedAt == nil) == archive
 			if changed && !dryRun {
-				if err := cl.query(qIssueArchive, map[string]any{"id": r.Issue.ID}, nil); err != nil {
+				if err := cl.query(doc, map[string]any{"id": r.Issue.ID}, nil); err != nil {
 					return err
 				}
 			}
-			verb := map[bool]string{true: "archived", false: "already archived"}[changed]
+			verb := map[bool]string{true: verbs[1], false: "already " + verbs[1]}[changed]
 			if changed && dryRun {
-				verb = "would archive"
+				verb = "would " + verbs[0]
 			}
 			return output(cmd, map[string]any{"changed": changed, "dryRun": dryRun, "identifier": r.Issue.Identifier, "url": r.Issue.URL},
 				fmt.Sprintf("%s %s", verb, r.Issue.Identifier))

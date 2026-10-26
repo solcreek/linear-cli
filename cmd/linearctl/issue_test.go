@@ -576,3 +576,25 @@ func TestIssueRowNestsIDs(t *testing.T) {
 		}
 	}
 }
+
+func TestIssueUnarchive(t *testing.T) {
+	t.Parallel()
+	archived := func(at any) *fake {
+		return newFake(t).on("IssueArchived", map[string]any{"issue": map[string]any{"id": "id-ENG-5", "identifier": "ENG-5", "archivedAt": at}}).
+			on("IssueUnarchive", map[string]any{"issueUnarchive": map[string]any{"success": true}})
+	}
+	api := archived("2026-10-01T00:00:00.000Z")
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "unarchive", "ENG-5", "--dry-run", "--json")
+	if d := decode(t, r.out); r.code != 0 || d["changed"] != true || slices.Contains(api.ops(), "IssueUnarchive") {
+		t.Errorf("dry run: exit %d, %q", r.code, r.out)
+	}
+	r = runWith(t, opts{api: api, key: testKey}, "issue", "unarchive", "ENG-5", "--yes")
+	if r.code != 0 || api.last("IssueUnarchive").Vars["id"] != "id-ENG-5" || r.out != "unarchived ENG-5\n" {
+		t.Errorf("yes: exit %d, %q", r.code, r.out)
+	}
+	api = archived(nil)
+	r = runWith(t, opts{api: api, key: testKey}, "issue", "unarchive", "ENG-5", "--yes", "--json")
+	if d := decode(t, r.out); r.code != 0 || d["changed"] != false || slices.Contains(api.ops(), "IssueUnarchive") {
+		t.Errorf("not archived: exit %d, %q", r.code, r.out)
+	}
+}

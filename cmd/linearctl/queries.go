@@ -91,6 +91,8 @@ var (
 
 	qIssueArchive = `mutation IssueArchive($id: String!) { issueArchive(id: $id) { success } }`
 
+	qIssueUnarchive = `mutation IssueUnarchive($id: String!) { issueUnarchive(id: $id) { success } }`
+
 	commentRow = `id body createdAt url user { name email } parent { id }`
 
 	qCommentList = `query CommentList($id: String!, $first: Int!, $after: String) {
@@ -136,7 +138,7 @@ func documents() map[string]string {
 	return map[string]string{
 		"Viewer": qViewer, "IssueList": qIssueList, "IssueSearch": qIssueSearch, "IssueShow": qIssueShow,
 		"CreateResolve": qCreateResolve, "IssueCreate": qIssueCreate, "UpdateResolve": qUpdateResolve,
-		"IssueUpdate": qIssueUpdate, "IssueArchived": qIssueArchived, "IssueArchive": qIssueArchive,
+		"IssueUpdate": qIssueUpdate, "IssueArchived": qIssueArchived, "IssueArchive": qIssueArchive, "IssueUnarchive": qIssueUnarchive,
 		"CommentList": qCommentList, "CommentResolve": qCommentResolve, "CommentCreate": qCommentCreate,
 		"Teams": qTeams, "States": qStates, "Labels": qLabels, "Users": qUsers, "Projects": qProjects,
 		"Cycles": qCycles,
