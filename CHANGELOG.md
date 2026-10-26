@@ -33,6 +33,9 @@ names are only ever added, never renamed or removed.
   `comment delete` (a comment that is not there is `changed: false`,
   `found: false`).
 - `issue list --priority`, repeatable.
+- `--meta` (or `LINEARCTL_META=1`) adds `meta` to any `--json` result: the
+  requests the command sent, the rate limit left after them, and the last
+  query's complexity. It costs no extra request.
 - `signedUrlsExpireAt` in `issue show` and `api query` results made with
   `--signed-urls`.
 - `issue list --id ISSUE`, repeatable, to read several issues in one request;

@@ -61,8 +61,9 @@ type limitError struct {
 }
 
 var (
-	asJSON  bool
-	timeout = wholeNumber{n: 30}
+	asJSON   bool
+	withMeta bool
+	timeout  = wholeNumber{n: 30}
 )
 
 func newRoot() *cobra.Command {
@@ -98,6 +99,8 @@ func newRoot() *cobra.Command {
 	root.Flags().Bool("version", false, "print the version")
 	root.PersistentFlags().BoolVar(&asJSON, "json", false, "print one JSON document on stdout")
 	root.PersistentFlags().Var(&timeout, "timeout", "give up on a network request after `N` seconds")
+	root.PersistentFlags().BoolVar(&withMeta, "meta", os.Getenv("LINEARCTL_META") == "1",
+		"add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1")
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error { return usageError{err} })
 	// Exit codes on every help page (rubric E4); children inherit it.
 	root.SetHelpTemplate(root.HelpTemplate() + "\n" + exitHelp + "\nRun 'linearctl describe' for every command as JSON.\n")
@@ -351,6 +354,9 @@ func output(cmd *cobra.Command, v any, text string) error {
 // compact into a pipe, where an agent pays for every byte in its context
 // (17-35% smaller; docs/performance.md). The data is the same either way.
 func printJSON(v any) error {
+	if doc, ok := v.(map[string]any); ok && withMeta && lastClient != nil {
+		doc["meta"] = lastClient.meta()
+	}
 	enc := json.NewEncoder(os.Stdout)
 	if isTerminal(os.Stdout) {
 		enc.SetIndent("", "  ")

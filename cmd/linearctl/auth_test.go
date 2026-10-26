@@ -187,3 +187,38 @@ func TestDescribeSaysLoginReadsStdin(t *testing.T) {
 		}
 	}
 }
+
+func TestMetaReportsRequestsAndRateLimit(t *testing.T) {
+	t.Parallel()
+	headers := map[string]string{"X-RateLimit-Requests-Remaining": "2400", "X-RateLimit-Requests-Limit": "2500", "X-Complexity": "12"}
+	pages := []map[string]any{conn("c1", issueNode("ENG-1", "One")), conn("", issueNode("ENG-2", "Two"))}
+	n := 0
+	api := newFake(t).onFunc("IssueList", func(map[string]any) (int, any, map[string]string) {
+		p := pages[n%2]
+		n++
+		return 200, map[string]any{"data": map[string]any{"issues": p}}, headers
+	})
+	for _, o := range []opts{{api: api, key: testKey}, {api: api, key: testKey, env: []string{"LINEARCTL_META=1"}}} {
+		args := []string{"issue", "list", "--limit", "0", "--json"}
+		if len(o.env) == 0 {
+			args = append(args, "--meta")
+		}
+		r := runWith(t, o, args...)
+		m, _ := decode(t, r.out)["meta"].(map[string]any)
+		req, _ := m["rateLimit"].(map[string]any)["requests"].(map[string]any)
+		if r.code != 0 || m["requests"] != 2.0 || m["complexity"] != 12.0 || req["remaining"] != 2400.0 {
+			t.Errorf("%v: exit %d, meta %v", o.env, r.code, m)
+		}
+	}
+	if r := runWith(t, opts{api: api, key: testKey}, "issue", "list", "--json"); strings.Contains(r.out, `"meta"`) {
+		t.Errorf("meta without --meta: %q", r.out)
+	}
+	// A failure carries it too: that is when a caller needs the budget.
+	api = newFake(t).onFunc("IssueShow", func(map[string]any) (int, any, map[string]string) {
+		return 400, map[string]any{"errors": []any{map[string]any{"message": "Entity not found", "extensions": map[string]any{"code": "INVALID_INPUT"}}}}, headers
+	})
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "show", "ENG-9", "--json", "--meta")
+	if d := decode(t, r.out); r.code != exitFailed || d["meta"] == nil {
+		t.Errorf("failure: exit %d, %q", r.code, r.out)
+	}
+}

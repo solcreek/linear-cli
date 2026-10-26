@@ -76,7 +76,11 @@ type client struct {
 	http       *http.Client
 	signedURLs int         // seconds; 0 leaves file URLs as they are
 	header     http.Header // the last response's headers
+	requests   int         // sent so far, for --meta
 }
+
+// lastClient is the run's client, whose headers --meta reports.
+var lastClient *client
 
 // newClient finds the API key; without one it is an auth error (exit 5).
 func newClient() (*client, error) {
@@ -91,7 +95,8 @@ func newClient() (*client, error) {
 }
 
 func newClientWith(key, source string) *client {
-	return &client{key: key, source: source, http: &http.Client{Timeout: time.Duration(timeout.n) * time.Second}}
+	lastClient = &client{key: key, source: source, http: &http.Client{Timeout: time.Duration(timeout.n) * time.Second}}
+	return lastClient
 }
 
 // query sends doc and decodes its data into out. Any GraphQL error fails it.
@@ -134,6 +139,7 @@ func (c *client) send(request map[string]any) (*gqlResponse, error) {
 	if c.signedURLs > 0 {
 		req.Header.Set("public-file-urls-expire-in", strconv.Itoa(c.signedURLs))
 	}
+	c.requests++
 	res, err := c.do(req)
 	if err != nil {
 		return nil, err
@@ -204,6 +210,16 @@ func (c *client) limited() error {
 		msg += "; retry after " + at.UTC().Format(time.RFC3339)
 	}
 	return limitError{errors.New(msg), at}
+}
+
+// meta is what --meta adds to a result: the requests this run sent, and
+// the budget left after the last one, from its headers.
+func (c *client) meta() map[string]any {
+	m := map[string]any{"requests": c.requests, "rateLimit": c.rateLimit(), "complexity": nil}
+	if n, err := strconv.ParseFloat(c.header.Get("X-Complexity"), 64); err == nil {
+		m["complexity"] = n
+	}
+	return m
 }
 
 // rateLimit is the budget left after the last request, from its headers.
