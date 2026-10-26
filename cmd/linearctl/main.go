@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -65,6 +66,12 @@ type limitError struct {
 	error
 	retryAt time.Time
 }
+
+// Where a run writes: the process's own streams, or a serve request's.
+var (
+	stdout io.Writer = os.Stdout
+	stderr io.Writer = os.Stderr
+)
 
 var (
 	asJSON   bool
@@ -364,8 +371,8 @@ func printJSON(v any) error {
 	if doc, ok := v.(map[string]any); ok && withMeta && lastClient != nil {
 		doc["meta"] = lastClient.meta()
 	}
-	enc := json.NewEncoder(os.Stdout)
-	if isTerminal(os.Stdout) {
+	enc := json.NewEncoder(stdout)
+	if f, ok := stdout.(*os.File); ok && isTerminal(f) {
 		enc.SetIndent("", "  ")
 	}
 	return enc.Encode(v)
@@ -458,27 +465,36 @@ func main() {
 		}
 		os.Exit(143)
 	}()
+	os.Exit(execute(os.Args[1:]))
+}
+
+// execute runs one invocation, args without the program name, and returns
+// its exit code. main runs it once; serve runs it once per request.
+func execute(args []string) int {
+	timeout = wholeNumber{n: 30} // flags bind to globals; start each run fresh
+	lastClient = nil
 	root := newRoot()
-	root.SetOut(os.Stdout) // help on stdout (rubric E1)
-	root.SetErr(os.Stderr)
+	root.SetArgs(args)
+	root.SetOut(stdout) // help on stdout (rubric E1)
+	root.SetErr(stderr)
 	err := root.Execute()
 	if err == nil {
-		os.Exit(exitOK)
+		return exitOK
 	}
 	// A partial result is already printed, problems included.
 	if errors.As(err, new(partialError)) {
-		os.Exit(exitPartial)
+		return exitPartial
 	}
-	fmt.Fprintf(os.Stderr, "linearctl: %v\n", err)
+	fmt.Fprintf(stderr, "linearctl: %v\n", err)
 	usage := errors.As(err, new(usageError))
 	var limited limitError
 	isLimited := errors.As(err, &limited)
 	if usage {
-		fmt.Fprintln(os.Stderr, "Run 'linearctl --help' for usage.")
+		fmt.Fprintln(stderr, "Run 'linearctl --help' for usage.")
 	}
 	// Under --json a failure is JSON too (rubric A5). Parsing may have
 	// stopped before it saw --json, so look at the arguments themselves.
-	if asJSON || slices.Contains(os.Args[1:], "--json") {
+	if asJSON || slices.Contains(args, "--json") {
 		doc := map[string]any{"error": err.Error(), "usage": usage}
 		if isLimited && !limited.retryAt.IsZero() {
 			doc["retryAt"] = limited.retryAt.UTC().Format(time.RFC3339)
@@ -487,15 +503,15 @@ func main() {
 	}
 	switch {
 	case usage:
-		os.Exit(exitUsage)
+		return exitUsage
 	case errors.As(err, new(busyError)):
-		os.Exit(exitBusy)
+		return exitBusy
 	case errors.As(err, new(authError)):
-		os.Exit(exitAuth)
+		return exitAuth
 	case isLimited:
-		os.Exit(exitLimited)
+		return exitLimited
 	case errors.As(err, new(conflictError)):
-		os.Exit(exitConflict)
+		return exitConflict
 	}
-	os.Exit(exitFailed)
+	return exitFailed
 }

@@ -321,7 +321,7 @@ func listDoc(items []map[string]any, next string, fields []string) map[string]an
 	var cursor any
 	if next != "" {
 		cursor = next
-		fmt.Fprintf(os.Stderr, "%d shown, more remain; --cursor %s for the next page, --limit 0 for all\n", len(items), next)
+		fmt.Fprintf(stderr, "%d shown, more remain; --cursor %s for the next page, --limit 0 for all\n", len(items), next)
 	}
 	return map[string]any{"items": out, "total": nil, "shown": len(out), "truncated": next != "", "nextCursor": cursor}
 }

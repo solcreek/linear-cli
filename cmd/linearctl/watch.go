@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"slices"
 	"strings"
 	"time"
@@ -309,7 +308,7 @@ func (w *watcher) run(mode string, since time.Time, heartbeat, reconcile, poll, 
 			if mode == "subscription" {
 				return err
 			}
-			fmt.Fprintf(os.Stderr, "linearctl: subscriptions unavailable (%s); polling every %s\n", cause(err), poll)
+			fmt.Fprintf(stderr, "linearctl: subscriptions unavailable (%s); polling every %s\n", cause(err), poll)
 		}
 	}
 	w.mode = map[bool]string{true: "subscription", false: "poll"}[sub != nil]
@@ -380,7 +379,7 @@ func (w *watcher) run(mode string, since time.Time, heartbeat, reconcile, poll, 
 		case err := <-failed:
 			// The stream is down: reconnect, then replay the gap.
 			down := time.Now()
-			fmt.Fprintf(os.Stderr, "linearctl: subscription lost (%s); reconnecting\n", cause(err))
+			fmt.Fprintf(stderr, "linearctl: subscription lost (%s); reconnecting\n", cause(err))
 			sub = nil
 			for tries := 0; sub == nil && tries < 5; tries++ {
 				time.Sleep(backoff)

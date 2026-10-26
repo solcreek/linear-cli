@@ -54,7 +54,7 @@ func addAuth(root *cobra.Command) {
 				verb = "would store"
 			}
 			if os.Getenv("LINEAR_API_KEY") != "" {
-				fmt.Fprintln(os.Stderr, "linearctl: note: LINEAR_API_KEY is set and wins over the stored key")
+				fmt.Fprintln(stderr, "linearctl: note: LINEAR_API_KEY is set and wins over the stored key")
 			}
 			return output(cmd, map[string]any{"changed": changed, "dryRun": dryRun, "store": source,
 				"user": who.Viewer, "organization": who.Organization},
@@ -112,7 +112,7 @@ func addAuth(root *cobra.Command) {
 				verb = "would remove"
 			}
 			if os.Getenv("LINEAR_API_KEY") != "" {
-				fmt.Fprintln(os.Stderr, "linearctl: note: LINEAR_API_KEY is still set")
+				fmt.Fprintln(stderr, "linearctl: note: LINEAR_API_KEY is still set")
 			}
 			return output(cmd, map[string]any{"changed": changed, "dryRun": dryRun, "store": source},
 				fmt.Sprintf("%s (%s)", verb, source))

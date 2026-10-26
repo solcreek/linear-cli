@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"regexp"
 	"slices"
 	"strconv"
@@ -142,7 +141,7 @@ func issueList() *cobra.Command {
 				rows(cmd, items, "identifier", "state.name", "assignee.name", "title")
 			}
 			for _, p := range problems {
-				fmt.Fprintf(os.Stderr, "linearctl: %s: %s\n", p["input"], p["error"])
+				fmt.Fprintf(stderr, "linearctl: %s: %s\n", p["input"], p["error"])
 			}
 			if len(problems) > 0 {
 				return partialError{fmt.Errorf("%d issues not found", len(problems))}

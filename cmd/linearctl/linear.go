@@ -177,7 +177,7 @@ func (c *client) send(request map[string]any) (*gqlResponse, error) {
 // more than 2 s (rubric P2).
 func (c *client) do(req *http.Request) (*http.Response, error) {
 	slow := time.AfterFunc(2*time.Second, func() {
-		waitNote.Do(func() { fmt.Fprintf(os.Stderr, "linearctl: waiting on %s\n", req.URL.Host) })
+		waitNote.Do(func() { fmt.Fprintf(stderr, "linearctl: waiting on %s\n", req.URL.Host) })
 	})
 	defer slow.Stop()
 	res, err := c.http.Do(req)
