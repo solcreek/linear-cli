@@ -9,6 +9,8 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-26
+
 ### Changed
 
 - linearctl is now written in Rust. Commands, flags, `--help`, `describe`,
@@ -147,7 +149,8 @@ names are only ever added, never renamed or removed.
 - Releases for linux, darwin and windows, and the npm package
   `@solcreek/linear-cli` with one native binary per platform.
 
-[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/solcreek/linear-cli/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/solcreek/linear-cli/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/solcreek/linear-cli/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/solcreek/linear-cli/releases/tag/v0.1.0
