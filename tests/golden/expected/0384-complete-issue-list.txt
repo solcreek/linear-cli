@@ -18,7 +18,7 @@ exit: 0
 --limit	show at most `N` items; 0 for all
 --milestone	only issues in project milestone `NAME` (none: in no milestone)
 --priority	only issues of `PRIORITY`: 0-4 or none, urgent, high, medium, low
---project	only issues in project `NAME`
+--project	only issues in project `NAME` (none: in no project)
 --query	full-text search for `TEXT`
 --sort	order by `FIELD`: updated (default), created, priority
 --state	only issues in workflow state `NAME` (repeatable; any of)

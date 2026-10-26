@@ -1797,7 +1797,7 @@ exit: 0
             },
             {
               "default": null,
-              "description": "project NAME",
+              "description": "project NAME, or none to clear it",
               "name": "project",
               "short": null,
               "type": "string"
@@ -1981,7 +1981,7 @@ exit: 0
             },
             {
               "default": null,
-              "description": "only issues in project NAME",
+              "description": "only issues in project NAME (none: in no project)",
               "name": "project",
               "short": null,
               "type": "string"
@@ -2327,7 +2327,7 @@ exit: 0
             },
             {
               "default": null,
-              "description": "project NAME",
+              "description": "project NAME, or none to clear it",
               "name": "project",
               "short": null,
               "type": "string"
@@ -3868,7 +3868,7 @@ exit: 0
         },
         {
           "default": null,
-          "description": "only issues in project NAME",
+          "description": "only issues in project NAME (none: in no project)",
           "name": "project",
           "short": null,
           "type": "string"

@@ -54,7 +54,7 @@ Flags:
                                 when the issue has none
       --parent ISSUE            make it a sub-issue of ISSUE (none: of no issue)
       --priority PRIORITY       PRIORITY: 0-4 or none, urgent, high, medium, low
-      --project NAME            project NAME
+      --project NAME            project NAME, or none to clear it
       --state NAME              workflow state NAME (see 'linearctl state list')
       --state-type TYPE         the team's first workflow state of TYPE (e.g. started)
       --team KEY                create in team KEY (e.g. ENG)
@@ -101,7 +101,7 @@ Flags:
       --milestone NAME       only issues in project milestone NAME (none: in no milestone)
       --priority PRIORITY    only issues of PRIORITY: 0-4 or none, urgent, high, medium, low
                              (repeatable, any of)
-      --project NAME         only issues in project NAME
+      --project NAME         only issues in project NAME (none: in no project)
       --query TEXT           full-text search for TEXT
       --sort FIELD           order by FIELD: updated (default), created, priority
       --state NAME           only issues in workflow state NAME (repeatable; any of)
@@ -197,7 +197,7 @@ Flags:
                                 when the issue has none
       --parent ISSUE            make it a sub-issue of ISSUE (none: of no issue)
       --priority PRIORITY       PRIORITY: 0-4 or none, urgent, high, medium, low
-      --project NAME            project NAME
+      --project NAME            project NAME, or none to clear it
       --remove-label NAME       remove label NAME (repeatable)
       --state NAME              workflow state NAME (see 'linearctl state list')
       --state-type TYPE         the team's first workflow state of TYPE (e.g. started)

@@ -30,7 +30,7 @@ Flags:
                                 when the issue has none
       --parent ISSUE            make it a sub-issue of ISSUE (none: of no issue)
       --priority PRIORITY       PRIORITY: 0-4 or none, urgent, high, medium, low
-      --project NAME            project NAME
+      --project NAME            project NAME, or none to clear it
       --remove-label NAME       remove label NAME (repeatable)
       --state NAME              workflow state NAME (see 'linearctl state list')
       --state-type TYPE         the team's first workflow state of TYPE (e.g. started)

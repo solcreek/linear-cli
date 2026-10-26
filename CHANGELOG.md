@@ -14,6 +14,12 @@ names are only ever added, never renamed or removed.
 - `issue create` takes the team from Linear's own `teamId` in `--json-input`
   when `--team` is not given (`--team` still wins). It used to demand `--team`.
 
+### Fixed
+
+- `--project none`: on `issue create` and `issue update` it clears the project
+  (undo can revert setting one); on `issue list` it matches issues with no
+  project. `issue list` returned nothing for it, and update refused it.
+
 ## [0.5.0] - 2026-10-26
 
 ### Added

@@ -78,7 +78,7 @@ pub fn filter_flags(c: Cmd) -> Cmd {
         .flag(Flag::strs("label", "only issues with label `NAME` (repeatable; all of)"))
         .flag(Flag::strs("any-label", "only issues with label `NAME` (repeatable; any of)"))
         .flag(Flag::strs("without-label", "only issues without label `NAME` (repeatable; none of)"))
-        .flag(Flag::str("project", "only issues in project `NAME`"))
+        .flag(Flag::str("project", "only issues in project `NAME` (none: in no project)"))
         .flag(Flag::str("milestone", "only issues in project milestone `NAME` (none: in no milestone)"))
         .flag(Flag::str("delegate", "only issues delegated to the agent `WHO` (name, email, me, any, none)"))
         .flag(Flag::str("attachment-url", "only issues with an attachment at `URL` (e.g. a linked pull request)"))
@@ -242,7 +242,8 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
     let p = ctx.str("project");
     if !p.is_empty() {
         plain("--project", &p)?;
-        filter.insert("project".into(), json!({"name": {"eqIgnoreCase": p}}));
+        let f = if p == "none" { json!({"null": true}) } else { json!({"name": {"eqIgnoreCase": p}}) };
+        filter.insert("project".into(), f);
     }
     let u = ctx.str("attachment-url");
     if !u.is_empty() {
@@ -403,7 +404,7 @@ fn issue_fields(c: Cmd) -> Cmd {
         .flag(Flag::str("state", "workflow state `NAME` (see 'linearctl state list')"))
         .flag(Flag::str("state-type", "the team's first workflow state of `TYPE` (e.g. started)"))
         .flag(Flag::str("priority", "`PRIORITY`: 0-4 or none, urgent, high, medium, low"))
-        .flag(Flag::str("project", "project `NAME`"))
+        .flag(Flag::str("project", "project `NAME`, or none to clear it"))
         .flag(Flag::str(
             "milestone",
             "project milestone `NAME`, or none to clear; it sets the project\nwhen the issue has none",
@@ -552,7 +553,7 @@ impl Wanted {
             "state": self.state, "withState": !self.state.is_empty(),
             "email": email, "withUser": !email.is_empty(), "me": self.assignee == "me" || self.delegate == "me",
             "labels": label_filter(&labels), "withLabels": !labels.is_empty(),
-            "project": self.project, "withProject": !self.project.is_empty(),
+            "project": self.project, "withProject": !self.project.is_empty() && self.project != "none",
             "parent": parent, "withParent": !self.parent.is_empty(),
             "milestone": self.milestone, "withMilestone": !self.milestone.is_empty() && self.milestone != "none",
             "delegate": self.delegate, "withDelegate": !matches!(self.delegate.as_str(), "" | "none" | "me"),
@@ -594,7 +595,9 @@ impl Wanted {
                 self.input.insert("assigneeId".into(), json!(id));
             }
         }
-        if !self.project.is_empty() {
+        if self.project == "none" {
+            self.input.insert("projectId".into(), Value::Null);
+        } else if !self.project.is_empty() {
             let id = one("project", &self.project, &nodes(&r["projects"]), "'linearctl project list'")?;
             self.input.insert("projectId".into(), json!(id));
         }
