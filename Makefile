@@ -1,10 +1,16 @@
-.PHONY: build test cover schema
+.PHONY: build test check cover schema
 
 build:
 	go build -o linearctl ./cmd/linearctl
 
 test:
 	go test ./...
+
+# What CI runs: run it before every commit.
+check:
+	@test -z "$$(gofmt -l .)" || { gofmt -l .; echo "gofmt: run gofmt -w on these"; exit 1; }
+	go vet ./...
+	go test -count=1 ./...
 
 # Coverage of the in-process tests and of every binary run, merged.
 cover:
