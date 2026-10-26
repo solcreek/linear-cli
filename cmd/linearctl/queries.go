@@ -142,6 +142,25 @@ var (
 
 	qRelationDelete = `mutation RelationDelete($id: String!) { issueRelationDelete(id: $id) { success } }`
 
+	// watch: the ids that match now; why ids stopped matching; what changed
+	// since a time, archived included; and the issue changes to subscribe to.
+	qWatchIDs = `query WatchIDs($filter: IssueFilter, $first: Int!, $after: String) {
+  issues(filter: $filter, first: $first, after: $after) { nodes { id identifier } ` + pageInfo + ` }
+}`
+
+	qWatchGone = `query WatchGone($ids: [ID!]!) {
+  issues(filter: { id: { in: $ids } }, first: 250, includeArchived: true) { nodes { id identifier archivedAt trashed } }
+}`
+
+	qWatchChanged = `query WatchChanged($filter: IssueFilter!) {
+  issues(filter: $filter, first: 250, includeArchived: true, orderBy: updatedAt) { nodes { id } }
+}`
+
+	qWatchCreated    = `subscription WatchCreated { issueCreated { id } }`
+	qWatchUpdated    = `subscription WatchUpdated { issueUpdated { id } }`
+	qWatchArchived   = `subscription WatchArchived { issueArchived { id } }`
+	qWatchUnarchived = `subscription WatchUnarchived { issueUnarchived { id } }`
+
 	qTeams = `query Teams($first: Int!, $after: String) {
   teams(first: $first, after: $after) { nodes { id key name description private } ` + pageInfo + ` }
 }`
@@ -203,7 +222,9 @@ func documents() map[string]string {
 		"RelationResolve": qRelationResolve, "RelationCreate": qRelationCreate, "RelationDelete": qRelationDelete,
 		"Comment": qComment, "CommentUpdate": qCommentUpdate, "CommentDelete": qCommentDelete,
 		"Teams": qTeams, "States": qStates, "Labels": qLabels, "Users": qUsers, "Projects": qProjects,
-		"Cycles": qCycles, "Notifications": qNotifications, "Milestones": qMilestones, "ProjectFind": qProjectFind, "ProjectUpdate": qProjectUpdate,
+		"Cycles": qCycles, "WatchIDs": qWatchIDs, "WatchGone": qWatchGone, "WatchChanged": qWatchChanged,
+		"WatchCreated": qWatchCreated, "WatchUpdated": qWatchUpdated, "WatchArchived": qWatchArchived,
+		"WatchUnarchived": qWatchUnarchived, "Notifications": qNotifications, "Milestones": qMilestones, "ProjectFind": qProjectFind, "ProjectUpdate": qProjectUpdate,
 	}
 }
 

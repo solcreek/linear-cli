@@ -95,6 +95,7 @@ flags and exit codes as JSON.
 | `file download` | save an image or attachment from `uploads.linear.app` | yes |
 | `config show` / `set` | `default-team` | set |
 | `api query` | send your own GraphQL query (read-only) | |
+| `watch` | stream changes to the issues a filter matches, as NDJSON (Linear's subscriptions, else polling) | |
 
 ## For agents
 

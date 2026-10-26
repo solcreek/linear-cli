@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/coder/websocket"
 	"github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/validator"
@@ -60,6 +62,9 @@ type fake struct {
 	log     []call
 	answers map[string]func(vars map[string]any) (int, any, map[string]string)
 	raw     bool // documents come from the caller (api query): not checked
+	noWS    bool // refuse WebSocket upgrades: no subscriptions
+	ws      []*websocket.Conn
+	wsCount int // subscriptions accepted so far
 }
 
 func newFake(t *testing.T) *fake {
@@ -115,6 +120,10 @@ func (f *fake) last(op string) call {
 }
 
 func (f *fake) serve(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Upgrade") == "websocket" {
+		f.serveWS(w, r)
+		return
+	}
 	var req struct {
 		Query     string         `json:"query"`
 		Variables map[string]any `json:"variables"`
@@ -185,4 +194,83 @@ func issueNode(identifier, title string) map[string]any {
 		"assignee": map[string]any{"name": "Ada", "email": "ada@example.com"}, "team": map[string]any{"key": "ENG"},
 		"project": nil, "cycle": nil, "labels": map[string]any{"nodes": []any{map[string]any{"name": "bug"}}},
 	}
+}
+
+// serveWS speaks graphql-transport-ws as Linear does: the key comes in the
+// upgrade's Authorization header; without it, subscribing closes with 4002.
+func (f *fake) serveWS(w http.ResponseWriter, r *http.Request) {
+	f.mu.Lock()
+	refuse := f.noWS
+	f.mu.Unlock()
+	if refuse {
+		http.Error(w, "no", http.StatusNotFound)
+		return
+	}
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{Subprotocols: []string{"graphql-transport-ws"}})
+	if err != nil {
+		return
+	}
+	ctx := context.Background()
+	keyed := r.Header.Get("Authorization") == testKey
+	for {
+		_, b, err := conn.Read(ctx)
+		if err != nil {
+			return
+		}
+		var m struct {
+			Type    string `json:"type"`
+			ID      string `json:"id"`
+			Payload struct {
+				Query string `json:"query"`
+			} `json:"payload"`
+		}
+		_ = json.Unmarshal(b, &m)
+		switch m.Type {
+		case "connection_init":
+			_ = conn.Write(ctx, websocket.MessageText, []byte(`{"type":"connection_ack"}`))
+		case "ping":
+			_ = conn.Write(ctx, websocket.MessageText, []byte(`{"type":"pong"}`))
+		case "subscribe":
+			if !keyed {
+				_ = conn.Close(4002, "You need to authenticate to access this operation.")
+				return
+			}
+			if err := checkRequest(m.Payload.Query, nil); err != nil {
+				f.t.Errorf("subscription %s: Linear would reject it: %v", m.ID, err)
+			}
+			f.mu.Lock()
+			f.wsCount++
+			if m.ID == "updated" {
+				f.ws = append(f.ws, conn)
+			}
+			f.mu.Unlock()
+		}
+	}
+}
+
+// push tells every open subscription that issue id was updated.
+func (f *fake) push(id string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, c := range f.ws {
+		msg := `{"type":"next","id":"updated","payload":{"data":{"issueUpdated":{"id":"` + id + `"}}}}`
+		_ = c.Write(context.Background(), websocket.MessageText, []byte(msg))
+	}
+}
+
+// dropWS closes every open subscription, as a network failure would.
+func (f *fake) dropWS() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, c := range f.ws {
+		_ = c.CloseNow()
+	}
+	f.ws = nil
+}
+
+// subscribed is how many subscriptions the fake has accepted.
+func (f *fake) subscribed() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.wsCount
 }
