@@ -2,10 +2,12 @@ package main
 
 import (
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -114,5 +116,25 @@ func TestRateLimitHeaders(t *testing.T) {
 	}
 	if _, ok := got["complexity"]; ok {
 		t.Errorf("an unparsable header became a value: %v", got)
+	}
+}
+
+// A command's requests share one connection: each new one would cost a TCP
+// and TLS handshake, ~40 ms against api.linear.app (docs/performance.md).
+func TestClientReusesTheConnection(t *testing.T) {
+	var conns atomic.Int32
+	api := newFake(t).on("Viewer", map[string]any{})
+	api.srv.Config.ConnState = func(_ net.Conn, s http.ConnState) {
+		if s == http.StateNew {
+			conns.Add(1)
+		}
+	}
+	t.Setenv("LINEARCTL_API_URL", api.url())
+	c := newClientWith(testKey, "env")
+	for range 3 {
+		must(t, c.query(qViewer, nil, nil))
+	}
+	if n := conns.Load(); n != 1 {
+		t.Errorf("%d connections for 3 requests", n)
 	}
 }
