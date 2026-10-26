@@ -298,19 +298,50 @@ pub fn text(ctx: &Ctx, name: &str) -> R<Option<String>> {
     Ok(Some(String::from_utf8_lossy(&data).into_owned()))
 }
 
+thread_local! {
+    /// Inside serve, the standard input of the request being run: Some(None)
+    /// when the request gave none. None outside serve.
+    static REQUEST_STDIN: std::cell::RefCell<Option<Option<Vec<u8>>>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Runs f as a serve request whose standard input is input (None: it gave
+/// none, so a command reading stdin is refused).
+pub fn with_request_stdin<T>(input: Option<Vec<u8>>, f: impl FnOnce() -> T) -> T {
+    REQUEST_STDIN.with(|s| *s.borrow_mut() = Some(input));
+    let out = f();
+    REQUEST_STDIN.with(|s| *s.borrow_mut() = None);
+    out
+}
+
+/// Standard input, up to limit bytes: inside serve the request's own,
+/// read once as a process reads its stdin (a second read finds it empty).
+/// A terminal is refused with the terminal message, a serve request
+/// without "stdin" as for --what -.
+pub fn read_stdin(what: &str, limit: u64, terminal: &str) -> R<Vec<u8>> {
+    let served = REQUEST_STDIN.with(|s| s.borrow_mut().as_mut().map(|given| given.as_mut().map(std::mem::take)));
+    match served {
+        Some(Some(mut data)) => {
+            data.truncate(limit as usize);
+            return Ok(data);
+        }
+        Some(None) => {
+            return Err(usage(format!("{what}: this serve request has no \"stdin\" to read; give it one")));
+        }
+        None => {}
+    }
+    if std::io::stdin().is_terminal() {
+        return Err(usage(terminal.to_string()));
+    }
+    let mut data = vec![];
+    std::io::stdin().take(limit).read_to_end(&mut data).map_err(|e| failed(format!("cannot read stdin: {e}")))?;
+    Ok(data)
+}
+
 /// Reads PATH, or stdin for "-". Stdin from a terminal is refused: the
 /// command would otherwise wait for input nobody knows to type.
 pub fn read_input(what: &str, path: &str) -> R<Vec<u8>> {
     if path == "-" {
-        if std::io::stdin().is_terminal() {
-            return Err(usage(format!("{what} -: pipe the input; stdin is a terminal")));
-        }
-        let mut data = vec![];
-        std::io::stdin()
-            .take(16 << 20)
-            .read_to_end(&mut data)
-            .map_err(|e| failed(format!("cannot read stdin: {e}")))?;
-        return Ok(data);
+        return read_stdin(&format!("{what} -"), 16 << 20, &format!("{what} -: pipe the input; stdin is a terminal"));
     }
     plain(what, path)?;
     std::fs::read(path).map_err(|e| match e.kind() {

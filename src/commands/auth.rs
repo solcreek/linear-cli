@@ -1,13 +1,11 @@
 use crate::cli::Cmd;
 use crate::cli::Ctx;
-use crate::fail::{R, failed, usage};
+use crate::fail::{R, usage};
 use crate::keys::store;
 use crate::queries;
 use crate::run::{Run, dry_run};
-use crate::state::cause;
 use crate::util::*;
 use serde_json::{Value, json};
-use std::io::{IsTerminal, Read};
 
 pub fn command() -> Cmd {
     let mut login = Cmd::new("login", "Check an API key read from stdin and store it")
@@ -121,16 +119,11 @@ fn logout(run: &mut Run, ctx: &Ctx) -> R {
 /// A key piped on stdin: never from a terminal, one trailing newline
 /// dropped, never empty. Errors name the input, never its content.
 fn secret_from_stdin() -> R<String> {
-    if std::io::stdin().is_terminal() {
-        return Err(usage(
-            "pipe the API key on stdin (e.g. pbpaste | linearctl auth login --yes); stdin is a terminal",
-        ));
-    }
-    let mut data = vec![];
-    std::io::stdin()
-        .take(4096)
-        .read_to_end(&mut data)
-        .map_err(|e| failed(format!("cannot read stdin: {}", cause(&e))))?;
+    let data = read_stdin(
+        "auth login",
+        4096,
+        "pipe the API key on stdin (e.g. pbpaste | linearctl auth login --yes); stdin is a terminal",
+    )?;
     let s = String::from_utf8_lossy(&data).into_owned();
     let key = s.strip_suffix('\n').unwrap_or(&s);
     let key = key.strip_suffix('\r').unwrap_or(key).to_string();
