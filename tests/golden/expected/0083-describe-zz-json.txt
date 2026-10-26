@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"unknown flag: --zz","usage":true}
+
+--- stderr
+linearctl: unknown flag: --zz
+Run 'linearctl --help' for usage.

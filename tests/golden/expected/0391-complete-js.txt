@@ -1,0 +1,7 @@
+exit: 0
+--- stdout
+--json	print one JSON document on stdout
+:4
+
+--- stderr
+Completion ended with directive: ShellCompDirectiveNoFileComp

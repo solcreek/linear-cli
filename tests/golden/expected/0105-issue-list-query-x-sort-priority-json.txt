@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--sort priority does not work with --query; use updated or created","usage":true}
+
+--- stderr
+linearctl: --sort priority does not work with --query; use updated or created
+Run 'linearctl --help' for usage.

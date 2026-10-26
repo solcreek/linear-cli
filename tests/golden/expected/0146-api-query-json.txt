@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"pass the request with --json-input PATH (- for stdin)","usage":true}
+
+--- stderr
+linearctl: pass the request with --json-input PATH (- for stdin)
+Run 'linearctl --help' for usage.

@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"complexity":null,"data":{"issues":{"nodes":[{"identifier":"ENG-158","title":"Customers in Brazil can't pay with Pix"},{"identifier":"ENG-142","title":"Checkout fails when a coupon code has trailing whitespace"}],"pageInfo":{"hasNextPage":true}}}}
+
+--- stderr

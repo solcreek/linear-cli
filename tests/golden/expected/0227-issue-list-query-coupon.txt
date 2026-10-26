@@ -1,0 +1,8 @@
+exit: 0
+--- stdout
+ENG-142	In Progress	Maya Patel	Checkout fails when a coupon code has trailing whitespace
+ENG-143	In Review	Maya Patel	Trim and uppercase coupon codes on the server before lookup
+ENG-144	Todo	Jonas Berg	Add a regression test for whitespace in coupon codes
+ENG-131	Done	Jonas Berg	Show a clear error when a coupon has expired
+
+--- stderr

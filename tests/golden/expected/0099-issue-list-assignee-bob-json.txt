@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--assignee must be me, none or an email; got \"bob\"","usage":true}
+
+--- stderr
+linearctl: --assignee must be me, none or an email; got "bob"
+Run 'linearctl --help' for usage.

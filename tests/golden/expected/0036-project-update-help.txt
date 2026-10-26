@@ -1,0 +1,37 @@
+exit: 0
+--- stdout
+Change a project's name, description (its one-line summary) or content (the
+overview document; the new text replaces all of it). Only fields that differ are
+sent; when none do, nothing is sent and the result is changed: false.
+PROJECT is a URL, slugId, UUID or exact name, as for project show.
+Changes things: pass --dry-run to preview, --yes to apply.
+
+Usage:
+  linearctl project update PROJECT [flags]
+
+Examples:
+  linearctl project update "Q4 launch" --content-file overview.md --dry-run --json
+  linearctl project update 0527ca4c9128 --description "Ship the new login" --yes
+
+Flags:
+      --content TEXT            the new overview, Markdown TEXT; replaces all of it
+      --content-file PATH       read the overview from PATH (- for stdin)
+      --description TEXT        the new one-line summary, TEXT
+      --description-file PATH   read the summary from PATH (- for stdin)
+      --dry-run                 show what would change; change nothing
+  -h, --help                    help for update
+      --name TEXT               the new name, TEXT
+      --yes                     apply the change
+
+Global Flags:
+      --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+      --json        print one JSON document on stdout
+      --meta        add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+      --timeout N   give up on a network request after N seconds (default 30)
+
+Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or
+Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since
+you read it; read it again)
+Run 'linearctl describe' for every command as JSON.
+
+--- stderr

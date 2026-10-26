@@ -1,0 +1,6 @@
+exit: 1
+--- stdout
+{"error":"Linear: demo mode does not answer nope","usage":false}
+
+--- stderr
+linearctl: Linear: demo mode does not answer nope

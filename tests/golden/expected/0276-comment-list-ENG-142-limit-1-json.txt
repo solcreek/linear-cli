@@ -1,0 +1,6 @@
+exit: 0
+--- stdout
+{"items":[{"body":"Same on Android 3.4.0. The app sends the field as typed, no trimming.","createdAt":"<TIME>","id":"30062c2c-4fcf-5a07-aa98-07b7abd4c8ca","parent":null,"url":"https://linear.app/northwind/issue/ENG-142/checkout-fails-when-a-coupon-code-has-trailing-whitespace#comment-30062c2c","user":{"email":"aiko@northwind.example","name":"Aiko Tanaka"}}],"nextCursor":"c1","shown":1,"total":null,"truncated":true}
+
+--- stderr
+1 shown, more remain; --cursor c1 for the next page, --limit 0 for all

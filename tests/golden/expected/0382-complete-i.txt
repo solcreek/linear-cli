@@ -1,0 +1,7 @@
+exit: 0
+--- stdout
+issue	List, show, create, update and archive issues
+:4
+
+--- stderr
+Completion ended with directive: ShellCompDirectiveNoFileComp

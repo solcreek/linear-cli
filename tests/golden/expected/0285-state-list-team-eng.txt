@@ -1,0 +1,11 @@
+exit: 0
+--- stdout
+ENG	Triage	triage
+ENG	Backlog	backlog
+ENG	Todo	unstarted
+ENG	In Progress	started
+ENG	In Review	started
+ENG	Done	completed
+ENG	Canceled	canceled
+
+--- stderr

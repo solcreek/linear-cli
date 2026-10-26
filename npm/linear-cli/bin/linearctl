@@ -13,7 +13,7 @@ try {
   bin = require.resolve(`${pkg}/bin/${exe}`)
 } catch {
   console.error(`linearctl: no binary for ${process.platform}-${process.arch} (${pkg} is not installed).`)
-  console.error("Reinstall without --no-optional, or build it: go install github.com/solcreek/linear-cli/cmd/linearctl@latest")
+  console.error("Reinstall without --no-optional, or build it: cargo install --git https://github.com/solcreek/linear-cli")
   process.exit(1)
 }
 const run = spawnSync(bin, process.argv.slice(2), { stdio: "inherit" })

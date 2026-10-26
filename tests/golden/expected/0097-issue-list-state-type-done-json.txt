@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--state-type must be one of triage, backlog, unstarted, started, completed, canceled, duplicate; got \"done\"","usage":true}
+
+--- stderr
+linearctl: --state-type must be one of triage, backlog, unstarted, started, completed, canceled, duplicate; got "done"
+Run 'linearctl --help' for usage.

@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"stdin is empty; pipe the API key","usage":true}
+
+--- stderr
+linearctl: stdin is empty; pipe the API key
+Run 'linearctl --help' for usage.

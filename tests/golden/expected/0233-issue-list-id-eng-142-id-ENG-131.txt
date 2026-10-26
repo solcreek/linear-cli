@@ -1,0 +1,6 @@
+exit: 0
+--- stdout
+ENG-142	In Progress	Maya Patel	Checkout fails when a coupon code has trailing whitespace
+ENG-131	Done	Jonas Berg	Show a clear error when a coupon has expired
+
+--- stderr

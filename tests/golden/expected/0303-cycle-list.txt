@@ -1,0 +1,7 @@
+exit: 0
+--- stdout
+ENG	23	<TIME>	<TIME>
+ENG	24	<TIME>	<TIME>
+ENG	25	<TIME>	<TIME>
+
+--- stderr

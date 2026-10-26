@@ -1,0 +1,34 @@
+[package]
+name = "linearctl"
+version = "0.2.1"
+edition = "2024"
+rust-version = "1.89"
+description = "An agent-first CLI for Linear"
+license = "MIT"
+repository = "https://github.com/solcreek/linear-cli"
+publish = false
+
+[dependencies]
+getrandom = "0.4"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-platform-verifier = "0.7"
+serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision"] }
+sha1 = { version = "0.11", default-features = false }
+tungstenite = { version = "0.30", default-features = false, features = ["handshake"] }
+ureq = { version = "3", default-features = false, features = ["rustls", "gzip", "platform-verifier"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+signal-hook = { version = "0.4", default-features = false, features = ["iterator"] }
+
+[target."cfg(windows)".dependencies]
+windows-sys = { version = "0.61", default-features = false, features = ["Win32_System_Console", "Win32_Foundation"] }
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[dev-dependencies]
+apollo-compiler = "1"

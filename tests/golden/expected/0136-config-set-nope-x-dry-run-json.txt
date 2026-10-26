@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"no setting \"nope\"; keys: default-team","usage":true}
+
+--- stderr
+linearctl: no setting "nope"; keys: default-team
+Run 'linearctl --help' for usage.

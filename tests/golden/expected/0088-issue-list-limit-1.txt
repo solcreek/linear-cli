@@ -1,0 +1,6 @@
+exit: 2
+--- stdout
+
+--- stderr
+linearctl: invalid argument "-1" for "--limit" flag: takes a whole number, got "-1"
+Run 'linearctl --help' for usage.

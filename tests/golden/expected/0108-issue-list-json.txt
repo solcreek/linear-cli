@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"unknown command \"--json\" for \"linearctl issue list\"","usage":true}
+
+--- stderr
+linearctl: unknown command "--json" for "linearctl issue list"
+Run 'linearctl --help' for usage.

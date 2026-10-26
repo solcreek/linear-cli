@@ -1,0 +1,6 @@
+exit: 0
+--- stdout
+would create in ENG: x
+id: 0b6c5f0e-0000-4000-8000-000000000001 (pass --id 0b6c5f0e-0000-4000-8000-000000000001 --yes)
+
+--- stderr

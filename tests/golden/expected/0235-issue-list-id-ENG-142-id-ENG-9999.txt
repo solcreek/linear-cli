@@ -1,0 +1,6 @@
+exit: 3
+--- stdout
+ENG-142	In Progress	Maya Patel	Checkout fails when a coupon code has trailing whitespace
+
+--- stderr
+linearctl: ENG-9999: not found (or this API key cannot see it)

@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--include-comments searches comments too, so it needs --query","usage":true}
+
+--- stderr
+linearctl: --include-comments searches comments too, so it needs --query
+Run 'linearctl --help' for usage.

@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--json-input is not a JSON object: json: cannot unmarshal array into Go value of type map[string]interface {}","usage":true}
+
+--- stderr
+linearctl: --json-input is not a JSON object: json: cannot unmarshal array into Go value of type map[string]interface {}
+Run 'linearctl --help' for usage.

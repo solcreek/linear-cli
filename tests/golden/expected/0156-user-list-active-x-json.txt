@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"invalid argument \"x\" for \"--active\" flag: strconv.ParseBool: parsing \"x\": invalid syntax","usage":true}
+
+--- stderr
+linearctl: invalid argument "x" for "--active" flag: strconv.ParseBool: parsing "x": invalid syntax
+Run 'linearctl --help' for usage.

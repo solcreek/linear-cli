@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"pass --name, --description, or --content / --content-file","usage":true}
+
+--- stderr
+linearctl: pass --name, --description, or --content / --content-file
+Run 'linearctl --help' for usage.

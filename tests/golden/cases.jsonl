@@ -1,0 +1,397 @@
+{"args": ["--help"]}
+{"args": ["api", "--help"]}
+{"args": ["api", "query", "--help"]}
+{"args": ["auth", "--help"]}
+{"args": ["auth", "login", "--help"]}
+{"args": ["auth", "logout", "--help"]}
+{"args": ["auth", "status", "--help"]}
+{"args": ["comment", "--help"]}
+{"args": ["comment", "create", "--help"]}
+{"args": ["comment", "delete", "--help"]}
+{"args": ["comment", "list", "--help"]}
+{"args": ["comment", "update", "--help"]}
+{"args": ["config", "--help"]}
+{"args": ["config", "set", "--help"]}
+{"args": ["config", "show", "--help"]}
+{"args": ["cycle", "--help"]}
+{"args": ["cycle", "list", "--help"]}
+{"args": ["describe", "--help"]}
+{"args": ["file", "--help"]}
+{"args": ["file", "download", "--help"]}
+{"args": ["issue", "--help"]}
+{"args": ["issue", "archive", "--help"]}
+{"args": ["issue", "create", "--help"]}
+{"args": ["issue", "list", "--help"]}
+{"args": ["issue", "show", "--help"]}
+{"args": ["issue", "unarchive", "--help"]}
+{"args": ["issue", "update", "--help"]}
+{"args": ["label", "--help"]}
+{"args": ["label", "list", "--help"]}
+{"args": ["milestone", "--help"]}
+{"args": ["milestone", "list", "--help"]}
+{"args": ["notification", "--help"]}
+{"args": ["notification", "list", "--help"]}
+{"args": ["project", "--help"]}
+{"args": ["project", "list", "--help"]}
+{"args": ["project", "show", "--help"]}
+{"args": ["project", "update", "--help"]}
+{"args": ["relation", "--help"]}
+{"args": ["relation", "create", "--help"]}
+{"args": ["relation", "delete", "--help"]}
+{"args": ["serve", "--help"]}
+{"args": ["state", "--help"]}
+{"args": ["state", "list", "--help"]}
+{"args": ["team", "--help"]}
+{"args": ["team", "list", "--help"]}
+{"args": ["user", "--help"]}
+{"args": ["user", "list", "--help"]}
+{"args": ["watch", "--help"]}
+{"args": ["issue", "list", "-h"]}
+{"args": ["auth", "login", "-h"]}
+{"args": ["describe", "-h"]}
+{"args": ["issue", "show", "-h"]}
+{"args": ["completion", "--help"]}
+{"args": ["completion", "bash", "--help"]}
+{"args": ["completion", "zsh", "--help"]}
+{"args": ["completion", "fish", "--help"]}
+{"args": ["completion", "powershell", "--help"]}
+{"args": ["help", "--help"]}
+{"args": []}
+{"args": ["issue"]}
+{"args": ["auth"]}
+{"args": ["help"]}
+{"args": ["help", "auth"]}
+{"args": ["help", "issue", "show"]}
+{"args": ["help", "nope"]}
+{"args": ["issue", "view", "--help"]}
+{"args": ["--help"], "env": {"LINEARCTL_DEMO": "1", "LINEARCTL_META": "1"}}
+{"args": ["issue", "list", "--help", "--json"]}
+{"args": ["nope", "--help"]}
+{"args": ["issue", "list", "--zz", "--help"]}
+{"args": ["describe"]}
+{"args": ["describe", "--json"]}
+{"args": ["describe"], "tty": true}
+{"args": ["--version"]}
+{"args": ["--version", "--json"]}
+{"args": ["issue", "--version"]}
+{"args": ["--zz"]}
+{"args": ["nope"]}
+{"args": ["-v"]}
+{"args": ["describe", "zz"]}
+{"args": ["--timeout", "x", "describe"]}
+{"args": ["--zz", "--json"]}
+{"args": ["--json", "nope"]}
+{"args": ["describe", "--zz", "--json"]}
+{"args": ["issue", "nope"]}
+{"args": ["issue", "list", "extra"]}
+{"args": ["issue", "list", "--limit"]}
+{"args": ["issue", "list", "--limit", "0x3"]}
+{"args": ["issue", "list", "--limit", "-1"]}
+{"args": ["issue", "list", "--limit", "1_0"]}
+{"args": ["issue", "list", "--limit", "99999999999999999999"]}
+{"args": ["issue", "list", "--json=maybe"]}
+{"args": ["issue", "list", "--json=false", "--state", ""]}
+{"args": ["issue", "list", "--state", "", "--json"]}
+{"args": ["issue", "list", "--label=", "--json"]}
+{"args": ["issue", "list", "--fields", "nope", "--json"]}
+{"args": ["issue", "list", "--sort", "nope", "--json"]}
+{"args": ["issue", "list", "--state-type", "done", "--json"]}
+{"args": ["issue", "list", "--priority", "9", "--json"]}
+{"args": ["issue", "list", "--assignee", "bob", "--json"]}
+{"args": ["issue", "list", "--cycle", "x", "--json"]}
+{"args": ["issue", "list", "--updated-since", "yesterday", "--json"]}
+{"args": ["issue", "list", "--team", "E N G", "--json"]}
+{"args": ["issue", "list", "--attachment-url", "ftp://x", "--json"]}
+{"args": ["issue", "list", "--include-comments", "--json"]}
+{"args": ["issue", "list", "--query", "x", "--sort", "priority", "--json"]}
+{"args": ["issue", "list", "--id", "nope", "--json"]}
+{"args": ["issue", "list", "--cursor", "a\tb", "--json"]}
+{"args": ["issue", "list", "--", "--json"]}
+{"args": ["issue", "show", "--json"]}
+{"args": ["issue", "show", "ENG-1", "ENG-2", "--json"]}
+{"args": ["issue", "show", "ENG-1", "--comments", "5"]}
+{"args": ["issue", "show", "ENG-1", "--comments=300", "--json"]}
+{"args": ["issue", "show", "nope", "--json"]}
+{"args": ["issue", "show", "https://example.com/a/issue/ENG-1", "--json"]}
+{"args": ["issue", "create", "--json"]}
+{"args": ["issue", "create", "--dry-run", "--yes", "--json"]}
+{"args": ["issue", "create", "--yes", "--json"]}
+{"args": ["issue", "create", "--dry-run", "--json"]}
+{"args": ["issue", "create", "--dry-run", "--id", "x", "--json"]}
+{"args": ["issue", "update", "ENG-1", "--json"]}
+{"args": ["issue", "update", "ENG-1", "--dry-run", "--label", "a", "--add-label", "b", "--json"]}
+{"args": ["issue", "update", "ENG-1", "--dry-run", "--if-updated-at", "x", "--json"]}
+{"args": ["issue", "update", "ENG-1", "--dry-run", "--description", "a", "--description-file", "b", "--json"]}
+{"args": ["issue", "update", "ENG-1", "--dry-run", "--description-file", "missing.md", "--json"]}
+{"args": ["issue", "update", "ENG-1", "--dry-run", "--json-input", "missing.json", "--json"]}
+{"args": ["issue", "archive", "--dry-run"]}
+{"args": ["comment", "create", "ENG-1", "--dry-run", "--json"]}
+{"args": ["comment", "create", "ENG-1", "--yes", "--json"]}
+{"args": ["comment", "create", "ENG-1", "--dry-run", "--body", "  ", "--json"]}
+{"args": ["comment", "create", "ENG-1", "--dry-run", "--body", "x", "--parent", "nope", "--json"]}
+{"args": ["comment", "update", "nope", "--dry-run", "--body", "x", "--json"]}
+{"args": ["comment", "delete", "nope", "--yes", "--json"]}
+{"args": ["relation", "create", "ENG-1", "nope", "ENG-2", "--dry-run", "--json"]}
+{"args": ["relation", "create", "ENG-1", "blocks", "eng-1", "--dry-run", "--json"]}
+{"args": ["relation", "create", "ENG-1", "blocks", "--dry-run", "--json"]}
+{"args": ["config", "set", "nope", "x", "--dry-run", "--json"]}
+{"args": ["config", "set", "default-team", "E-1", "--dry-run", "--json"]}
+{"args": ["config", "set", "default-team", "--yes"]}
+{"args": ["project", "show", "--json"]}
+{"args": ["project", "show", "https://linear.app/a/project/nohex", "--json"]}
+{"args": ["project", "show", "x", "--issues", "999", "--json"]}
+{"args": ["project", "update", "x", "--dry-run", "--json"]}
+{"args": ["project", "list", "--status", "nope", "--json"]}
+{"args": ["file", "download", "https://example.com/x", "--dry-run", "--json"]}
+{"args": ["file", "download", "https://uploads.linear.app/", "--dry-run", "--json"]}
+{"args": ["api", "query", "--json"]}
+{"args": ["api", "query", "--json-input", "-", "--json"]}
+{"args": ["serve"]}
+{"args": ["serve", "--json"]}
+{"args": ["watch", "--mode", "x", "--json"]}
+{"args": ["watch", "--heartbeat", "0", "--json"]}
+{"args": ["watch", "--reconcile", "5", "--json"]}
+{"args": ["watch", "--since", "x", "--json"]}
+{"args": ["auth", "login", "--dry-run", "--json"]}
+{"args": ["auth", "logout", "--json"]}
+{"args": ["user", "list", "--active=x", "--json"]}
+{"args": ["team", "list", "x"]}
+{"args": ["-h", "x"]}
+{"args": ["issue", "list", "--team=", "--json"]}
+{"args": ["issue", "list", "--team"]}
+{"args": ["--timeout=", "describe"]}
+{"args": ["issue", "list", "--id", ""]}
+{"args": ["label", "list", "--team", "not a key", "--json"]}
+{"args": ["issue", "list", "--json"]}
+{"args": ["auth", "status"]}
+{"args": ["issue", "create", "--team", "ENG", "--title", "x", "--dry-run", "--json"]}
+{"args": ["issue", "list", "--json"], "env": {"LINEARCTL_TEAM": "bad team"}}
+{"args": ["issue", "list", "--json"], "setup": {"home/config/config.json": "{\"default-team\": 5}"}}
+{"args": ["issue", "list", "--json"], "setup": {"home/config/config.json": "nope"}}
+{"args": ["api", "query", "--json-input", "-", "--json"], "stdin": "nope"}
+{"args": ["api", "query", "--json-input", "-", "--json"], "stdin": "{\"query\": \"  \"}"}
+{"args": ["api", "query", "--json-input", "-", "--json"], "stdin": "{\"query\": \"mutation { x }\"}"}
+{"args": ["api", "query", "--json-input", "-", "--json"], "stdin": "{\"query\": \"query {\"}"}
+{"args": ["api", "query", "--json-input", "-", "--json"], "stdin": "{\"query\": \"subscription S { issueCreated { id } }\"}"}
+{"args": ["auth", "login", "--dry-run", "--json"], "stdin": ""}
+{"args": ["auth", "login", "--dry-run", "--json"], "stdin": "short"}
+{"args": ["auth", "login", "--dry-run", "--json"], "stdin": "has space in it 0000000000\n"}
+{"args": ["auth", "logout", "--dry-run", "--json"]}
+{"args": ["auth", "logout", "--yes"]}
+{"args": ["auth", "logout", "--yes", "--json"], "setup": {"home/config/credentials.json": "{\"apiKey\": \"lin_api_stored00000000000000\"}"}}
+{"args": ["auth", "logout", "--dry-run", "--json"], "setup": {"home/config/credentials.json": "{\"apiKey\": \"lin_api_stored00000000000000\"}"}}
+{"args": ["config", "show"]}
+{"args": ["config", "show", "--json"]}
+{"args": ["config", "show", "--json"], "tty": true}
+{"args": ["config", "set", "default-team", "eng", "--dry-run", "--json"]}
+{"args": ["config", "set", "default-team", "eng", "--yes", "--json"]}
+{"args": ["config", "set", "default-team", "eng", "--yes"]}
+{"args": ["config", "show"], "setup": {"home/config/config.json": "{\"default-team\": \"ENG\"}"}}
+{"args": ["config", "set", "default-team", "ENG", "--yes", "--json"], "setup": {"home/config/config.json": "{\"default-team\": \"ENG\"}"}}
+{"args": ["config", "show", "--json"], "setup": {"home/config/config.json": "{\"default-team\": \"ENG\", \"other\": \"x\"}"}}
+{"args": ["config", "show"], "setup": {"home/config/config.json": "[1]"}}
+{"args": ["issue", "list", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--limit", "0", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--limit", "0"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--limit", "5", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--limit", "5"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--limit", "5", "--cursor", "c5", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--limit", "5", "--cursor", "c5"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--label", "bug", "--limit", "0", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--label", "bug", "--limit", "0"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--label", "BUG", "--label", "customer reported", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--label", "BUG", "--label", "customer reported"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--any-label", "security", "--any-label", "feature", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--any-label", "security", "--any-label", "feature"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--without-label", "bug", "--limit", "0", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--without-label", "bug", "--limit", "0"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--assignee", "me", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--assignee", "me"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--assignee", "none", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--assignee", "none"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--assignee", "jonas@northwind.example", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--assignee", "jonas@northwind.example"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--state-type", "started", "--state-type", "triage", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--state-type", "started", "--state-type", "triage"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--state", "Todo", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--state", "Todo"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--cycle", "current", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--cycle", "current"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--cycle", "next", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--cycle", "next"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--cycle", "23", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--cycle", "23"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "checkout v2", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "checkout v2"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--query", "coupon", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--query", "coupon"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--query", "retry", "--include-comments", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--query", "retry", "--include-comments"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--query", "nil", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--query", "nil"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--id", "eng-142", "--id", "ENG-131", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--id", "eng-142", "--id", "ENG-131"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--id", "ENG-142", "--id", "ENG-9999", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--id", "ENG-142", "--id", "ENG-9999"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--sort", "priority", "--limit", "0", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--sort", "priority", "--limit", "0"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--sort", "created", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--sort", "created"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--priority", "urgent", "--priority", "2", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--priority", "urgent", "--priority", "2"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--team", "eng", "--team", "ops", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--team", "eng", "--team", "ops"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--delegate", "none", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--delegate", "none"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--delegate", "any", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--delegate", "any"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--milestone", "none", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--milestone", "none"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--updated-since", "2d", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--updated-since", "2d"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--updated-since", "2020-01-01", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--updated-since", "2020-01-01"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--fields", "identifier,title,labels", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--fields", "identifier,title,labels"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--fields", " identifier , state", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--fields", " identifier , state"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--attachment-url", "https://github.com/northwind/web/pull/1890", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--attachment-url", "https://github.com/northwind/web/pull/1890"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "show", "ENG-142", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "show", "ENG-142"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "view", "eng-142", "--comments=0", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "view", "eng-142", "--comments=0"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "show", "ENG-131", "--fields", "inverseRelations", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "show", "ENG-131", "--fields", "inverseRelations"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "show", "ENG-9999", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "show", "ENG-9999"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "show", "https://linear.app/northwind/issue/ENG-143/x", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "show", "https://linear.app/northwind/issue/ENG-143/x"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "show", "ENG-142", "--signed-urls", "300", "--fields", "identifier", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "show", "ENG-142", "--signed-urls", "300", "--fields", "identifier"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "show", "ENG-142", "--comments", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "show", "ENG-142", "--comments"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["comment", "list", "ENG-142", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["comment", "list", "ENG-142"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["comment", "list", "ENG-142", "--limit", "1", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["comment", "list", "ENG-142", "--limit", "1"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["comment", "list", "ENG-9999", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["comment", "list", "ENG-9999"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["team", "list", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["team", "list"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["state", "list", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["state", "list"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["state", "list", "--team", "eng", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["state", "list", "--team", "eng"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["label", "list", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["label", "list"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["label", "list", "--team", "ENG", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["label", "list", "--team", "ENG"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["user", "list", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["user", "list"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["user", "list", "--active", "--app", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["user", "list", "--active", "--app"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "list", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "list"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "list", "--status", "started", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "list", "--status", "started"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["milestone", "list", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["milestone", "list"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["notification", "list", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["notification", "list"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["cycle", "list", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["cycle", "list"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["cycle", "list", "--fields", "number,isActive,isNext", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["cycle", "list", "--fields", "number,isActive,isNext"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Checkout v2", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Checkout v2"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "checkout v2", "--issues", "0", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "checkout v2", "--issues", "0"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Nope", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Nope"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["auth", "status", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["auth", "status"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["config", "show", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["config", "show"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "create", "--team", "ENG", "--title", "x", "--label", "bug", "--state", "todo", "--assignee", "me", "--id", "0b6c5f0e-0000-4000-8000-000000000001", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "create", "--team", "ENG", "--title", "x", "--label", "bug", "--state", "todo", "--assignee", "me", "--id", "0b6c5f0e-0000-4000-8000-000000000001", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "create", "--team", "ENG", "--title", "x", "--label", "nope", "--id", "0b6c5f0e-0000-4000-8000-000000000001", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "create", "--team", "ENG", "--title", "x", "--label", "nope", "--id", "0b6c5f0e-0000-4000-8000-000000000001", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "create", "--team", "ENG", "--title", "x", "--project", "Mobile 3.0", "--parent", "ENG-142", "--priority", "high", "--assignee", "aiko@northwind.example", "--id", "0b6c5f0e-0000-4000-8000-000000000001", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "create", "--team", "ENG", "--title", "x", "--project", "Mobile 3.0", "--parent", "ENG-142", "--priority", "high", "--assignee", "aiko@northwind.example", "--id", "0b6c5f0e-0000-4000-8000-000000000001", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "create", "--team", "ENG", "--title", "x", "--id", "0b6c5f0e-0000-4000-8000-000000000001", "--yes", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "create", "--team", "ENG", "--title", "x", "--id", "0b6c5f0e-0000-4000-8000-000000000001", "--yes"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "update", "ENG-142", "--state", "Done", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "update", "ENG-142", "--state", "Done", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "update", "ENG-142", "--state", "In Progress", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "update", "ENG-142", "--state", "In Progress", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "update", "ENG-142", "--add-label", "feature", "--remove-label", "bug", "--remove-label", "security", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "update", "ENG-142", "--add-label", "feature", "--remove-label", "bug", "--remove-label", "security", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "update", "ENG-142", "--label", "Bug", "--label", "customer reported", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "update", "ENG-142", "--label", "Bug", "--label", "customer reported", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "update", "ENG-142", "--parent", "none", "--assignee", "none", "--priority", "none", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "update", "ENG-142", "--parent", "none", "--assignee", "none", "--priority", "none", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "update", "ENG-142", "--state", "Done", "--yes", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "update", "ENG-142", "--state", "Done", "--yes"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "archive", "ENG-142", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "archive", "ENG-142", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "unarchive", "ENG-142", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "unarchive", "ENG-142", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["comment", "create", "ENG-142", "--body", "hi", "--id", "5f1e0000-0000-4000-8000-000000000001", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["comment", "create", "ENG-142", "--body", "hi", "--id", "5f1e0000-0000-4000-8000-000000000001", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["relation", "create", "ENG-142", "related", "ENG-131", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["relation", "create", "ENG-142", "related", "ENG-131", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["relation", "create", "ENG-131", "blocked-by", "ENG-142", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["relation", "create", "ENG-131", "blocked-by", "ENG-142", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["relation", "delete", "ENG-142", "blocks", "ENG-158", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["relation", "delete", "ENG-142", "blocks", "ENG-158", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["relation", "create", "ENG-142", "duplicate", "ENG-158", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["relation", "create", "ENG-142", "duplicate", "ENG-158", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "update", "Checkout v2", "--name", "Checkout v2", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "update", "Checkout v2", "--name", "Checkout v2", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "update", "Checkout v2", "--description", "x", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "update", "Checkout v2", "--description", "x", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["file", "download", "https://uploads.linear.app/a/b", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["file", "download", "https://uploads.linear.app/a/b", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["config", "set", "default-team", "ENG", "--yes", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["config", "set", "default-team", "ENG", "--yes"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["watch", "--mode", "subscription", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--demo", "--meta", "--json"]}
+{"args": ["issue", "list", "--demo", "--json"], "tty": true}
+{"args": ["issue", "show", "ENG-142", "--demo", "--json"], "tty": true}
+{"args": ["issue", "show", "ENG-142", "--demo"], "tty": true}
+{"args": ["issue", "update", "ENG-142", "--demo", "--dry-run", "--json-input", "-", "--json"], "stdin": "{\"title\": \"New\", \"estimate\": 3}"}
+{"args": ["issue", "update", "ENG-142", "--demo", "--dry-run", "--json-input", "-", "--json"], "stdin": "[1]"}
+{"args": ["issue", "update", "ENG-142", "--demo", "--dry-run", "--description-file", "-", "--json"], "stdin": "From stdin\n"}
+{"args": ["comment", "create", "ENG-142", "--demo", "--dry-run", "--body-file", "note.md", "--id", "5f1e0000-0000-4000-8000-000000000002", "--json"], "setup": {"cwd/note.md": "From a file <b> & \"quotes\"\n"}}
+{"args": ["api", "query", "--demo", "--json-input", "-", "--json"], "stdin": "{\"query\": \"query { viewer { name email } organization { urlKey name } }\"}"}
+{"args": ["api", "query", "--demo", "--json-input", "-"], "stdin": "{\"query\": \"query Q($n: Int!) { issues(first: $n) { nodes { identifier title } pageInfo { hasNextPage } } }\", \"variables\": {\"n\": 2}}"}
+{"args": ["api", "query", "--demo", "--json-input", "-", "--json"], "stdin": "{\"query\": \"query { nope { id } }\"}"}
+{"args": ["api", "query", "--demo", "--json-input", "q.json", "--json"], "setup": {"cwd/q.json": "{\"query\": \"query { teams { nodes { key name } } }\", \"operationName\": \"\"}"}}
+{"args": ["serve", "--stdio", "--demo"], "stdin": "{\"id\": 1, \"argv\": [\"issue\", \"list\", \"--json\", \"--fields\", \"identifier\", \"--limit\", \"3\"]}\n{\"id\": \"two\", \"argv\": [\"issue\", \"list\", \"--limit\", \"2\"]}\n{\"id\": 3, \"argv\": [\"issue\", \"list\", \"--state-type\", \"done\", \"--json\"]}\n{\"id\": 4, \"argv\": [\"watch\", \"--json\"]}\n{\"id\": 5, \"argv\": [\"comment\", \"create\", \"ENG-1\", \"--body-file\", \"-\", \"--dry-run\"]}\n{\"id\": 6, \"argv\": [\"comment\", \"create\", \"ENG-1\", \"--body-file=-\", \"--dry-run\"]}\n{\"id\": 7, \"argv\": []}\nnot json\n\n{\"id\": 8, \"argv\": [\"describe\"]}\n{\"id\": 9, \"argv\": [\"issue\", \"show\", \"ENG-142\", \"--fields\", \"identifier,title\", \"--json\"]}\n{\"id\": null, \"argv\": [\"--version\"]}\n{\"id\": [1], \"argv\": [\"serve\", \"--stdio\"]}\n{\"id\": 10, \"argv\": [\"issue\", \"update\", \"ENG-142\", \"--state\", \"Done\", \"--yes\", \"--json\"]}\n{\"id\": 11, \"argv\": [\"issue\", \"list\", \"--zz\"]}\n"}
+{"args": ["serve", "--stdio"], "stdin": "{\"id\": 1, \"argv\": [\"issue\", \"list\", \"--json\", \"--fields\", \"identifier\", \"--limit\", \"3\"]}\n{\"id\": \"two\", \"argv\": [\"issue\", \"list\", \"--limit\", \"2\"]}\n{\"id\": 3, \"argv\": [\"issue\", \"list\", \"--state-type\", \"done\", \"--json\"]}\n{\"id\": 4, \"argv\": [\"watch\", \"--json\"]}\n{\"id\": 5, \"argv\": [\"comment\", \"create\", \"ENG-1\", \"--body-file\", \"-\", \"--dry-run\"]}\n{\"id\": 6, \"argv\": [\"comment\", \"create\", \"ENG-1\", \"--body-file=-\", \"--dry-run\"]}\n{\"id\": 7, \"argv\": []}\nnot json\n\n{\"id\": 8, \"argv\": [\"describe\"]}\n{\"id\": 9, \"argv\": [\"issue\", \"show\", \"ENG-142\", \"--fields\", \"identifier,title\", \"--json\"]}\n{\"id\": null, \"argv\": [\"--version\"]}\n{\"id\": [1], \"argv\": [\"serve\", \"--stdio\"]}\n{\"id\": 10, \"argv\": [\"issue\", \"update\", \"ENG-142\", \"--state\", \"Done\", \"--yes\", \"--json\"]}\n{\"id\": 11, \"argv\": [\"issue\", \"list\", \"--zz\"]}\n"}
+{"args": ["serve", "--stdio"], "stdin": "{\"id\": 1, \"argv\": [\"issue\", \"list\", \"--json\", \"--fields\", \"identifier\", \"--limit\", \"3\"]}\n{\"id\": \"two\", \"argv\": [\"issue\", \"list\", \"--limit\", \"2\"]}\n{\"id\": 3, \"argv\": [\"issue\", \"list\", \"--state-type\", \"done\", \"--json\"]}\n{\"id\": 4, \"argv\": [\"watch\", \"--json\"]}\n{\"id\": 5, \"argv\": [\"comment\", \"create\", \"ENG-1\", \"--body-file\", \"-\", \"--dry-run\"]}\n{\"id\": 6, \"argv\": [\"comment\", \"create\", \"ENG-1\", \"--body-file=-\", \"--dry-run\"]}\n{\"id\": 7, \"argv\": []}\nnot json\n\n{\"id\": 8, \"argv\": [\"describe\"]}\n{\"id\": 9, \"argv\": [\"issue\", \"show\", \"ENG-142\", \"--fields\", \"identifier,title\", \"--json\"]}\n{\"id\": null, \"argv\": [\"--version\"]}\n{\"id\": [1], \"argv\": [\"serve\", \"--stdio\"]}\n{\"id\": 10, \"argv\": [\"issue\", \"update\", \"ENG-142\", \"--state\", \"Done\", \"--yes\", \"--json\"]}\n{\"id\": 11, \"argv\": [\"issue\", \"list\", \"--zz\"]}\n", "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["serve", "--stdio", "--demo"], "stdin": "{\"id\":1,\"argv\":[\"issue\",\"list\",\"--json\",\"--limit\",\"1\"]}"}
+{"args": ["completion", "bash"]}
+{"args": ["completion", "zsh"]}
+{"args": ["completion", "fish"]}
+{"args": ["completion", "powershell"]}
+{"args": ["completion", "bash", "--no-descriptions"]}
+{"args": ["completion", "nope"]}
+{"args": ["__complete", ""]}
+{"args": ["__complete", "i"]}
+{"args": ["__complete", "issue", ""]}
+{"args": ["__complete", "issue", "list", "--"]}
+{"args": ["__complete", "issue", "list", "--st"]}
+{"args": ["__complete", "issue", "show", ""]}
+{"args": ["__complete", "issue", "list", "--state", ""]}
+{"args": ["__complete", "completion", ""]}
+{"args": ["__complete", "help", ""]}
+{"args": ["__complete", "-"]}
+{"args": ["__complete", "--js"]}
+{"args": ["__completeNoDesc", "issue", ""]}
+{"args": ["issue", "list", "--label", "x", "--label", "", "--json"]}
+{"args": ["issue", "list", "--state", "Todo", "--state=", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "update", "ENG-142", "--add-label", "bug", "--add-label", "", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "list", "--status", "started", "--status", "", "--json"], "env": {"LINEARCTL_DEMO": "1"}}

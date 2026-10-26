@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"changed":true,"dryRun":true,"relation":{"id":null,"issue":"ENG-142","relatedIssue":"ENG-158","type":"duplicate"}}
+
+--- stderr

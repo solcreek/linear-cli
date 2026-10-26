@@ -1,0 +1,6 @@
+exit: 1
+--- stdout
+{"error":"not found: issue ENG-9999 (or this API key cannot see it)","usage":false}
+
+--- stderr
+linearctl: not found: issue ENG-9999 (or this API key cannot see it)

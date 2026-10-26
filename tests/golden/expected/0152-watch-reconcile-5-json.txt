@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--reconcile is at least 10","usage":true}
+
+--- stderr
+linearctl: --reconcile is at least 10
+Run 'linearctl --help' for usage.

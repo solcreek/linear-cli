@@ -1,0 +1,6 @@
+exit: 2
+--- stdout
+
+--- stderr
+linearctl: invalid argument "maybe" for "--json" flag: strconv.ParseBool: parsing "maybe": invalid syntax
+Run 'linearctl --help' for usage.

@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"COMMENT must be a comment id (a UUID, as comment list shows); got \"nope\"","usage":true}
+
+--- stderr
+linearctl: COMMENT must be a comment id (a UUID, as comment list shows); got "nope"
+Run 'linearctl --help' for usage.

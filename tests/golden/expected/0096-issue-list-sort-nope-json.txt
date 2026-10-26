@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--sort must be updated, created or priority; got \"nope\"","usage":true}
+
+--- stderr
+linearctl: --sort must be updated, created or priority; got "nope"
+Run 'linearctl --help' for usage.

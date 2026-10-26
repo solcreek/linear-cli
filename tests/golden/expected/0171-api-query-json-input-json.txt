@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--json-input has no query","usage":true}
+
+--- stderr
+linearctl: --json-input has no query
+Run 'linearctl --help' for usage.

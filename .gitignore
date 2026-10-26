@@ -1,3 +1,5 @@
 /linearctl
 /dist/
 /.cover/
+/target/
+*.profraw

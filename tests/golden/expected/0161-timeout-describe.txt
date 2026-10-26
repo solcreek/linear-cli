@@ -1,0 +1,6 @@
+exit: 2
+--- stdout
+
+--- stderr
+linearctl: invalid argument "" for "--timeout" flag: takes a whole number, got ""
+Run 'linearctl --help' for usage.

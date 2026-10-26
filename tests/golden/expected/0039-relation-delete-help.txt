@@ -1,0 +1,35 @@
+exit: 0
+--- stdout
+Remove a relation between two issues. One that is not there is changed: false.
+TYPE is one of:
+  blocks      ISSUE blocks OTHER
+  blocked-by  OTHER blocks ISSUE
+  duplicate   ISSUE is a duplicate of OTHER
+  related     ISSUE and OTHER are related (either direction)
+  similar     ISSUE and OTHER are similar (either direction)
+Changes things: pass --dry-run to preview, --yes to apply.
+
+Usage:
+  linearctl relation delete ISSUE TYPE OTHER [flags]
+
+Examples:
+  linearctl relation delete ENG-12 blocks ENG-15 --dry-run
+  linearctl relation delete ENG-12 duplicate ENG-9 --yes --json
+
+Flags:
+      --dry-run   show what would change; change nothing
+  -h, --help      help for delete
+      --yes       apply the change
+
+Global Flags:
+      --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+      --json        print one JSON document on stdout
+      --meta        add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+      --timeout N   give up on a network request after N seconds (default 30)
+
+Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or
+Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since
+you read it; read it again)
+Run 'linearctl describe' for every command as JSON.
+
+--- stderr

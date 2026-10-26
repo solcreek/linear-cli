@@ -1,0 +1,21 @@
+exit: 0
+--- stdout
+ENG-158	Todo	Jonas Berg	Customers in Brazil can't pay with Pix
+ENG-142	In Progress	Maya Patel	Checkout fails when a coupon code has trailing whitespace
+ENG-143	In Review	Maya Patel	Trim and uppercase coupon codes on the server before lookup
+ENG-149	In Review	Aiko Tanaka	Dashboard takes 4 s to load for workspaces with 10k+ projects
+ENG-140	In Review	Maya Patel	Upgrade the payments SDK to v5 before the v4 sunset
+ENG-120	In Progress	Maya Patel	Checkout v2 rollout plan
+ENG-147	In Progress	Sofia Romero	iOS: push notifications arrive twice after reinstalling the app
+ENG-157	Triage	-	Search ignores accents: "café" does not match "cafe"
+ENG-155	Backlog	-	Dark mode for the settings pages
+ENG-156	Triage	-	Export invoices as CSV
+ENG-151	Todo	Daniel Okafor	Rate-limit the password reset endpoint
+ENG-138	In Progress	Daniel Okafor	Move background jobs from Redis to Postgres
+ENG-153	Todo	Sofia Romero	Android: offline queue drops edits made in airplane mode
+ENG-144	Todo	Jonas Berg	Add a regression test for whitespace in coupon codes
+ENG-152	Todo	Aiko Tanaka	Flaky test: OrderSummary renders taxes for EU addresses
+ENG-146	Backlog	Daniel Okafor	Single sign-on with Okta for enterprise workspaces
+ENG-131	Done	Jonas Berg	Show a clear error when a coupon has expired
+
+--- stderr

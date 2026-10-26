@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"--add-label is empty","usage":true}
+
+--- stderr
+linearctl: --add-label is empty
+Run 'linearctl --help' for usage.

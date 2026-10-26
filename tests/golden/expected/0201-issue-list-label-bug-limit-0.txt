@@ -1,0 +1,12 @@
+exit: 0
+--- stdout
+ENG-158	Todo	Jonas Berg	Customers in Brazil can't pay with Pix
+ENG-142	In Progress	Maya Patel	Checkout fails when a coupon code has trailing whitespace
+ENG-143	In Review	Maya Patel	Trim and uppercase coupon codes on the server before lookup
+ENG-147	In Progress	Sofia Romero	iOS: push notifications arrive twice after reinstalling the app
+ENG-157	Triage	-	Search ignores accents: "café" does not match "cafe"
+ENG-153	Todo	Sofia Romero	Android: offline queue drops edits made in airplane mode
+ENG-144	Todo	Jonas Berg	Add a regression test for whitespace in coupon codes
+ENG-152	Todo	Aiko Tanaka	Flaky test: OrderSummary renders taxes for EU addresses
+
+--- stderr

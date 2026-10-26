@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"changed":true,"dryRun":false,"key":"default-team","value":"ENG"}
+
+--- stderr

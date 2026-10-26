@@ -1,0 +1,6 @@
+exit: 0
+--- stdout
+would comment on ENG-142
+id: 5f1e0000-0000-4000-8000-000000000001 (pass --id 5f1e0000-0000-4000-8000-000000000001 --yes)
+
+--- stderr

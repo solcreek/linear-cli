@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"pass --body TEXT or --body-file PATH (- for stdin), not empty","usage":true}
+
+--- stderr
+linearctl: pass --body TEXT or --body-file PATH (- for stdin), not empty
+Run 'linearctl --help' for usage.

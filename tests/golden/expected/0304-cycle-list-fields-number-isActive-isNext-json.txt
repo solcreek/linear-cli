@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"items":[{"isActive":false,"isNext":false,"number":23},{"isActive":true,"isNext":false,"number":24},{"isActive":false,"isNext":true,"number":25}],"nextCursor":null,"shown":3,"total":null,"truncated":false}
+
+--- stderr

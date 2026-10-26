@@ -1,0 +1,5 @@
+exit: 1
+--- stdout
+
+--- stderr
+linearctl: not found: issue ENG-9999 (or this API key cannot see it)

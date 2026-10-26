@@ -1,0 +1,42 @@
+exit: 0
+--- stdout
+Generate the autocompletion script for the bash shell.
+
+This script depends on the 'bash-completion' package.
+If it is not installed already, you can install it via your OS's package manager.
+
+To load completions in your current shell session:
+
+	source <(linearctl completion bash)
+
+To load completions for every new session, execute once:
+
+#### Linux:
+
+	linearctl completion bash > /etc/bash_completion.d/linearctl
+
+#### macOS:
+
+	linearctl completion bash > $(brew --prefix)/etc/bash_completion.d/linearctl
+
+You will need to start a new shell for this setup to take effect.
+
+Usage:
+  linearctl completion bash
+
+Flags:
+  -h, --help              help for bash
+      --no-descriptions   disable completion descriptions
+
+Global Flags:
+      --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+      --json        print one JSON document on stdout
+      --meta        add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+      --timeout N   give up on a network request after N seconds (default 30)
+
+Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or
+Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since
+you read it; read it again)
+Run 'linearctl describe' for every command as JSON.
+
+--- stderr

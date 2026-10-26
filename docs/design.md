@@ -1,9 +1,12 @@
 # linearctl — command surface (as built, 2026-10-26)
 
-Go + cobra, hand-written GraphQL over `net/http` against
-`https://api.linear.app/graphql`. Every document is in `queries.go`; the tests
-validate each against the vendored `graphql/schema.graphql` (`make schema`
-refreshes it). No `@linear/sdk`, no code generation.
+Rust, hand-written GraphQL over HTTP (ureq, rustls) against
+`https://api.linear.app/graphql`. Every document is in `src/queries.rs`; the
+tests validate each against the vendored `graphql/schema.graphql` (`make schema`
+refreshes it). No `@linear/sdk`, no code generation. The command line reads its
+arguments as cobra and pflag did in the Go implementation (until 0.2.0), and
+prints the same help, JSON and errors: `tests/golden` holds that output, and
+`acceptance/` the Go implementation's tests of the binary.
 The CLI is the contract: `linear-tui` (Rust, ratatui) spawns `linearctl … --json` and
 never holds the API key.
 
@@ -34,9 +37,11 @@ A feature belongs here when all of these hold:
    the primitives here.
 
 Checks: every document is validated against the public schema
-(`queries_test.go`); tests assert that text arguments are sent unchanged; and
-`TestNoWorkspaceConventions` fails if the source names a workspace, a team
-key from a real workspace, or an HTML comment marker.
+(`documents_match_the_schema` in `src/queries.rs`, and the fake Linear in
+`acceptance/` checks every request the binary sends); tests assert that text
+arguments are sent unchanged; and `no_workspace_conventions` (`src/generic.rs`)
+fails if the source names a workspace, a team key from a real workspace, or an
+HTML comment marker.
 
 ## Global flags
 

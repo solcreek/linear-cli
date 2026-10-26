@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"pass --team KEY (or set LINEARCTL_TEAM, or default-team with 'linearctl config set')","usage":true}
+
+--- stderr
+linearctl: pass --team KEY (or set LINEARCTL_TEAM, or default-team with 'linearctl config set')
+Run 'linearctl --help' for usage.

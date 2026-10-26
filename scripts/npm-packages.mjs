@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// Assembles the npm packages for one release from goreleaser's binaries:
+// Assembles the npm packages for one release from its binaries:
 // one package per platform holding the binary, and @solcreek/linear-cli,
 // which depends on them optionally (npm installs only the one matching the
 // machine, by "os" and "cpu").
 //
 //   node scripts/npm-packages.mjs VERSION BINARIES OUT
 //
-// BINARIES holds goreleaser's build directories (dist/), whose names start
+// BINARIES holds the build directories scripts/package.sh made, whose names start
 // with linearctl_<goos>_<goarch>. OUT gets one directory per package, ready
 // for npm publish; it must not exist.
 import fs from "node:fs"
@@ -30,7 +30,7 @@ const meta = {
   homepage: "https://github.com/solcreek/linear-cli#readme",
   bugs: "https://github.com/solcreek/linear-cli/issues",
 }
-// goreleaser's GOOS_GOARCH to npm's platform and arch.
+// The builds' GOOS_GOARCH (Go's names, kept) to npm's platform and arch.
 const platforms = [
   ["darwin_arm64", "darwin", "arm64"],
   ["darwin_amd64", "darwin", "x64"],

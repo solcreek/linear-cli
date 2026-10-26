@@ -1,0 +1,10 @@
+exit: 0
+--- stdout
+ENG-120	In Progress	Maya Patel	Checkout v2 rollout plan
+ENG-147	In Progress	Sofia Romero	iOS: push notifications arrive twice after reinstalling the app
+ENG-157	Triage	-	Search ignores accents: "café" does not match "cafe"
+ENG-155	Backlog	-	Dark mode for the settings pages
+ENG-156	Triage	-	Export invoices as CSV
+
+--- stderr
+5 shown, more remain; --cursor c10 for the next page, --limit 0 for all

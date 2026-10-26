@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"error":"the query does not parse: input:1:8: Expected Name, found \u003cEOF\u003e","usage":true}
+
+--- stderr
+linearctl: the query does not parse: input:1:8: Expected Name, found <EOF>
+Run 'linearctl --help' for usage.

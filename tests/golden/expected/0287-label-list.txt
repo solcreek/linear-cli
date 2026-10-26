@@ -1,0 +1,11 @@
+exit: 0
+--- stdout
+Bug	-	-
+Customer reported	-	-
+Feature	-	-
+Improvement	-	-
+Performance	-	-
+Security	-	-
+Tech debt	-	-
+
+--- stderr

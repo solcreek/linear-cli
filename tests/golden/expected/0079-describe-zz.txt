@@ -1,0 +1,6 @@
+exit: 2
+--- stdout
+
+--- stderr
+linearctl: unknown command "zz" for "linearctl describe"
+Run 'linearctl --help' for usage.

@@ -1,0 +1,9 @@
+exit: 0
+--- stdout
+ENG-143  Trim and uppercase coupon codes on the server before lookup
+state: In Review   assignee: Maya Patel   priority: High
+https://linear.app/northwind/issue/ENG-143/trim-and-uppercase-coupon-codes-on-the-server-before-lookup
+
+Normalize in `CouponService.lookup`, not in the controllers, so the partner API gets it too.
+
+--- stderr

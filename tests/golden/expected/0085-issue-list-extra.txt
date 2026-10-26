@@ -1,0 +1,6 @@
+exit: 2
+--- stdout
+
+--- stderr
+linearctl: unknown command "extra" for "linearctl issue list"
+Run 'linearctl --help' for usage.

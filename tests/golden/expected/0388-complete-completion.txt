@@ -1,0 +1,10 @@
+exit: 0
+--- stdout
+bash	Generate the autocompletion script for bash
+fish	Generate the autocompletion script for fish
+powershell	Generate the autocompletion script for powershell
+zsh	Generate the autocompletion script for zsh
+:4
+
+--- stderr
+Completion ended with directive: ShellCompDirectiveNoFileComp

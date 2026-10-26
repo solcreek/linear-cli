@@ -1,0 +1,38 @@
+exit: 0
+--- stdout
+Add a Markdown comment to an issue.
+
+--yes requires --id, a UUID you choose, so a rerun can never post twice: if a
+comment with that id exists, it is returned with changed: false.
+--dry-run without --id generates one and prints it as id; pass it to --yes.
+--parent replies in a comment's thread.
+Changes things: pass --dry-run to preview, --yes to apply.
+
+Usage:
+  linearctl comment create ISSUE [flags]
+
+Examples:
+  linearctl comment create ENG-123 --body "Fixed in #42" --dry-run --json
+  git log -1 --format=%B | linearctl comment create ENG-123 --body-file - --id 5f1e… --yes
+
+Flags:
+      --body TEXT        the comment, Markdown TEXT
+      --body-file PATH   read the comment from PATH (- for stdin)
+      --dry-run          show what would change; change nothing
+  -h, --help             help for create
+      --id UUID          the new comment's UUID; required with --yes
+      --parent ID        reply in the thread of comment ID
+      --yes              apply the change
+
+Global Flags:
+      --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+      --json        print one JSON document on stdout
+      --meta        add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+      --timeout N   give up on a network request after N seconds (default 30)
+
+Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or
+Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since
+you read it; read it again)
+Run 'linearctl describe' for every command as JSON.
+
+--- stderr
