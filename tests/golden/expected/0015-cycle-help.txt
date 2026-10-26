@@ -1,6 +1,6 @@
 exit: 0
 --- stdout
-List cycles
+List and show cycles
 
 Usage:
   linearctl cycle [flags]
@@ -8,6 +8,7 @@ Usage:
 
 Available Commands:
   list        List cycles
+  show        Show a cycle: its progress, histories and issues, as Linear computes them
 
 Flags:
   -h, --help   help for cycle

@@ -967,6 +967,97 @@ exit: 0
           "name": "list",
           "summary": "List cycles",
           "usage": "linearctl cycle list [flags]"
+        },
+        {
+          "aliases": [],
+          "args": [
+            {
+              "default": null,
+              "name": "CYCLE",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "examples": [
+            "linearctl cycle show current --team ENG --json",
+            "linearctl cycle show 23 --team ENG --issues 250 --fields number,progress,issues --json"
+          ],
+          "flags": [
+            {
+              "default": null,
+              "description": "continue after CURSOR (nextCursor from the previous page)",
+              "name": "cursor",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "return only these comma-separated FIELDS (see Fields above)",
+              "name": "fields",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "help for show",
+              "name": "help",
+              "short": "h",
+              "type": "boolean"
+            },
+            {
+              "default": "50",
+              "description": "include the first N issues; 0 for none",
+              "name": "issues",
+              "short": null,
+              "type": "integer"
+            },
+            {
+              "default": null,
+              "description": "the cycle's team KEY (falls back to LINEARCTL_TEAM, then default-team)",
+              "name": "team",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": "50",
+              "description": "include the first N issues left open at close; 0 for none",
+              "name": "uncompleted",
+              "short": null,
+              "type": "integer"
+            },
+            {
+              "default": null,
+              "description": "use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1",
+              "name": "demo",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "print one JSON document on stdout",
+              "name": "json",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1",
+              "name": "meta",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": "30",
+              "description": "give up on a network request after N seconds",
+              "name": "timeout",
+              "short": null,
+              "type": "integer"
+            }
+          ],
+          "mutates": false,
+          "name": "show",
+          "summary": "Show a cycle: its progress, histories and issues, as Linear computes them",
+          "usage": "linearctl cycle show CYCLE [flags]"
         }
       ],
       "examples": [],
@@ -1009,7 +1100,7 @@ exit: 0
       ],
       "mutates": false,
       "name": "cycle",
-      "summary": "List cycles",
+      "summary": "List and show cycles",
       "usage": "linearctl cycle [flags]"
     },
     {

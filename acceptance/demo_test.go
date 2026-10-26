@@ -37,7 +37,7 @@ func identifiers(items []map[string]any) []string {
 func TestDemoAnswersEveryReadCommandOffline(t *testing.T) {
 	t.Parallel()
 	args := map[string][]string{"issue show": {"ENG-142"}, "issue view": {"ENG-142"}, "comment list": {"ENG-142"},
-		"project show": {"Checkout v2"}}
+		"project show": {"Checkout v2"}, "cycle show": {"current"}}
 	skip := []string{"describe", "watch", "serve", "api query", "file download", "config show"}
 	for _, c := range commands(t) {
 		name := strings.Join(c.Path, " ")

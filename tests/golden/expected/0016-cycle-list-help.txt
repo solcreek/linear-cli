@@ -2,7 +2,8 @@ exit: 0
 --- stdout
 List cycles.
 
-Fields: id, number, name, startsAt, endsAt, isActive, isNext, team
+Fields: id, number, name, description, startsAt, endsAt, completedAt, isActive,
+isNext, isPrevious, isPast, isFuture, progress, team
 
 Usage:
   linearctl cycle list [flags]

@@ -205,6 +205,7 @@ fn build() -> World {
     }
     let mut cycles: HashMap<String, usize> = HashMap::new();
     let mut next: Option<(usize, String)> = None;
+    let mut previous: Option<(usize, String)> = None;
     for c in seed["cycles"].as_array().into_iter().flatten() {
         let (starts, ends) = (at(&c["startsAt"]), at(&c["endsAt"]));
         let text = |v: &V| if let V::S(Value::String(x)) = v { x.clone() } else { String::new() };
@@ -217,21 +218,48 @@ fn build() -> World {
                 ("id".into(), s(&demo_id("cycle", &number))),
                 ("number".into(), V::S(c["number"].clone())),
                 ("name".into(), NULL),
-                ("startsAt".into(), starts),
-                ("endsAt".into(), ends),
+                ("endsAt".into(), ends.clone()),
+                ("description".into(), NULL),
+                ("startsAt".into(), starts.clone()),
+                ("completedAt".into(), if now >= enn { ends.clone() } else { NULL }),
+                ("createdAt".into(), starts.clone()),
+                ("updatedAt".into(), starts),
+                ("archivedAt".into(), NULL),
+                ("autoArchivedAt".into(), NULL),
                 ("isActive".into(), V::S(json!(now >= sn && now < enn))),
                 ("isNext".into(), V::S(json!(false))),
+                ("isPrevious".into(), V::S(json!(false))),
+                ("isPast".into(), V::S(json!(now >= enn))),
+                ("isFuture".into(), V::S(json!(now < sn))),
+                // Linear's day-by-day series; the demo has no history.
+                ("progress".into(), V::S(json!(0.0))),
+                ("currentProgress".into(), V::S(json!({}))),
+                ("progressHistory".into(), V::S(json!({}))),
+                ("scopeHistory".into(), V::S(json!([]))),
+                ("completedScopeHistory".into(), V::S(json!([]))),
+                ("inProgressScopeHistory".into(), V::S(json!([]))),
+                ("issueCountHistory".into(), V::S(json!([]))),
+                ("completedIssueCountHistory".into(), V::S(json!([]))),
+                ("inheritedFrom".into(), NULL),
+                ("issues".into(), V::L(vec![])),
+                ("uncompletedIssuesUponClose".into(), V::L(vec![])),
                 ("team".into(), team_v.clone()),
             ]),
         );
         if now < sn && next.as_ref().is_none_or(|(_, ns)| st < *ns) {
             next = Some((id, st.clone()));
         }
+        if now >= enn && previous.as_ref().is_none_or(|(_, pe)| en > *pe) {
+            previous = Some((id, en.clone()));
+        }
         cycles.insert(number, id);
         w.root.entry("cycles".into()).or_default().push(V::N(id));
     }
     if let Some((id, _)) = next {
         w.nodes[id].insert("isNext".into(), V::S(json!(true)));
+    }
+    if let Some((id, _)) = previous {
+        w.nodes[id].insert("isPrevious".into(), V::S(json!(true)));
     }
     if team != usize::MAX {
         let states_list = w.root.get("workflowStates").cloned().unwrap_or_default();
@@ -415,10 +443,56 @@ fn build() -> World {
             push(&mut w.nodes[other], "inverseRelations", V::N(rel));
         }
     }
+    cycle_issues(&mut w);
     for k in ["projectMilestones", "notifications", "attachments", "comments", "cycles", "projects"] {
         w.root.entry(k.into()).or_default();
     }
     w
+}
+
+/// Each cycle's issues, and its progress as Linear documents it: completed
+/// points plus a quarter of in-progress points, over all points; 0 without
+/// points. The demo stands in for Linear here; linearctl itself computes none.
+fn cycle_issues(w: &mut World) {
+    let issues: Vec<usize> = w
+        .root
+        .get("issues")
+        .into_iter()
+        .flatten()
+        .filter_map(|v| if let V::N(i) = v { Some(*i) } else { None })
+        .collect();
+    let cycles: Vec<usize> = w
+        .root
+        .get("cycles")
+        .into_iter()
+        .flatten()
+        .filter_map(|v| if let V::N(i) = v { Some(*i) } else { None })
+        .collect();
+    for c in cycles {
+        let (mut total, mut done, mut started) = (0.0, 0.0, 0.0);
+        for &i in &issues {
+            if !matches!(w.nodes[i].get("cycle"), Some(V::N(x)) if *x == c) {
+                continue;
+            }
+            push(&mut w.nodes[c], "issues", V::N(i));
+            let points = match w.nodes[i].get("estimate") {
+                Some(V::S(v)) => v.as_f64().unwrap_or(0.0),
+                _ => 0.0,
+            };
+            let kind = match w.nodes[i].get("state") {
+                Some(V::N(st)) => text_of(&w.nodes[*st], "type"),
+                _ => String::new(),
+            };
+            total += points;
+            match kind.as_str() {
+                "completed" => done += points,
+                "started" => started += points,
+                _ => {}
+            }
+        }
+        let progress = if total > 0.0 { (done + 0.25 * started) / total } else { 0.0 };
+        w.nodes[c].insert("progress".into(), V::S(json!(progress)));
+    }
 }
 
 fn push(n: &mut Node, k: &str, v: V) {

@@ -5,7 +5,7 @@ auth	Store, check or remove the Linear API key
 comment	List and create comments on an issue
 completion	Generate the autocompletion script for the specified shell
 config	Show or change settings
-cycle	List cycles
+cycle	List and show cycles
 describe	Print every command, flag and exit code as JSON
 file	Download files attached to issues and comments
 help	Help about any command

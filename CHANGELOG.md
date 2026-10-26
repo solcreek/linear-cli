@@ -9,6 +9,19 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Added
+
+- `cycle show CYCLE` (current, next, previous, a number, or a UUID; `--team`
+  picks among teams): Linear's own Cycle fields under Linear's names, among them
+  `progress`, `currentProgress`, `progressHistory` and the day-by-day
+  `scopeHistory`, `completedScopeHistory`, `inProgressScopeHistory`,
+  `issueCountHistory` and `completedIssueCountHistory`, plus `issues` (paged
+  with `--cursor`) and `uncompletedIssuesUponClose` as lists. Nothing is
+  computed; `--fields` trims.
+- `cycle list` rows carry the same fields as `cycle show`'s top level:
+  `description`, `completedAt`, `isPrevious`, `isPast`, `isFuture`, `progress`,
+  and `team.id`.
+
 ### Changed
 
 - `issue list --cycle` also takes `previous` and a cycle's UUID, the words

@@ -44,6 +44,10 @@ LINEARCTL_HOME moves config and credentials under one directory.",
     ];
     let mut subs = vec![auth::command(), issue::command(), comment::command(), relation::command()];
     for mut c in lookups::commands() {
+        if c.name() == "cycle" {
+            c.short = "List and show cycles".into();
+            c.subs.extend(cycle::commands());
+        }
         if c.name() == "project" {
             c.short = "List, show and update projects".into();
             c.subs.extend(project::commands());
