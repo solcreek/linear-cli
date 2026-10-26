@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--attachment-url must be an http(s) URL; got \"ftp://x\"","usage":true}
+{"code":"USAGE","error":"--attachment-url must be an http(s) URL; got \"ftp://x\"","usage":true}
 
 --- stderr
 linearctl: --attachment-url must be an http(s) URL; got "ftp://x"

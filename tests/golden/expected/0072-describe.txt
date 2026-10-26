@@ -3957,6 +3957,58 @@ exit: 0
       "usage": "linearctl watch [flags]"
     }
   ],
+  "errorCodes": [
+    {
+      "code": "USAGE",
+      "exit": 2,
+      "meaning": "the invocation is wrong: fix it, do not retry it as is"
+    },
+    {
+      "code": "NOT_FOUND",
+      "exit": 1,
+      "meaning": "what was named is not there, or this key cannot see it: look it up with a list command"
+    },
+    {
+      "code": "AMBIGUOUS",
+      "exit": 1,
+      "meaning": "a name fits more than one thing, listed in error: name it more precisely"
+    },
+    {
+      "code": "LINEAR_ERROR",
+      "exit": 1,
+      "meaning": "Linear refused the request; error has its words"
+    },
+    {
+      "code": "NETWORK",
+      "exit": 1,
+      "meaning": "Linear could not be reached, timed out or answered 5xx: rerunning is safe"
+    },
+    {
+      "code": "FAILED",
+      "exit": 1,
+      "meaning": "anything else that failed; error says what"
+    },
+    {
+      "code": "BUSY",
+      "exit": 4,
+      "meaning": "another run holds a lock; nothing changed: retry"
+    },
+    {
+      "code": "AUTH",
+      "exit": 5,
+      "meaning": "no API key, or Linear rejected it"
+    },
+    {
+      "code": "RATE_LIMITED",
+      "exit": 6,
+      "meaning": "Linear's budget is spent: retry after retryAt"
+    },
+    {
+      "code": "CONFLICT",
+      "exit": 7,
+      "meaning": "a precondition such as --if-updated-at no longer holds: read again"
+    }
+  ],
   "exitCodes": {
     "auth": 5,
     "busy": 4,

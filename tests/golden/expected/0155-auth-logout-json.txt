@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"logout changes things: pass --dry-run to preview, or --yes to apply (one of them)","usage":true}
+{"code":"USAGE","error":"logout changes things: pass --dry-run to preview, or --yes to apply (one of them)","usage":true}
 
 --- stderr
 linearctl: logout changes things: pass --dry-run to preview, or --yes to apply (one of them)

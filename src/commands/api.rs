@@ -108,6 +108,7 @@ fn query(run: &mut Run, ctx: &Ctx) -> R {
     if let Some(f) = &failure {
         out["error"] = json!(f.to_string());
         out["usage"] = json!(false);
+        out["code"] = json!(f.kind());
         run.print_json_keeping(out, &["data", "errors"])?;
         return Err(Fail::Reported(f.to_string()));
     }

@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--team is empty","usage":true}
+{"code":"USAGE","error":"--team is empty","usage":true}
 
 --- stderr
 linearctl: --team is empty

@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--cursor contains a control character","usage":true}
+{"code":"USAGE","error":"--cursor contains a control character","usage":true}
 
 --- stderr
 linearctl: --cursor contains a control character

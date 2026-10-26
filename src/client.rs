@@ -4,7 +4,7 @@
 //! document it sends is in queries.rs. One agent per process, so a
 //! command's requests, and serve's, share one connection.
 
-use crate::fail::{self, Fail, R, failed};
+use crate::fail::{self, Fail, R, failed, missing, network};
 use crate::json;
 use crate::run::{Run, VERSION};
 use crate::util::printable;
@@ -198,9 +198,9 @@ impl Client {
             401 => return Err(rejected()),
             429 => return Err(self.limited()),
             _ if !wellformed => {
-                return Err(server(status, failed(format!("Linear answered HTTP {status} without JSON"))));
+                return Err(server(status, network(format!("Linear answered HTTP {status} without JSON"))));
             }
-            s if s >= 400 && errors.is_empty() => return Err(server(s, failed(format!("Linear answered HTTP {s}")))),
+            s if s >= 400 && errors.is_empty() => return Err(server(s, network(format!("Linear answered HTTP {s}")))),
             _ => {}
         }
         let mut v = parsed.unwrap_or(Value::Null);
@@ -226,18 +226,19 @@ impl Client {
                 if !self.noted.swap(true, Ordering::Relaxed) {
                     run.eprint(&format!("linearctl: waiting on {host}\n"));
                 }
-                rx.recv().map_err(|_| failed(format!("cannot reach {host}: the request was lost")).hint(fail::RERUN))?
+                rx.recv()
+                    .map_err(|_| network(format!("cannot reach {host}: the request was lost")).hint(fail::RERUN))?
             }
             Err(mpsc::RecvTimeoutError::Disconnected) => {
-                return Err(failed(format!("cannot reach {host}")).hint(fail::RERUN));
+                return Err(network(format!("cannot reach {host}")).hint(fail::RERUN));
             }
         };
         result.map_err(|e| {
             match e {
                 ureq::Error::Timeout(_) => {
-                    failed(format!("{host} did not answer within {} s; raise --timeout", self.timeout))
+                    network(format!("{host} did not answer within {} s; raise --timeout", self.timeout))
                 }
-                e => failed(format!("cannot reach {host}: {}", transport_cause(&e))),
+                e => network(format!("cannot reach {host}: {}", transport_cause(&e))),
             }
             .hint(fail::RERUN)
         })
@@ -322,9 +323,9 @@ impl Client {
         })?;
         match status {
             401 => return Err(rejected()),
-            404 | 403 => return Err(failed(format!("not found: {url} (or this API key cannot see it)"))),
+            404 | 403 => return Err(missing(format!("not found: {url} (or this API key cannot see it)"))),
             200 => {}
-            s => return Err(server(s, failed(format!("{} answered HTTP {s}", host_of(url))))),
+            s => return Err(server(s, network(format!("{} answered HTTP {s}", host_of(url))))),
         }
         let data = match data {
             Some(Ok(d)) => d,

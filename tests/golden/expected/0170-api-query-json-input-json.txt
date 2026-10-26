@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--json-input is not a JSON request object: invalid character 'o' in literal null (expecting 'u')","usage":true}
+{"code":"USAGE","error":"--json-input is not a JSON request object: invalid character 'o' in literal null (expecting 'u')","usage":true}
 
 --- stderr
 linearctl: --json-input is not a JSON request object: invalid character 'o' in literal null (expecting 'u')

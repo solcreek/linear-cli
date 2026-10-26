@@ -1,6 +1,6 @@
 exit: 1
 --- stdout
-{"error":"<TMP>/home/config/config.json is not valid JSON: json: cannot unmarshal number into Go struct field .default-team of type string","usage":false}
+{"code":"FAILED","error":"<TMP>/home/config/config.json is not valid JSON: json: cannot unmarshal number into Go struct field .default-team of type string","usage":false}
 
 --- stderr
 linearctl: <TMP>/home/config/config.json is not valid JSON: json: cannot unmarshal number into Go struct field .default-team of type string

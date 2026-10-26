@@ -1,5 +1,5 @@
 use crate::cli::{Args, Cmd, Ctx, Flag};
-use crate::fail::{self, Fail, R, failed, usage};
+use crate::fail::{self, Fail, R, ambiguous, failed, missing, usage};
 use crate::json::{marshal, quote_go};
 use crate::queries::{self, ISSUE_ROW_FIELDS};
 use crate::run::{Run, dry_run};
@@ -578,7 +578,7 @@ impl Wanted {
         if !self.state_type.is_empty() {
             let pos = |v: &Value| v["position"].as_f64().unwrap_or(f64::MAX);
             let Some(first) = typed.iter().min_by(|a, b| pos(a).total_cmp(&pos(b))) else {
-                return Err(failed(format!(
+                return Err(missing(format!(
                     "the team has no workflow state of type {}; see 'linearctl state list'",
                     self.state_type
                 )));
@@ -601,7 +601,7 @@ impl Wanted {
         if !self.parent.is_empty() {
             let found = nodes(&r["parent"]);
             let Some(p) = found.first() else {
-                return Err(failed(format!("not found: parent issue {}", self.parent)).hint(fail::FIND_ISSUE));
+                return Err(missing(format!("not found: parent issue {}", self.parent)).hint(fail::FIND_ISSUE));
             };
             self.input.insert("parentId".into(), json!(str_at(p, "id")));
         }
@@ -643,14 +643,14 @@ impl Wanted {
                 }
                 match matched.len() {
                     0 => {
-                        return Err(failed(format!(
+                        return Err(missing(format!(
                             "no milestone named {} in the issue's project; see 'linearctl milestone list'",
                             quote_go(name)
                         )));
                     }
                     1 => {}
                     n => {
-                        return Err(failed(format!(
+                        return Err(ambiguous(format!(
                             "{n} milestones are named {} (projects: {}); pass --project",
                             quote_go(name),
                             projects.join(", ")
@@ -680,9 +680,9 @@ pub fn nodes(v: &Value) -> Vec<Value> {
 /// The single match for name, or an error naming what was looked for.
 fn one(kind: &str, name: &str, nodes: &[Value], hint: &str) -> R<String> {
     match nodes.len() {
-        0 => Err(failed(format!("no {kind} named {}; see {hint}", quote_go(name)))),
+        0 => Err(missing(format!("no {kind} named {}; see {hint}", quote_go(name)))),
         1 => Ok(str_at(&nodes[0], "id")),
-        n => Err(failed(format!(
+        n => Err(ambiguous(format!(
             "{n} {kind}s are named {}; rename one in Linear, or pass its id in --json-input",
             quote_go(name)
         ))),
@@ -773,7 +773,7 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     }
     let teams = nodes(&r["teams"]);
     let Some(t) = teams.first() else {
-        return Err(failed(format!("no team with key {team}; see 'linearctl team list'")));
+        return Err(missing(format!("no team with key {team}; see 'linearctl team list'")));
     };
     w.apply(&r, &nodes(&t["states"]), &nodes(&t["typed"]), &str_at(t, "id"), "")?;
     w.input.insert("teamId".into(), json!(str_at(t, "id")));

@@ -120,8 +120,10 @@ flags and exit codes as JSON.
   duplicate.
 - Lists are `{items, total, shown, truncated, nextCursor}`; continue with
   `--cursor`, trim with `--fields` and `--limit`.
-- A failure is `{error, usage}`, plus `hint` when there is a next step: the
-  command that finds what was not found, or that a rerun is safe.
+- A failure is `{error, usage, code}`, plus `hint` when there is a next step:
+  the command that finds what was not found, or that a rerun is safe. Branch on
+  `code` (`NOT_FOUND`, `AMBIGUOUS`, `NETWORK`, …; `describe` lists them all),
+  not on the words of `error`.
 
 | exit | meaning |
 |---|---|

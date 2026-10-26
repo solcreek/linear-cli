@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--if-updated-at must be the issue's updatedAt, an RFC 3339 time; got \"x\"","usage":true}
+{"code":"USAGE","error":"--if-updated-at must be the issue's updatedAt, an RFC 3339 time; got \"x\"","usage":true}
 
 --- stderr
 linearctl: --if-updated-at must be the issue's updatedAt, an RFC 3339 time; got "x"

@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"unknown flag: --zz","usage":true}
+{"code":"USAGE","error":"unknown flag: --zz","usage":true}
 
 --- stderr
 linearctl: unknown flag: --zz

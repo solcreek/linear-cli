@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"unknown command \"nope\" for \"linearctl\"","usage":true}
+{"code":"USAGE","error":"unknown command \"nope\" for \"linearctl\"","usage":true}
 
 --- stderr
 linearctl: unknown command "nope" for "linearctl"

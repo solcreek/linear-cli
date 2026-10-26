@@ -1,6 +1,6 @@
 exit: 1
 --- stdout
-{"error":"no such file: missing.json","usage":false}
+{"code":"FAILED","error":"no such file: missing.json","usage":false}
 
 --- stderr
 linearctl: no such file: missing.json

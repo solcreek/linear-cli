@@ -3,7 +3,7 @@
 
 use crate::cli::{Args, Cmd, Ctx, Flag};
 use crate::client::Client;
-use crate::fail::{Fail, R, failed, usage};
+use crate::fail::{Fail, R, ambiguous, missing, usage};
 use crate::json::quote_go;
 use crate::queries;
 use crate::run::{Run, dry_run};
@@ -82,7 +82,7 @@ fn cycle_filter(ctx: &Ctx, word: &str) -> R<Value> {
 
 /// A cycle that is not there, and where to see the ones that are.
 fn cycle_not_found(word: &str) -> Fail {
-    failed(format!("not found: cycle {word} (or this API key cannot see it)"))
+    missing(format!("not found: cycle {word} (or this API key cannot see it)"))
         .hint("'linearctl cycle list --team KEY' lists a team's cycles")
 }
 
@@ -94,7 +94,7 @@ fn find_cycle(run: &mut Run, cl: &Client, word: &str, vars: Value) -> R<Value> {
     match n.len() {
         0 => Err(cycle_not_found(word)),
         1 => super::issue::nodes(&data["cycles"]).into_iter().next().ok_or_else(|| cycle_not_found(word)),
-        _ => Err(failed(format!(
+        _ => Err(ambiguous(format!(
             "cycle {} is ambiguous: teams {} and {} both have one; pass --team",
             quote_go(word),
             str_at(&n[0], "team.key"),
@@ -277,7 +277,7 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     }
     let teams = super::issue::nodes(&r["teams"]);
     let Some(t) = teams.first() else {
-        return Err(failed(format!("no team with key {team}; see 'linearctl team list'")));
+        return Err(missing(format!("no team with key {team}; see 'linearctl team list'")));
     };
     input.insert("teamId".into(), json!(str_at(t, "id")));
     input.insert("id".into(), json!(id));
@@ -298,7 +298,7 @@ fn find_one(run: &mut Run, cl: &Client, ctx: &Ctx, word: &str) -> R<Value> {
     match n.len() {
         0 => Err(cycle_not_found(word)),
         1 => Ok(n[0].clone()),
-        _ => Err(failed(format!(
+        _ => Err(ambiguous(format!(
             "cycle {} is ambiguous: teams {} and {} both have one; pass --team",
             quote_go(word),
             str_at(&n[0], "team.key"),

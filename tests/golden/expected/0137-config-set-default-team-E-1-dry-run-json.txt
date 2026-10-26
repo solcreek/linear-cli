@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"default-team must be a team key like ENG; got \"E-1\"","usage":true}
+{"code":"USAGE","error":"default-team must be a team key like ENG; got \"E-1\"","usage":true}
 
 --- stderr
 linearctl: default-team must be a team key like ENG; got "E-1"

@@ -1,6 +1,6 @@
 exit: 1
 --- stdout
-{"error":"not found: issue ENG-9999 (or this API key cannot see it)","hint":"'linearctl issue list --query TEXT' finds an issue by the words in it","usage":false}
+{"code":"NOT_FOUND","error":"not found: issue ENG-9999 (or this API key cannot see it)","hint":"'linearctl issue list --query TEXT' finds an issue by the words in it","usage":false}
 
 --- stderr
 linearctl: not found: issue ENG-9999 (or this API key cannot see it)

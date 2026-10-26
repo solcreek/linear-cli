@@ -1,6 +1,6 @@
 exit: 1
 --- stdout
-{"error":"demo mode is read-only: linearctl config set --yes changes nothing; --dry-run shows what it would do","usage":false}
+{"code":"FAILED","error":"demo mode is read-only: linearctl config set --yes changes nothing; --dry-run shows what it would do","usage":false}
 
 --- stderr
 linearctl: demo mode is read-only: linearctl config set --yes changes nothing; --dry-run shows what it would do

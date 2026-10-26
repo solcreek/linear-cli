@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--fields: no field \"nope\"; known: id,identifier,title,priority,priorityLabel,url,createdAt,updatedAt,state,assignee,delegate,team,project,cycle,projectMilestone,labels","usage":true}
+{"code":"USAGE","error":"--fields: no field \"nope\"; known: id,identifier,title,priority,priorityLabel,url,createdAt,updatedAt,state,assignee,delegate,team,project,cycle,projectMilestone,labels","usage":true}
 
 --- stderr
 linearctl: --fields: no field "nope"; known: id,identifier,title,priority,priorityLabel,url,createdAt,updatedAt,state,assignee,delegate,team,project,cycle,projectMilestone,labels

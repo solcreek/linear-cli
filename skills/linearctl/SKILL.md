@@ -31,6 +31,10 @@ before guessing a flag. Always pass `--json`.
   never a duplicate.
 - A rerun of any mutating command that has nothing to do succeeds with
   `"changed": false`.
+- Branch on a failure's `code`, not its words: exit 1 alone is `NOT_FOUND`
+  (look it up with a list command), `AMBIGUOUS` (name it more precisely),
+  `LINEAR_ERROR`, `NETWORK` (rerunning is safe) or `FAILED`; `describe` lists
+  every code under `errorCodes`.
 - Exit codes: 0 ok, 1 failed (read `error`; "not found: …" names what), 2 usage
   (fix the invocation; do not retry as is), 3 partial (`api query`: data plus
   `problems`), 4 busy (retry), 5 auth (set `LINEAR_API_KEY` or run

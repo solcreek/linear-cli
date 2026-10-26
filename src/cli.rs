@@ -796,6 +796,12 @@ pub fn describe(found: &Found, version: &str) -> serde_json::Value {
             json!({"ok": 0, "failed": 1, "usage": 2, "partial": 3, "busy": 4, "auth": 5,
             "rateLimited": 6, "conflict": 7}),
         );
+        // The "code" a failure's JSON carries, beside its exit code.
+        let codes: Vec<Value> = crate::fail::ERROR_CODES
+            .iter()
+            .map(|(code, exit, meaning)| json!({"code": code, "exit": exit, "meaning": meaning}))
+            .collect();
+        d.insert("errorCodes".into(), Value::Array(codes));
         return Value::Object(d);
     }
     let args: Vec<Value> = c

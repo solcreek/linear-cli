@@ -1,6 +1,6 @@
 exit: 1
 --- stdout
-{"complexity":null,"data":null,"error":"Linear: demo mode does not answer nope","errors":[{"message":"demo mode does not answer nope"}],"usage":false}
+{"code":"LINEAR_ERROR","complexity":null,"data":null,"error":"Linear: demo mode does not answer nope","errors":[{"message":"demo mode does not answer nope"}],"usage":false}
 
 --- stderr
 linearctl: Linear: demo mode does not answer nope

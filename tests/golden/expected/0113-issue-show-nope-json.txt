@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"ISSUE must be an identifier like ENG-123, a UUID, or a linear.app issue URL; got \"nope\"","usage":true}
+{"code":"USAGE","error":"ISSUE must be an identifier like ENG-123, a UUID, or a linear.app issue URL; got \"nope\"","usage":true}
 
 --- stderr
 linearctl: ISSUE must be an identifier like ENG-123, a UUID, or a linear.app issue URL; got "nope"

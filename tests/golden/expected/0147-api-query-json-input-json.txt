@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--json-input is not a JSON request object: unexpected end of JSON input","usage":true}
+{"code":"USAGE","error":"--json-input is not a JSON request object: unexpected end of JSON input","usage":true}
 
 --- stderr
 linearctl: --json-input is not a JSON request object: unexpected end of JSON input

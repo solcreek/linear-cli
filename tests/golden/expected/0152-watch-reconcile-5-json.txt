@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"--reconcile is at least 10","usage":true}
+{"code":"USAGE","error":"--reconcile is at least 10","usage":true}
 
 --- stderr
 linearctl: --reconcile is at least 10

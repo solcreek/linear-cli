@@ -11,6 +11,11 @@ names are only ever added, never renamed or removed.
 
 ### Added
 
+- A failure under `--json` carries `code`, a stable name for its kind:
+  `USAGE`, `NOT_FOUND`, `AMBIGUOUS`, `LINEAR_ERROR`, `NETWORK`, `FAILED`,
+  `BUSY`, `AUTH`, `RATE_LIMITED`, `CONFLICT`. Exit 1 covers five of them, which
+  differed only in prose. `describe` lists them under `errorCodes` with their
+  exit codes. `error` and `usage` are unchanged.
 - A failure under `--json` carries `hint` when there is a next step: the
   command that lists what was not found (an issue, comment, project or cycle), the
   read to make after an `--if-updated-at` conflict, and, after a timeout, a lost

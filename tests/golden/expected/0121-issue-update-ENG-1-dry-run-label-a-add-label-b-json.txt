@@ -1,6 +1,6 @@
 exit: 2
 --- stdout
-{"error":"pass --label, or --add-label/--remove-label, not both","usage":true}
+{"code":"USAGE","error":"pass --label, or --add-label/--remove-label, not both","usage":true}
 
 --- stderr
 linearctl: pass --label, or --add-label/--remove-label, not both
