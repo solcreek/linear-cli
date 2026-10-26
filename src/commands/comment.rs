@@ -1,6 +1,6 @@
 use super::issue::{chosen_id, nodes};
 use crate::cli::{Args, Cmd, Ctx, Flag};
-use crate::fail::{Fail, R, usage};
+use crate::fail::{self, Fail, R, usage};
 use crate::json::quote_go;
 use crate::queries;
 use crate::run::{Run, dry_run};
@@ -35,7 +35,7 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
     let (items, next) = collect(ctx.whole("limit"), cursor, |first, after| {
         let mut data = cl
             .query(run, queries::COMMENT_LIST, json!({"id": r, "first": first, "after": optional(after)}))
-            .map_err(|e| e.not_found(&format!("issue {r}")))?;
+            .map_err(|e| e.not_found(&format!("issue {r}"), fail::FIND_ISSUE))?;
         Ok(Page::take(&mut data["issue"]["comments"]))
     })?;
     if run.json {
@@ -99,7 +99,7 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     let cl = run.client()?;
     let res = cl
         .query(run, queries::COMMENT_RESOLVE, json!({"issue": r, "id": id}))
-        .map_err(|e| e.not_found(&format!("issue {r}")))?;
+        .map_err(|e| e.not_found(&format!("issue {r}"), fail::FIND_ISSUE))?;
     if let Some(c) = nodes(&res["comments"]).first() {
         let it = flatten(c.clone());
         let text = format!("exists {}", str_at(&it, "url"));
@@ -152,7 +152,9 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     let id = comment_id(&ctx.args[0])?;
     let body = body(ctx)?;
     let cl = run.client()?;
-    let res = cl.query(run, queries::COMMENT, json!({"id": id})).map_err(|e| e.not_found(&format!("comment {id}")))?;
+    let res = cl.query(run, queries::COMMENT, json!({"id": id})).map_err(|e| {
+        e.not_found(&format!("comment {id}"), "'linearctl comment list ISSUE' lists an issue's comment ids")
+    })?;
     let comment = &res["comment"];
     let url = str_at(comment, "url");
     let changed = str_at(comment, "body") != body;

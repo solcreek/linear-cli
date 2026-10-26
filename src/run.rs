@@ -202,11 +202,14 @@ pub fn dry_run(ctx: &Ctx) -> R<bool> {
 fn finish(run: &mut Run, args: &[String], result: R) -> i32 {
     let Err(e) = result else { return fail::OK };
     // A partial result is already printed, problems included.
-    if let Fail::Partial(_) = e {
+    if let Fail::Partial(_) = e.base() {
         return fail::PARTIAL;
     }
     run.eprint(&format!("linearctl: {e}\n"));
-    let usage = matches!(e, Fail::Usage(_));
+    if let Some(h) = e.hint_text() {
+        run.eprint(&format!("hint: {h}\n"));
+    }
+    let usage = matches!(e.base(), Fail::Usage(_));
     if usage {
         run.eprint("Run 'linearctl --help' for usage.\n");
     }
@@ -214,8 +217,11 @@ fn finish(run: &mut Run, args: &[String], result: R) -> i32 {
     // it saw --json, so look at the arguments themselves.
     if run.json || args.iter().any(|a| a == "--json") {
         let mut doc = json!({"error": e.to_string(), "usage": usage});
-        if let Fail::Limited(_, Some(ms)) = e {
+        if let Fail::Limited(_, Some(ms)) = e.base() {
             doc["retryAt"] = json!(crate::time::rfc3339(ms * 1_000_000));
+        }
+        if let Some(h) = e.hint_text() {
+            doc["hint"] = json!(h);
         }
         let _ = run.print_json(doc);
     }

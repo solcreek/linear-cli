@@ -1,4 +1,4 @@
-.PHONY: build release test check cover schema
+.PHONY: build release test check cover schema skill
 
 build:
 	cargo build
@@ -12,6 +12,7 @@ test: build
 	cargo test --quiet
 	LINEARCTL_BIN=target/debug/linearctl go test -count=1 ./acceptance
 	python3 tests/golden/run.py check target/debug/linearctl
+	python3 scripts/skill-docs.py check target/debug/linearctl
 
 # What CI runs: run it before every commit.
 check:
@@ -28,3 +29,7 @@ cover:
 # Refresh Linear's schema; the tests then check every query against it.
 schema:
 	curl -sfL -o graphql/schema.graphql https://raw.githubusercontent.com/linear/linear/master/packages/sdk/src/schema.graphql
+
+# Regenerate the agent skill (skills/linearctl/) from the commands' help.
+skill: build
+	python3 scripts/skill-docs.py write target/debug/linearctl
