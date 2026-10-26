@@ -1,6 +1,9 @@
 //! The command tree, as `linearctl describe` lists it.
 
+mod auth;
 mod comment;
+mod config;
+mod file;
 mod issue;
 mod lookups;
 mod project;
@@ -34,7 +37,7 @@ LINEARCTL_HOME moves config and credentials under one directory.",
         Flag::bool("meta", "add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1")
             .default_to(env_on("LINEARCTL_META")),
     ];
-    let mut subs: Vec<Cmd> = vec![issue::command(), comment::command(), relation::command()];
+    let mut subs: Vec<Cmd> = vec![auth::command(), issue::command(), comment::command(), relation::command()];
     for mut c in lookups::commands() {
         if c.name() == "project" {
             c.short = "List, show and update projects".into();
@@ -42,6 +45,7 @@ LINEARCTL_HOME moves config and credentials under one directory.",
         }
         subs.push(c);
     }
+    subs.extend([file::command(), config::command()]);
     subs.push(
         Cmd::new("describe", "Print every command, flag and exit code as JSON")
             .example("  linearctl describe")
