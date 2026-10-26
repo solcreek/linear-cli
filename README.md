@@ -1,0 +1,129 @@
+# linearctl
+
+[![CI](https://github.com/solcreek/linear-cli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/solcreek/linear-cli/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/solcreek/linear-cli.svg)](https://pkg.go.dev/github.com/solcreek/linear-cli/cmd/linearctl)
+[![Go version](https://img.shields.io/github/go-mod/go-version/solcreek/linear-cli)](go.mod)
+[![Go Report Card](https://goreportcard.com/badge/github.com/solcreek/linear-cli)](https://goreportcard.com/report/github.com/solcreek/linear-cli)
+[![MIT license](https://img.shields.io/github/license/solcreek/linear-cli)](LICENSE)
+
+An agent-first CLI for [Linear](https://linear.app): list, search, show, create and
+update issues and comments from a shell or an AI agent, with `--json` on every
+command, `--dry-run`/`--yes` on every change, and a `describe` command that prints
+the whole surface as JSON.
+
+`linearctl` speaks GraphQL to `https://api.linear.app/graphql` directly, without
+[`@linear/sdk`](https://github.com/linear/linear/tree/master/packages/sdk). The
+SDK loads relations lazily, one request each, and an API key gets 2,500 requests
+an hour; a `linearctl` read sends one request per page of up to 250. The
+queries are written by hand and checked against Linear's published schema by the
+tests.
+
+## Install
+
+```sh
+go install github.com/solcreek/linear-cli/cmd/linearctl@latest
+```
+
+Prebuilt binaries and an npm package (`@solcreek/linear-cli`) are planned.
+
+## Authenticate
+
+Create a personal API key at <https://linear.app/settings/account/security>, then
+either export it:
+
+```sh
+export LINEAR_API_KEY=lin_api_…
+```
+
+or store it (macOS Keychain, or `credentials.json` with mode 0600 elsewhere). The
+key is read from stdin, never from an argument:
+
+```sh
+pbpaste | linearctl auth login --yes
+linearctl auth status
+```
+
+`LINEAR_API_KEY` wins over a stored key.
+
+## Use
+
+```sh
+linearctl issue list --assignee me --state-type started
+linearctl issue list --team ENG --label bug --updated-since 7d --json
+linearctl issue list --query "login timeout" --limit 10
+linearctl issue show ENG-123
+linearctl issue show ENG-123 --signed-urls 300 --json   # image URLs that open without the key
+
+linearctl issue create --team ENG --title "Fix login timeout" --label bug --dry-run --json
+linearctl issue create --team ENG --title "Fix login timeout" --label bug --id <id from dry run> --yes
+linearctl issue update ENG-123 --state "In Progress" --assignee me --yes
+linearctl comment create ENG-123 --body-file notes.md --id <uuid> --yes
+
+linearctl team list
+linearctl state list --team ENG
+linearctl label list --team ENG
+echo '{"query":"query { viewer { name } }"}' | linearctl api query --json-input -
+```
+
+Every command has `--help` with examples. `linearctl describe` prints all commands,
+flags and exit codes as JSON.
+
+### Commands
+
+| command | does | changes things |
+|---|---|---|
+| `auth login` / `status` / `logout` | store, check, remove the API key | login, logout |
+| `issue list` | list and search issues; filter by team, assignee, state, label, project, cycle, date | |
+| `issue show` | one issue with description, comments, sub-issues, relations, attachments | |
+| `issue create` / `update` / `archive` | change issues | yes |
+| `comment list` / `create` | read and post comments | create |
+| `team` / `state` / `label` / `user` / `project` / `cycle list` | the names other commands take | |
+| `file download` | save an image or attachment from `uploads.linear.app` | yes |
+| `config show` / `set` | `default-team` | set |
+| `api query` | send your own GraphQL query (read-only) | |
+
+## For agents
+
+[AGENTS.md](AGENTS.md) is the context to give an agent. In short:
+
+- Always pass `--json`. Into a pipe it is compact, one document on stdout.
+- Every command that changes something takes `--dry-run` or `--yes`, exactly one,
+  and never prompts. A rerun that has nothing to do succeeds with
+  `"changed": false`.
+- `issue create` and `comment create` need `--id UUID` with `--yes`. `--dry-run`
+  prints one; retrying with the same id returns the existing item instead of a
+  duplicate.
+- Lists are `{items, total, shown, truncated, nextCursor}`; continue with
+  `--cursor`, trim with `--fields` and `--limit`.
+
+| exit | meaning |
+|---|---|
+| 0 | ok, including "found nothing" |
+| 1 | failed: a network error, a Linear error, not found |
+| 2 | usage: fix the invocation, do not retry it as is |
+| 3 | partial: `api query` data with `problems` |
+| 4 | busy: a config lock is held; retry |
+| 5 | auth: no API key, or Linear rejected it |
+| 6 | rate-limited: retry after `retryAt` |
+
+## Speed
+
+A command's time is almost all the request to Linear (~150 ms). Starting,
+decoding and printing take ~5 ms; a 100-issue page decodes in 0.5 ms. Measurements
+and what was tried: [docs/performance.md](docs/performance.md).
+
+## Develop
+
+```sh
+make test     # go test ./...
+make cover    # coverage across in-process tests and every binary run
+make schema   # refresh graphql/schema.graphql from Linear
+```
+
+The tests run the built binary against a fake Linear, with `LINEARCTL_HOME`
+pointing at a temporary directory, so they never touch the network, the
+Keychain or your config. The design is in [docs/design.md](docs/design.md).
+
+## License
+
+[MIT](LICENSE)
