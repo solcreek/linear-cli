@@ -159,7 +159,9 @@ flags and exit codes as JSON.
   rerun (`changed: false`); `issue create`, `comment create` and `cycle create`
   need `--id` for that.
 - Making many calls: `serve --stdio` answers them from one process, about 80 ms
-  less each.
+  less each. A request's `"stdin"` is its command's standard input (for
+  `--json-input=-`), and `--concurrency N` runs up to N at once, answers matched
+  by `id`.
 - From the npm package, run the native binary directly (see Install) to skip
   Node.
 

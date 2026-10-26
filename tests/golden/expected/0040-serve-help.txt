@@ -4,14 +4,23 @@ Answer linearctl invocations over stdin and stdout, for a program that makes man
 calls (a TUI, a long agent session). One process serves them all: no start-up, no
 new TLS connection, no Keychain read per call.
 
-Each line on stdin is a request:   {"id": ANY, "argv": ["issue", "list", "--json"]}
+Each line on stdin is a request:   {"id": ANY, "argv": ["issue", "list", "--json"],
+                                    "stdin": TEXT (optional)}
 Each line on stdout answers one:   {"id": ANY, "exit": N, "result": JSON|null,
                                     "stdout": TEXT|null, "stderr": TEXT}
 argv is what follows linearctl on a command line; exit and the JSON in result are
 exactly what that command line would give (result is null when it printed text,
-which is then in stdout). Requests run one at a time, in order. A malformed line
-is answered with exit 2. watch and serve are refused, and so is - as a file:
-stdin carries requests. serve ends when stdin closes (exit 0).
+which is then in stdout). stdin is that command's standard input, so - as a file
+(--json-input=-, --body-file=-) reads it; "" is an empty one. Without stdin, - is
+refused: serve's own stdin carries requests. A malformed line is answered with
+exit 2; watch and serve are refused.
+
+Requests run one at a time, in order. With --concurrency N, up to N run at once
+and answers come as each finishes: match them by id. They share one key, one
+connection pool and Linear's one rate budget; a request Linear limits answers
+exit 6 like any other. Nothing orders two writes: send the second after the
+first one's answer when it must come after. serve ends when stdin closes and
+every request has its answer (exit 0).
 
 Usage:
   linearctl serve [flags]
@@ -20,8 +29,9 @@ Examples:
   printf '{"id":1,"argv":["issue","list","--json"]}\n' | linearctl serve --stdio
 
 Flags:
-  -h, --help    help for serve
-      --stdio   read requests on stdin, answer on stdout
+      --concurrency N   run up to N requests at once (at most 32), out of order (default 1)
+  -h, --help            help for serve
+      --stdio           read requests on stdin, answer on stdout
 
 Global Flags:
       --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1

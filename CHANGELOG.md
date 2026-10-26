@@ -9,6 +9,19 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Added
+
+- `serve --stdio`: a request's optional `"stdin"` is its command's standard
+  input, so `--json-input=-`, `--body-file=-` and the like work as on a command
+  line (`""` is an empty one; without it, `-` is refused as before).
+  `--concurrency N` (default 1, at most 32) runs up to N requests at once, sharing
+  one key, connection pool and rate budget; answers come as each finishes.
+
+### Fixed
+
+- `auth login` inside `serve` no longer reads serve's own stdin, the request
+  stream, for the key: it reads the request's `"stdin"`, or is refused.
+
 ## [0.8.0] - 2026-10-26
 
 ### Added

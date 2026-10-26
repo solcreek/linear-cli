@@ -3451,6 +3451,13 @@ exit: 0
       ],
       "flags": [
         {
+          "default": "1",
+          "description": "run up to N requests at once (at most 32), out of order",
+          "name": "concurrency",
+          "short": null,
+          "type": "integer"
+        },
+        {
           "default": null,
           "description": "help for serve",
           "name": "help",
