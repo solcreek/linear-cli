@@ -1,5 +1,7 @@
 # linearctl
 
+[![Release](https://img.shields.io/github/v/release/solcreek/linear-cli)](https://github.com/solcreek/linear-cli/releases/latest)
+[![npm version](https://img.shields.io/npm/v/@solcreek/linear-cli)](https://www.npmjs.com/package/@solcreek/linear-cli)
 [![CI](https://github.com/solcreek/linear-cli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/solcreek/linear-cli/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/solcreek/linear-cli.svg)](https://pkg.go.dev/github.com/solcreek/linear-cli/cmd/linearctl)
 [![Go version](https://img.shields.io/github/go-mod/go-version/solcreek/linear-cli)](go.mod)
@@ -21,10 +23,14 @@ tests.
 ## Install
 
 ```sh
+npm install -g @solcreek/linear-cli                          # macOS, Linux, Windows
 go install github.com/solcreek/linear-cli/cmd/linearctl@latest
 ```
 
-Prebuilt binaries and an npm package (`@solcreek/linear-cli`) are planned.
+Or download a binary from [Releases](https://github.com/solcreek/linear-cli/releases/latest)
+(`checksums.txt` alongside). The npm package installs the native binary for
+your platform; no Node runs when you call `linearctl`, unless install scripts
+were skipped (`--ignore-scripts`, pnpm), where a small Node shim runs it.
 
 ## Authenticate
 
