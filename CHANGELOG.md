@@ -9,6 +9,13 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Fixed
+
+- `watch` with issue updates alone subscribed (after Linear's 4003) reports
+  archives again: catching up looked for issues updated since, and archiving
+  an issue leaves its `updatedAt` as it was. It now also looks for issues
+  archived since.
+
 ## [0.11.0] - 2026-10-27
 
 ### Fixed

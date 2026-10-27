@@ -257,8 +257,10 @@ impl Watcher {
     /// upserted, what changed and no longer matches is removed.
     fn reconcile(&mut self, run: &mut Run, from: i64) -> R {
         let started = time::now();
-        let gte = json!({"updatedAt": {"gte": time::rfc3339(from)}});
-        let filter = self.and(gte.clone());
+        let gte = json!({"gte": time::rfc3339(from)});
+        let filter = self.and(json!({"updatedAt": gte}));
+        // Archiving an issue leaves its updatedAt as it was.
+        let changed_filter = json!({"or": [{"updatedAt": gte}, {"archivedAt": gte}]});
         let cl = self.cl.clone();
         let (items, more_items) = collect(PAGE_SIZE * SNAPSHOT_PAGES, String::new(), |first, after| {
             let mut data = cl.query(
@@ -280,7 +282,7 @@ impl Watcher {
             let mut data = cl.query(
                 run,
                 queries::WATCH_CHANGED,
-                json!({"filter": gte, "first": first, "after": optional(after)}),
+                json!({"filter": changed_filter, "first": first, "after": optional(after)}),
             )?;
             Ok(Page::take(&mut data["issues"]))
         })?;

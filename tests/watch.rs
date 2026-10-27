@@ -234,7 +234,13 @@ fn graphql(stream: TcpStream, fake: Data) {
         };
         let data = match op {
             "WatchGone" => json!({"issues": {"nodes": nodes}}),
-            "WatchIDs" | "WatchChanged" => json!({"issues": page(&req, fake.archived, 250)}),
+            "WatchIDs" => json!({"issues": page(&req, fake.archived, 250)}),
+            // Archiving leaves updatedAt: only archivedAt finds an archive.
+            "WatchChanged" => {
+                let f = req["variables"]["filter"].to_string();
+                let n = if f.contains("archivedAt") { fake.archived } else { 0 };
+                json!({"issues": page(&req, n, 250)})
+            }
             _ => json!({"issues": {"nodes": nodes, "pageInfo": {"hasNextPage": false, "endCursor": null}}}),
         };
         let body = json!({"data": data}).to_string();
