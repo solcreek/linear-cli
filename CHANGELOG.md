@@ -9,10 +9,12 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-10-27
+
 ### Fixed
 
 - `watch` with issue updates alone subscribed (after Linear's 4003) reports
-  archives again: catching up looked for issues updated since, and archiving
+  archives: catching up looked for issues updated since, and archiving
   an issue leaves its `updatedAt` as it was. It now also looks for issues
   archived since.
 
@@ -342,7 +344,8 @@ names are only ever added, never renamed or removed.
 - Releases for linux, darwin and windows, and the npm package
   `@solcreek/linear-cli` with one native binary per platform.
 
-[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.11.1...HEAD
+[0.11.1]: https://github.com/solcreek/linear-cli/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/solcreek/linear-cli/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/solcreek/linear-cli/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/solcreek/linear-cli/compare/v0.8.0...v0.9.0
