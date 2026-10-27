@@ -9,6 +9,8 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-27
+
 ### Changed
 
 - `watch` on macOS and Linux shares one subscription among the watches of
@@ -358,7 +360,8 @@ names are only ever added, never renamed or removed.
 - Releases for linux, darwin and windows, and the npm package
   `@solcreek/linear-cli` with one native binary per platform.
 
-[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.11.1...HEAD
+[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/solcreek/linear-cli/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/solcreek/linear-cli/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/solcreek/linear-cli/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/solcreek/linear-cli/compare/v0.9.0...v0.10.0
