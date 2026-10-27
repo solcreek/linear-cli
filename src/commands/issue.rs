@@ -270,10 +270,17 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
     if !who.is_empty() {
         filter.insert("assignee".into(), user_filter("--assignee", &who)?);
     }
+    // State names match ignoring case, as issue create and update resolve
+    // them; Linear has no case-insensitive "in", so more than one is an or.
     let mut state = Map::new();
     let names = values(ctx, "state")?;
-    if !names.is_empty() {
-        state.insert("name".into(), json!({"in": names}));
+    match names.as_slice() {
+        [] => {}
+        [n] => _ = state.insert("name".into(), json!({"eqIgnoreCase": n})),
+        _ => {
+            let or: Vec<Value> = names.iter().map(|n| json!({"state": {"name": {"eqIgnoreCase": n}}})).collect();
+            and.push(json!({"or": or}));
+        }
     }
     let types = values(ctx, "state-type")?;
     if !types.is_empty() {

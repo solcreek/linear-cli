@@ -9,6 +9,12 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Changed
+
+- `issue list --state NAME` (and `watch --state`) matches the state's name
+  ignoring case, as `issue create` and `issue update` resolve it and as
+  `--label`, `--project` and `--assignee` already did: `--state todo` finds Todo.
+
 ## [0.9.0] - 2026-10-26
 
 ### Added
