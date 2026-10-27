@@ -9,6 +9,13 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Fixed
+
+- `issue list --query` with one `--team` searches that team, passing its id as
+  `searchIssues`' `teamId` as well as filtering: a workspace search filtered to
+  the team missed hits Linear's team search finds. Several `--team` values
+  filter only, as before (`teamId` takes one).
+
 ## [0.10.0] - 2026-10-27
 
 ### Changed

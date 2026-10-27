@@ -42,7 +42,8 @@ fn list_cmd() -> Cmd {
 --state or --state-type matches any of its values, a repeated --label all of them;\n\
 --any-label matches any of its values, --without-label none of them.\n\
 --query searches titles, descriptions and comments, ranked by relevance unless\n\
---sort is given; Linear allows 30 searches a minute.\n\
+--sort is given; Linear allows 30 searches a minute. With one --team, it searches\n\
+that team, as Linear's team search does.\n\
 --team falls back to LINEARCTL_TEAM, then to default-team in config.",
         )
         .example(
@@ -166,6 +167,15 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
         }
     }
     let cl = run.client()?;
+    // A search of one team passes it as searchIssues' teamId too: Linear
+    // then searches that team, which finds hits a workspace search filtered
+    // to the team misses (measured 2026-10-27). teamId takes one team.
+    if let (false, [team]) = (query.is_empty(), teams_flag(ctx)?.as_slice()) {
+        let found = cl.query(run, queries::TEAM_FIND, json!({"key": team}))?;
+        if let Some(t) = nodes(&found["teams"]).first() {
+            vars.insert("teamId".into(), json!(str_at(t, "id")));
+        }
+    }
     let mut limit = ctx.whole("limit");
     let ids = ids_flag(ctx)?;
     if !ids.is_empty() {

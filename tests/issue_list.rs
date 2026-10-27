@@ -120,3 +120,62 @@ fn rows_with_all_their_labels_cost_no_request() {
     assert_eq!(doc["items"][0]["labels"].as_array().unwrap().len(), 20);
     assert_eq!(sent(&api).len(), 1);
 }
+
+/// A fake Linear that knows team ENG and finds no issues; each request's
+/// operation name and variables.
+fn teams() -> testserver::Server {
+    serve(|req| {
+        let body: Value = serde_json::from_str(&req.body).unwrap();
+        let data = if body["query"].as_str().unwrap_or("").starts_with("query TeamFind") {
+            let eng = body["variables"]["key"] == "ENG";
+            json!({"teams": {"nodes": if eng { json!([{"id": "team-eng"}]) } else { json!([]) }}})
+        } else {
+            let page = json!({"nodes": [], "pageInfo": {"hasNextPage": false, "endCursor": null}});
+            json!({"issues": page, "searchIssues": page})
+        };
+        Response::json(200, &json!({"data": data}).to_string())
+    })
+}
+
+fn ops(api: &testserver::Server) -> Vec<(String, Value)> {
+    let reqs = api.requests.lock().unwrap();
+    reqs.iter()
+        .map(|r| {
+            let body: Value = serde_json::from_str(&r.body).unwrap();
+            let q = body["query"].as_str().unwrap_or("").trim_start_matches("query ");
+            (q.split(['(', ' ', '{']).next().unwrap_or("").to_string(), body["variables"].clone())
+        })
+        .collect()
+}
+
+#[test]
+fn a_search_of_one_team_passes_its_id_as_team_id() {
+    let api = teams();
+    let (code, out) = linearctl(&api.url, &["issue", "list", "--query", "checkout", "--team", "eng", "--json"]);
+    assert_eq!(code, 0, "{out}");
+    let got = ops(&api);
+    assert_eq!(got.len(), 2, "{got:?}");
+    assert_eq!((got[0].0.as_str(), &got[0].1["key"]), ("TeamFind", &json!("ENG")));
+    assert_eq!(got[1].0, "IssueSearch");
+    assert_eq!(got[1].1["teamId"], "team-eng");
+    // The filter stays.
+    assert_eq!(got[1].1["filter"], json!({"team": {"key": {"eq": "ENG"}}}));
+}
+
+#[test]
+fn team_id_only_for_a_search_of_one_known_team() {
+    let api = teams();
+    let cases: [&[&str]; 3] = [
+        &["--query", "x", "--team", "ENG", "--team", "WEB"], // teamId takes one
+        &["--team", "ENG"],                                  // not a search
+        &["--query", "x", "--team", "NOPE"],                 // looked up, not found
+    ];
+    for args in cases {
+        let (code, out) = linearctl(&api.url, &[&["issue", "list", "--json"], args].concat());
+        assert_eq!(code, 0, "{args:?}: {out}");
+    }
+    let got = ops(&api);
+    let names: Vec<&str> = got.iter().map(|(n, _)| n.as_str()).collect();
+    assert_eq!(names, ["IssueSearch", "IssueList", "TeamFind", "IssueSearch"]);
+    assert!(got.iter().all(|(_, v)| v.get("teamId").is_none()), "{got:?}");
+}

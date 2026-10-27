@@ -105,7 +105,7 @@ pub const ISSUE_LIST: &str = concat!(
 );
 
 pub const ISSUE_SEARCH: &str = concat!(
-    "query IssueSearch($term: String!, $filter: IssueFilter, $first: Int!, $after: String, $orderBy: PaginationOrderBy,\n  $includeComments: Boolean) {\n  searchIssues(term: $term, filter: $filter, first: $first, after: $after, orderBy: $orderBy, includeComments: $includeComments) { nodes {",
+    "query IssueSearch($term: String!, $filter: IssueFilter, $first: Int!, $after: String, $orderBy: PaginationOrderBy,\n  $includeComments: Boolean, $teamId: String) {\n  searchIssues(term: $term, filter: $filter, first: $first, after: $after, orderBy: $orderBy, includeComments: $includeComments,\n    teamId: $teamId) { nodes {",
     issue_row!(),
     " } ",
     page_info!(),
@@ -225,6 +225,10 @@ pub const TEAMS: &str = concat!(
     page_info!(),
     " }\n}"
 );
+
+/// A team's id, for an argument that takes one and not a filter.
+pub const TEAM_FIND: &str =
+    "query TeamFind($key: String!) {\n  teams(filter: { key: { eqIgnoreCase: $key } }) { nodes { id } }\n}";
 
 pub const STATES: &str = concat!(
     "query States($filter: WorkflowStateFilter, $first: Int!, $after: String) {\n  workflowStates(filter: $filter, first: $first, after: $after) { nodes { id name type position color team { key } } ",
@@ -383,6 +387,7 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("CommentUpdate", COMMENT_UPDATE),
         ("CommentDelete", COMMENT_DELETE),
         ("Teams", TEAMS),
+        ("TeamFind", TEAM_FIND),
         ("States", STATES),
         ("Labels", LABELS),
         ("LabelsByID", LABELS_BY_ID),
