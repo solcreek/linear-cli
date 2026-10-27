@@ -62,8 +62,9 @@ fn project_filter(s: &str) -> R<Value> {
 /// The one project PROJECT names: none is not found, and a name two
 /// projects share is an error listing them.
 fn find_project(run: &mut Run, cl: &Client, r: &str, filter: Value, issues: u64) -> R<Value> {
-    let data =
+    let mut data =
         cl.query(run, queries::PROJECT_FIND, json!({"filter": filter, "issues": issues, "withIssues": issues > 0}))?;
+    super::issue::complete_labels(run, cl, &mut data)?;
     let n = super::issue::nodes(&data["projects"]);
     match n.len() {
         0 => Err(missing(format!("not found: project {r} (or this API key cannot see it)"))

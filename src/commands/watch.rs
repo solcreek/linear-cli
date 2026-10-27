@@ -6,7 +6,7 @@
 //! issue stop matching is reported as a remove. When subscriptions are not
 //! available it polls instead.
 
-use super::issue::{filter_flags, list_filter, nodes, when};
+use super::issue::{complete_labels, filter_flags, list_filter, nodes, when};
 use crate::cli::{Cmd, Ctx, Flag};
 use crate::client::{Client, endpoint};
 use crate::fail::{R, failed, usage};
@@ -241,7 +241,8 @@ impl Watcher {
     /// upserts, the rest may be removes.
     fn check(&mut self, run: &mut Run, ids: &[String]) -> R {
         let vars = json!({"filter": self.and(json!({"id": {"in": ids}})), "first": PAGE_SIZE});
-        let data = self.cl.query(run, queries::ISSUE_LIST, vars)?;
+        let mut data = self.cl.query(run, queries::ISSUE_LIST, vars)?;
+        complete_labels(run, &self.cl, &mut data)?;
         let items = nodes(&data["issues"]);
         let mut matched = std::collections::HashSet::new();
         for it in &items {
@@ -265,6 +266,7 @@ impl Watcher {
                 queries::ISSUE_LIST,
                 json!({"filter": filter, "first": first, "after": optional(after)}),
             )?;
+            complete_labels(run, &cl, &mut data)?;
             Ok(Page::take(&mut data["issues"]))
         })?;
         let mut matched = std::collections::HashSet::new();

@@ -15,6 +15,13 @@ names are only ever added, never renamed or removed.
   ignoring case, as `issue create` and `issue update` resolve it and as
   `--label`, `--project` and `--assignee` already did: `--state todo` finds Todo.
 
+### Fixed
+
+- An issue's `labels` in `issue list`, `watch`, `issue create` and `update`,
+  `cycle show` and `project show` are all of them: a row with more than 20 used
+  to drop the rest without saying so. The labels past 20 cost one more request
+  per page of rows.
+
 ## [0.9.0] - 2026-10-26
 
 ### Added

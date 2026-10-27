@@ -8,7 +8,7 @@
 /// project and cycle list: names are not unique across teams.
 macro_rules! issue_row {
     () => {
-        "\n\tid identifier title priority priorityLabel url createdAt updatedAt dueDate estimate\n\tstate { id name type color }\n\tassignee { id name email }\n\tdelegate { id name }\n\tteam { id key name }\n\tproject { id name }\n\tcycle { id number }\n\tprojectMilestone { id name }\n\tlabels(first: 20) { nodes { id name color } }"
+        "\n\tid identifier title priority priorityLabel url createdAt updatedAt dueDate estimate\n\tstate { id name type color }\n\tassignee { id name email }\n\tdelegate { id name }\n\tteam { id key name }\n\tproject { id name }\n\tcycle { id number }\n\tprojectMilestone { id name }\n\tlabels(first: 20) { nodes { id name color } }\n\tlabelIds"
     };
 }
 
@@ -232,6 +232,9 @@ pub const STATES: &str = concat!(
     " }\n}"
 );
 
+/// Labels by id: those an issue row's first 20 did not include.
+pub const LABELS_BY_ID: &str = "query LabelsByID($ids: [ID!]!) {\n  issueLabels(filter: { id: { in: $ids } }, first: 250, includeArchived: true) { nodes { id name color } }\n}";
+
 pub const LABELS: &str = concat!(
     "query Labels($filter: IssueLabelFilter, $first: Int!, $after: String) {\n  issueLabels(filter: $filter, first: $first, after: $after) { nodes { id name color isGroup team { key } parent { name } } ",
     page_info!(),
@@ -382,6 +385,7 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("Teams", TEAMS),
         ("States", STATES),
         ("Labels", LABELS),
+        ("LabelsByID", LABELS_BY_ID),
         ("Users", USERS),
         ("Projects", PROJECTS),
         ("Cycles", CYCLES),

@@ -179,6 +179,7 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
         vars.insert("first".into(), json!(first));
         vars.insert("after".into(), optional(after));
         let mut data = cl.query(run, doc, Value::Object(vars.clone()))?;
+        complete_labels(run, &cl, &mut data)?;
         if doc == queries::ISSUE_LIST_VIEW {
             let found = nodes(&data["matches"]);
             match found.as_slice() {
@@ -470,6 +471,9 @@ fn show(run: &mut Run, ctx: &Ctx) -> R {
         .map_err(|e| e.not_found(&format!("issue {r}"), fail::FIND_ISSUE))?;
     let mut data = data;
     let mut issue = data["issue"].take();
+    if let Some(m) = issue.as_object_mut() {
+        m.shift_remove("labelIds"); // read_all reads every label
+    }
     read_all(run, &cl, &mut issue)?;
     let issue = flatten(issue);
     if run.json {
@@ -931,6 +935,61 @@ fn with_available(run: &mut Run, cl: &crate::client::Client, e: Fail, team_id: &
 }
 
 /// A connection's nodes, none when it is absent.
+/// Gives every issue row in data all its labels. A row reads its first 20
+/// (first multiplies a list's cost) and labelIds, every label's id; the
+/// labels past 20 are read by id, 250 to a request, and labelIds dropped.
+pub fn complete_labels(run: &mut Run, cl: &crate::client::Client, data: &mut Value) -> R {
+    let mut rows: Vec<&mut Value> = vec![];
+    issue_rows(data, &mut rows);
+    let mut want: Vec<String> = vec![];
+    for r in &rows {
+        for id in label_ids_missing(r) {
+            if !want.contains(&id) {
+                want.push(id);
+            }
+        }
+    }
+    let mut found: Vec<Value> = vec![];
+    for ids in want.chunks(250) {
+        let got = cl.query(run, queries::LABELS_BY_ID, json!({"ids": ids}))?;
+        found.extend(nodes(&got["issueLabels"]));
+    }
+    for r in rows {
+        for id in label_ids_missing(r) {
+            if let (Some(l), Some(have)) =
+                (found.iter().find(|l| str_at(l, "id") == id), r["labels"]["nodes"].as_array_mut())
+            {
+                have.push(l.clone());
+            }
+        }
+        if let Some(m) = r.as_object_mut() {
+            m.shift_remove("labelIds");
+        }
+    }
+    Ok(())
+}
+
+/// The objects under v that carry labelIds: issue rows.
+fn issue_rows<'a>(v: &'a mut Value, out: &mut Vec<&'a mut Value>) {
+    match v {
+        Value::Object(m) if m.contains_key("labelIds") => out.push(v),
+        Value::Object(m) => m.values_mut().for_each(|x| issue_rows(x, out)),
+        Value::Array(a) => a.iter_mut().for_each(|x| issue_rows(x, out)),
+        _ => {}
+    }
+}
+
+/// The ids in a row's labelIds that its labels lack.
+fn label_ids_missing(r: &Value) -> Vec<String> {
+    let have = nodes(&r["labels"]);
+    let ids = r["labelIds"].as_array().cloned().unwrap_or_default();
+    ids.iter()
+        .filter_map(Value::as_str)
+        .filter(|id| !have.iter().any(|l| str_at(l, "id") == *id))
+        .map(String::from)
+        .collect()
+}
+
 pub fn nodes(v: &Value) -> Vec<Value> {
     v["nodes"].as_array().cloned().unwrap_or_default()
 }
@@ -1048,7 +1107,8 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     vars.insert("team".into(), team_filter);
     vars.insert("id".into(), json!(id));
     vars.insert("withID".into(), json!(true));
-    let r = cl.query(run, queries::CREATE_RESOLVE, Value::Object(vars))?;
+    let mut r = cl.query(run, queries::CREATE_RESOLVE, Value::Object(vars))?;
+    complete_labels(run, &cl, &mut r["existing"])?;
     if let Some(existing) = nodes(&r["existing"]).first() {
         let it = flatten(existing.clone());
         let text = format!("exists {} {}", str_at(&it, "identifier"), str_at(&it, "url"));
@@ -1068,8 +1128,8 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
         let text = format!("would create in {}: {title}\nid: {id} (pass --id {id} --yes)", str_at(t, "key"));
         return run.output(json!({"changed": true, "dryRun": true, "id": id, "input": w.input}), &text);
     }
-    let out = cl.query(run, queries::ISSUE_CREATE, json!({"input": w.input}))?;
-    let mut out = out;
+    let mut out = cl.query(run, queries::ISSUE_CREATE, json!({"input": w.input}))?;
+    complete_labels(run, &cl, &mut out)?;
     let it = flatten(out["issueCreate"]["issue"].take());
     let text = format!("created {} {}", str_at(&it, "identifier"), str_at(&it, "url"));
     run.output(json!({"changed": true, "dryRun": false, "id": id, "issue": it}), &text)
@@ -1210,8 +1270,8 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
         let keys: Vec<&str> = keys.iter().map(|k| k.as_str()).collect();
         return run.output(doc, &format!("would update {identifier}: {}", keys.join(", ")));
     }
-    let out = cl.query(run, queries::ISSUE_UPDATE, json!({"id": str_at(is, "id"), "input": w.input}))?;
-    let mut out = out;
+    let mut out = cl.query(run, queries::ISSUE_UPDATE, json!({"id": str_at(is, "id"), "input": w.input}))?;
+    complete_labels(run, &cl, &mut out)?;
     doc["issue"] = flatten(out["issueUpdate"]["issue"].take());
     run.output(doc, &format!("updated {identifier}"))
 }

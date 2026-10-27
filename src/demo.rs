@@ -379,6 +379,11 @@ fn build() -> World {
             .flatten()
             .map(|l| labels.get(l.as_str().unwrap_or("")).map_or(NULL, |i| V::N(*i)))
             .collect();
+        let ids: Vec<Value> = ls
+            .iter()
+            .filter_map(|l| if let V::N(i) = l { Some(json!(text_of(&w.nodes[*i], "id"))) } else { None })
+            .collect();
+        m.insert("labelIds".into(), V::S(Value::Array(ids)));
         m.insert("labels".into(), V::L(ls));
         let id = add(&mut w, m);
         for a in sd["attachments"].as_array().into_iter().flatten() {

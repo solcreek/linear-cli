@@ -102,7 +102,8 @@ fn cycle_ambiguous(word: &str, n: &[Value]) -> Fail {
 /// The one cycle the filter finds: none is not found, and two (the same
 /// word in two teams) is an error naming them.
 fn find_cycle(run: &mut Run, cl: &Client, word: &str, vars: Value) -> R<Value> {
-    let data = cl.query(run, queries::CYCLE_SHOW, vars)?;
+    let mut data = cl.query(run, queries::CYCLE_SHOW, vars)?;
+    super::issue::complete_labels(run, cl, &mut data)?;
     let n = super::issue::nodes(&data["matches"]);
     match n.len() {
         0 => Err(cycle_not_found(word)),
@@ -127,6 +128,7 @@ fn rest_of_issues(run: &mut Run, cl: &Client, c: &mut Value) -> R {
     while c["issues"]["pageInfo"]["hasNextPage"] == json!(true) {
         let after = c["issues"]["pageInfo"]["endCursor"].clone();
         let mut page = cl.query(run, queries::CYCLE_ISSUES, json!({"id": id, "after": after}))?;
+        super::issue::complete_labels(run, cl, &mut page)?;
         let got = &mut page["cycle"]["issues"];
         let nodes = got["nodes"].as_array_mut().map(std::mem::take).unwrap_or_default();
         if let Some(have) = c["issues"]["nodes"].as_array_mut() {

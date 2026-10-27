@@ -40,6 +40,33 @@ fn linear() -> testserver::Server {
     })
 }
 
+/// A label as an issue row has it.
+fn label(n: u32) -> Value {
+    json!({"id": format!("l{n}"), "name": format!("L{n}"), "color": "#000000"})
+}
+
+/// A fake Linear with two issues: ENG-1 with n labels, of which the row
+/// reads at most 20, and ENG-2 with one. Labels by id answer from all n.
+fn labelled(n: u32) -> testserver::Server {
+    serve(move |req| {
+        let body: Value = serde_json::from_str(&req.body).unwrap();
+        let data = if body["query"].as_str().unwrap_or("").starts_with("query LabelsByID") {
+            let ids = body["variables"]["ids"].as_array().cloned().unwrap_or_default();
+            let found: Vec<Value> = (1..=n).map(label).filter(|l| ids.contains(&l["id"])).collect();
+            json!({"issueLabels": {"nodes": found}})
+        } else {
+            let row = |id: &str, n: u32| {
+                json!({"id": id, "identifier": id, "title": "t",
+                    "labels": {"nodes": (1..=n.min(20)).map(label).collect::<Vec<_>>()},
+                    "labelIds": (1..=n).map(|i| format!("l{i}")).collect::<Vec<_>>()})
+            };
+            let nodes = json!([row("ENG-1", n), row("ENG-2", 1)]);
+            json!({"issues": {"nodes": nodes, "pageInfo": {"hasNextPage": false, "endCursor": null}}})
+        };
+        Response::json(200, &json!({"data": data}).to_string())
+    })
+}
+
 /// The variables of each request the fake got.
 fn sent(api: &testserver::Server) -> Vec<Value> {
     let reqs = api.requests.lock().unwrap();
@@ -63,4 +90,33 @@ fn state_names_match_ignoring_case() {
             {"state": {"name": {"eqIgnoreCase": "in review"}}}
         ]}]})
     );
+}
+
+#[test]
+fn rows_carry_every_label() {
+    let api = labelled(22);
+    let (code, out) = linearctl(&api.url, &["issue", "list", "--json"]);
+    assert_eq!(code, 0, "{out}");
+    let doc: Value = serde_json::from_str(&out).unwrap();
+    let names = |i: usize| -> Vec<String> {
+        doc["items"][i]["labels"].as_array().unwrap().iter().map(|l| l["name"].as_str().unwrap().into()).collect()
+    };
+    assert_eq!(names(0), (1..=22).map(|i| format!("L{i}")).collect::<Vec<_>>());
+    assert_eq!(names(1), ["L1"]);
+    // labelIds is how linearctl knows; rows do not print it.
+    assert!(doc["items"].as_array().unwrap().iter().all(|it| it.get("labelIds").is_none()), "{out}");
+    // One more request, for the two labels past 20.
+    let got = sent(&api);
+    assert_eq!(got.len(), 2);
+    assert_eq!(got[1]["ids"], json!(["l21", "l22"]));
+}
+
+#[test]
+fn rows_with_all_their_labels_cost_no_request() {
+    let api = labelled(20);
+    let (code, out) = linearctl(&api.url, &["issue", "list", "--json"]);
+    assert_eq!(code, 0, "{out}");
+    let doc: Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(doc["items"][0]["labels"].as_array().unwrap().len(), 20);
+    assert_eq!(sent(&api).len(), 1);
 }
