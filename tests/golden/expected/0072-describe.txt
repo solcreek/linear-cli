@@ -4134,6 +4134,13 @@ exit: 0
           "type": "string"
         },
         {
+          "default": null,
+          "description": "hold a subscription of its own, not one shared by the key's watches",
+          "name": "no-share",
+          "short": null,
+          "type": "boolean"
+        },
+        {
           "default": "60",
           "description": "when polling, ask Linear every N seconds",
           "name": "poll-interval",

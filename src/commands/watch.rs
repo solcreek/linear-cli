@@ -5,6 +5,10 @@
 //! against the filter with one issue list request, so a change that makes an
 //! issue stop matching is reported as a remove. When subscriptions are not
 //! available it polls instead.
+//!
+//! Linear allows one subscription per account, so the watches of one key
+//! share one: the first starts a hub (watch/hub.rs), a background linearctl
+//! that holds it and relays the changed ids to every watch on the key.
 
 use super::issue::{complete_labels, filter_flags, list_filter, nodes, when};
 use crate::cli::{Cmd, Ctx, Flag};
@@ -23,6 +27,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::time::{Duration, Instant};
+
+#[cfg(unix)]
+mod hub;
 
 /// Known ids at start: up to 2,500 issues.
 const SNAPSHOT_PAGES: u64 = 10;
@@ -58,6 +65,8 @@ against the filter with one request (at most one per 2 s) and reconciles every\n
 --reconcile seconds. --mode poll asks Linear every --poll-interval seconds instead.\n\
 When Linear allows only one subscription (it closes the rest with 4003), watch\n\
 subscribes to issue updates alone and catches up every 60 s (or --reconcile).\n\
+On macOS and Linux the watches of one key share one subscription, held by a\n\
+background linearctl; --no-share holds one of its own.\n\
 Removes are reported for issues known to match: up to 2,500 found at start, and\n\
 any since; beyond that (everything: true) every non-matching change is a remove.",
         )
@@ -71,9 +80,26 @@ any since; beyond that (everything: true) every non-matching change is a remove.
         .flag(Flag::whole("heartbeat", 30, "print a heartbeat every `N` seconds"))
         .flag(Flag::whole("reconcile", 300, "with subscriptions, re-read missed changes every `N` s"))
         .flag(Flag::whole("poll-interval", 60, "when polling, ask Linear every `N` seconds"))
+        .flag(Flag::bool("no-share", "hold a subscription of its own, not one shared by the key's watches"))
         // For tests; the default protects the rate limit.
         .flag(Flag::whole("batch-ms", 2000, "check changed issues at most every `MS` milliseconds").hidden());
     fields_flag_spec(c, ISSUE_ROW_FIELDS)
+}
+
+/// The hub that holds a key's one subscription for its watches: started by
+/// watch itself, with the key on stdin.
+pub fn hub_command() -> Cmd {
+    let mut c = Cmd::new("watch-hub", "Hold the key's subscription for its watches").run(|run, ctx| {
+        #[cfg(unix)]
+        return hub::serve(run, ctx);
+        #[cfg(not(unix))]
+        {
+            let _ = (run, ctx);
+            Err(failed("watch-hub needs Unix sockets"))
+        }
+    });
+    c.hidden = true;
+    c
 }
 
 fn watch(run: &mut Run, ctx: &Ctx) -> R {
@@ -112,6 +138,7 @@ fn watch(run: &mut Run, ctx: &Ctx) -> R {
         everything: false,
         mode: String::new(),
         since: 0,
+        share: !ctx.bool("no-share"),
     };
     w.run(run, &mode, since, heartbeat, reconcile, poll, batch)
 }
@@ -128,6 +155,9 @@ struct Watcher {
     mode: String,
     /// Changes from here on (Unix ns) are covered.
     since: i64,
+    /// Subscribe through the key's hub rather than directly (Unix only).
+    #[cfg_attr(not(unix), allow(dead_code))]
+    share: bool,
 }
 
 fn dur(ns: i64) -> Duration {
@@ -298,6 +328,24 @@ impl Watcher {
         Ok(())
     }
 
+    /// A subscription: the hub's, shared with the key's other watches, or
+    /// one of its own with --no-share, on Windows, or when the hub cannot
+    /// start. A hub that runs but cannot subscribe is an error, as Linear's
+    /// own would be: subscribing beside it would only be closed with 4003.
+    fn subscribe(&self, run: &mut Run, single: bool) -> Result<Subscription, String> {
+        #[cfg(unix)]
+        if self.share && !run.demo {
+            match hub::subscribe_shared(&self.cl.key) {
+                Ok(s) => return Ok(s),
+                Err(hub::Refused::Upstream(e)) => return Err(e),
+                Err(hub::Refused::Unavailable(e)) => {
+                    run.eprint(&format!("linearctl: cannot share a subscription ({e}); subscribing alone\n"))
+                }
+            }
+        }
+        subscribe(run, &self.cl.key, single)
+    }
+
     fn heartbeat(&self, run: &mut Run) -> R {
         let mut doc = Map::new();
         doc.insert("at".into(), json!(time::rfc3339(time::now())));
@@ -322,8 +370,12 @@ impl Watcher {
         // Updates only, once Linear has refused more than one subscription.
         let mut single = false;
         if mode != "poll" {
-            match subscribe(run, &self.cl.key, single) {
-                Ok(s) => sub = Some(s),
+            match self.subscribe(run, single) {
+                Ok(s) => {
+                    // The hub may hold updates alone already.
+                    single = s.single;
+                    sub = Some(s);
+                }
                 Err(e) if mode == "subscription" => return Err(failed(e)),
                 Err(e) => run.eprint(&format!(
                     "linearctl: subscriptions unavailable ({e}); polling every {}\n",
@@ -348,6 +400,10 @@ impl Watcher {
         let now = Instant::now();
         let mut next_beat = now + dur(heartbeat);
         let mut every = if sub.is_some() { reconcile } else { poll };
+        if sub.is_some() && single {
+            every = reconcile.min(ONE_SUBSCRIPTION_RECONCILE);
+            one_subscription(run, every);
+        }
         let mut next_catch_up = now + dur(every);
         let mut flush: Option<Instant> = None;
         let mut pending: Vec<String> = vec![];
@@ -401,10 +457,7 @@ impl Watcher {
                         single = true;
                         every = reconcile.min(ONE_SUBSCRIPTION_RECONCILE);
                         next_catch_up = Instant::now() + dur(every);
-                        run.eprint(&format!(
-                            "linearctl: Linear allows one subscription at a time; watching issue updates, catching up every {}\n",
-                            time::duration(every)
-                        ));
+                        one_subscription(run, every);
                     } else {
                         run.eprint(&format!("linearctl: subscription lost ({e}); reconnecting\n"));
                     }
@@ -417,7 +470,14 @@ impl Watcher {
                             std::thread::sleep(dur(backoff));
                             backoff = (2 * backoff).min(30 * SECOND);
                         }
-                        if let Ok(s) = subscribe(run, &self.cl.key, single) {
+                        if let Ok(s) = self.subscribe(run, single) {
+                            // A hub that fell back to updates alone says so.
+                            if s.single && !single {
+                                single = true;
+                                every = reconcile.min(ONE_SUBSCRIPTION_RECONCILE);
+                                next_catch_up = Instant::now() + dur(every);
+                                one_subscription(run, every);
+                            }
                             sub = Some(s);
                             break;
                         }
@@ -473,6 +533,13 @@ impl Watcher {
     }
 }
 
+fn one_subscription(run: &mut Run, every: i64) {
+    run.eprint(&format!(
+        "linearctl: Linear allows one subscription at a time; watching issue updates, catching up every {}\n",
+        time::duration(every)
+    ));
+}
+
 /// A ticker's next tick: one period on, skipping ticks already missed.
 fn tick(prev: Instant, every: i64) -> Instant {
     let mut next = prev + dur(every);
@@ -504,6 +571,8 @@ struct Subscription {
     last_seen: Arc<AtomicI64>,
     /// When it connected.
     opened: Instant,
+    /// Issue updates alone are subscribed.
+    single: bool,
 }
 
 impl Subscription {
@@ -670,7 +739,7 @@ fn subscribe(run: &Run, key: &str, single: bool) -> Result<Subscription, String>
     let last_seen = Arc::new(AtomicI64::new(time::now()));
     let seen = last_seen.clone();
     std::thread::spawn(move || read(ws, events_tx, commands_rx, seen));
-    Ok(Subscription { events, commands, last_seen, opened: Instant::now() })
+    Ok(Subscription { events, commands, last_seen, opened: Instant::now(), single })
 }
 
 fn read(mut ws: Socket, events: Sender<Event>, commands: Receiver<Command>, seen: Arc<AtomicI64>) {

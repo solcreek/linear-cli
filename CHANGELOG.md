@@ -9,6 +9,20 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Changed
+
+- `watch` on macOS and Linux shares one subscription among the watches of
+  one API key (#6). Linear allows an account one subscription and closes
+  the rest with 4003, so watches that each held their own kept closing each
+  other. The first starts a background `linearctl watch-hub` that holds it
+  and passes every changed issue id to each watch, which checks it against
+  its own filter as before; the hub exits 10 s after its last watch.
+  Starting the hub costs one 4003 (four subscriptions asked for, then issue
+  updates alone, as one watch does); a hub started within the hour after
+  one starts from updates alone. A second watch adds no connection and no
+  4003. `--no-share` holds a subscription of its own; Windows does as
+  before. Each watch still makes its own requests, about one per batch.
+
 ## [0.11.1] - 2026-10-27
 
 ### Fixed

@@ -54,7 +54,14 @@ LINEARCTL_HOME moves config and credentials under one directory.",
         }
         subs.push(c);
     }
-    subs.extend([file::command(), config::command(), api::command(), watch::command(), serve::command()]);
+    subs.extend([
+        file::command(),
+        config::command(),
+        api::command(),
+        watch::command(),
+        watch::hub_command(),
+        serve::command(),
+    ]);
     subs.push(
         Cmd::new("describe", "Print every command, flag and exit code as JSON")
             .example("  linearctl describe")

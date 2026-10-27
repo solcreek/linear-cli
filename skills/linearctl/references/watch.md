@@ -21,6 +21,8 @@ against the filter with one request (at most one per 2 s) and reconciles every
 --reconcile seconds. --mode poll asks Linear every --poll-interval seconds instead.
 When Linear allows only one subscription (it closes the rest with 4003), watch
 subscribes to issue updates alone and catches up every 60 s (or --reconcile).
+On macOS and Linux the watches of one key share one subscription, held by a
+background linearctl; --no-share holds one of its own.
 Removes are reported for issues known to match: up to 2,500 found at start, and
 any since; beyond that (everything: true) every non-matching change is a remove.
 
@@ -53,6 +55,7 @@ Flags:
       --label NAME             only issues with label NAME (repeatable; all of)
       --milestone NAME         only issues in project milestone NAME (none: in no milestone)
       --mode MODE              MODE: auto (subscribe or poll), subscription, poll (default "auto")
+      --no-share               hold a subscription of its own, not one shared by the key's watches
       --poll-interval N        when polling, ask Linear every N seconds (default 60)
       --priority PRIORITY      only issues of PRIORITY: 0-4 or none, urgent, high, medium, low
                                (repeatable, any of)
