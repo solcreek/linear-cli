@@ -135,6 +135,19 @@ func TestIssueListUnresolvablePlaces(t *testing.T) {
 	}
 }
 
+// The lookup failing ends the list before any issue is read.
+func TestIssueListPlaceLookupFails(t *testing.T) {
+	t.Parallel()
+	api := listFake(t, conn("")).onFunc("PlaceResolve", linearErr("boom", "INTERNAL_ERROR"))
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "list", "--json", "--project", "Q4")
+	if d := decode(t, r.out); r.code != exitFailed || d["code"] != "LINEAR_ERROR" {
+		t.Errorf("exit %d, %s", r.code, r.out)
+	}
+	if ops := strings.Join(api.ops(), ","); ops != "PlaceResolve" {
+		t.Errorf("requests %s", ops)
+	}
+}
+
 func TestIssueListRefusesBadPlaces(t *testing.T) {
 	t.Parallel()
 	for _, args := range [][]string{
