@@ -1384,6 +1384,17 @@ fn archive_run(run: &mut Run, ctx: &Ctx, archive: bool) -> R {
 mod tests {
     use super::*;
 
+    /// What a list row adds on request is what issue show has under the
+    /// same names, and never part of the default row.
+    #[test]
+    fn row_extras_are_show_fields_outside_the_row() {
+        for f in ISSUE_ROW_EXTRAS {
+            assert!(show_fields().contains(f), "{f} is not an issue show field");
+            assert!(!ISSUE_ROW_FIELDS.contains(f), "{f} is in the default row");
+            assert!(list_fields().contains(f));
+        }
+    }
+
     /// The resolve queries declare non-null variables that resolve_vars
     /// must supply; a missing one is an error only Linear reports.
     #[test]
