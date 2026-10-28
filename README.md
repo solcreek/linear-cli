@@ -106,7 +106,7 @@ flags and exit codes as JSON.
 | command | does | changes things |
 |---|---|---|
 | `auth login` / `status` / `logout` | store, check, remove the API key | login, logout |
-| `issue list` | list and search issues; filter by team, assignee, state, label, project, milestone, cycle, date | |
+| `issue list` | list and search issues; filter by team, assignee, state, label, project, milestone, cycle, date; `--fields` adds each row's `parent` and relations | |
 | `issue show` | one issue with description, comments, sub-issues, relations, attachments | |
 | `issue create` / `update` / `archive` | change issues | yes |
 | `comment list` / `create` | read and post comments | create |
@@ -131,6 +131,11 @@ flags and exit codes as JSON.
   duplicate.
 - Lists are `{items, total, shown, truncated, nextCursor}`; continue with
   `--cursor`, trim with `--fields` and `--limit`.
+- `issue list --blocked` is Linear's `hasBlockedByRelations`, and Linear
+  decides what it matches: an open issue that an open issue blocks (open:
+  triage, backlog, unstarted or started). A completed or canceled blocker
+  does not count; `--blocking` is the same from the other end. To see each
+  blocker and its state, add `--fields identifier,inverseRelations`.
 - A failure is `{error, usage, code}`, plus `hint` when there is a next step:
   the command that finds what was not found, or that a rerun is safe. Branch on
   `code` (`NOT_FOUND`, `AMBIGUOUS`, `NETWORK`, …; `describe` lists them all),

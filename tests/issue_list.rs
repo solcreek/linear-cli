@@ -179,3 +179,78 @@ fn team_id_only_for_a_search_of_one_known_team() {
     assert_eq!(names, ["IssueSearch", "IssueList", "TeamFind", "IssueSearch"]);
     assert!(got.iter().all(|(_, v)| v.get("teamId").is_none()), "{got:?}");
 }
+
+/// A fake Linear whose list, search and saved view all answer ENG-1, and
+/// whose IssueRelations answers what it is asked for: ENG-1's parent and
+/// one relation each way.
+fn related() -> testserver::Server {
+    serve(|req| {
+        let body: Value = serde_json::from_str(&req.body).unwrap();
+        let q = body["query"].as_str().unwrap_or("");
+        let page = json!({"nodes": [{"id": "id-1", "identifier": "ENG-1", "title": "t"}],
+            "pageInfo": {"hasNextPage": false, "endCursor": null}});
+        let side = |n: &str, t: &str| json!({"id": n, "identifier": n, "title": "t", "state": {"id": t, "name": t, "type": t}});
+        let rel = |a: &str, b: &str| {
+            json!({"nodes": [{"id": "r", "type": "blocks", "issue": side(a, "started"), "relatedIssue": side(b, "unstarted")}],
+                "pageInfo": {"hasNextPage": false, "endCursor": null}})
+        };
+        let data = if q.starts_with("query IssueRelations") {
+            let v = &body["variables"];
+            let mut it = json!({"id": "id-1"});
+            if v["withParent"] == true {
+                it["parent"] = side("ENG-0", "completed");
+            }
+            if v["withRelations"] == true {
+                it["relations"] = rel("ENG-1", "ENG-2");
+            }
+            if v["withInverse"] == true {
+                it["inverseRelations"] = rel("ENG-3", "ENG-1");
+            }
+            json!({"issues": {"nodes": [it]}})
+        } else if q.starts_with("query IssueListView") {
+            json!({"matches": {"nodes": [{"id": "v", "name": "V", "modelName": "Issue"}]},
+                "customViews": {"nodes": [{"issues": page}]}})
+        } else {
+            json!({"issues": page, "searchIssues": page})
+        };
+        Response::json(200, &json!({"data": data}).to_string())
+    })
+}
+
+#[test]
+fn relation_fields_come_by_id_after_the_rows_on_every_path() {
+    for path in [&[][..], &["--query", "x"][..], &["--view", "V"][..]] {
+        let api = related();
+        let args =
+            [&["issue", "list", "--fields", "identifier,parent,relations,inverseRelations", "--json"], path].concat();
+        let (code, out) = linearctl(&api.url, &args);
+        assert_eq!(code, 0, "{path:?}: {out}");
+        let doc: Value = serde_json::from_str(&out).unwrap();
+        let it = &doc["items"][0];
+        assert_eq!(it["parent"]["state"]["type"], "completed", "{path:?}: {out}");
+        assert_eq!(it["relations"][0]["relatedIssue"]["identifier"], "ENG-2");
+        assert_eq!(it["relations"][0]["relatedIssue"]["state"]["type"], "unstarted");
+        assert_eq!(it["inverseRelations"][0]["issue"]["state"]["name"], "started");
+        let got = ops(&api);
+        assert_eq!(got.len(), 2, "{path:?}: {got:?}");
+        assert_eq!(got[1].0, "IssueRelations");
+        assert_eq!(got[1].1["ids"], json!(["id-1"]));
+        for with in ["withParent", "withRelations", "withInverse"] {
+            assert_eq!(got[1].1[with], true, "{path:?}: {got:?}");
+        }
+    }
+}
+
+#[test]
+fn rows_without_relation_fields_cost_no_request() {
+    let api = related();
+    for fields in [&[][..], &["--fields", "identifier,state"][..]] {
+        let (code, out) = linearctl(&api.url, &[&["issue", "list", "--json"], fields].concat());
+        assert_eq!(code, 0, "{out}");
+        let doc: Value = serde_json::from_str(&out).unwrap();
+        for k in ["parent", "relations", "inverseRelations"] {
+            assert!(doc["items"][0].get(k).is_none(), "{fields:?}: {out}");
+        }
+    }
+    assert!(ops(&api).iter().all(|(n, _)| n == "IssueList"), "{:?}", ops(&api));
+}

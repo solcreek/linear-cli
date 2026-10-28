@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"items":[{"identifier":"ENG-158","title":"Customers in Brazil can't pay with Pix"}],"nextCursor":null,"shown":1,"total":null,"truncated":false}
+
+--- stderr

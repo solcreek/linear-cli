@@ -1907,7 +1907,8 @@ exit: 0
           "examples": [
             "linearctl issue list --assignee me --state-type started --json",
             "linearctl issue list --team ENG --label bug --updated-since 7d --fields identifier,title --json",
-            "linearctl issue list --query \"login timeout\" --limit 10"
+            "linearctl issue list --query \"login timeout\" --limit 10",
+            "linearctl issue list --project Q4 --limit 0 --fields identifier,parent,inverseRelations --json"
           ],
           "flags": [
             {
@@ -1933,14 +1934,14 @@ exit: 0
             },
             {
               "default": null,
-              "description": "only issues blocked by an open issue",
+              "description": "only issues Linear's hasBlockedByRelations matches: open issues an\nopen one blocks (open: triage, backlog, unstarted or started)",
               "name": "blocked",
               "short": null,
               "type": "boolean"
             },
             {
               "default": null,
-              "description": "only issues that block another",
+              "description": "only issues Linear's hasBlockingRelations matches: open issues that\nblock an open one",
               "name": "blocking",
               "short": null,
               "type": "boolean"
@@ -4045,14 +4046,14 @@ exit: 0
         },
         {
           "default": null,
-          "description": "only issues blocked by an open issue",
+          "description": "only issues Linear's hasBlockedByRelations matches: open issues an\nopen one blocks (open: triage, backlog, unstarted or started)",
           "name": "blocked",
           "short": null,
           "type": "boolean"
         },
         {
           "default": null,
-          "description": "only issues that block another",
+          "description": "only issues Linear's hasBlockingRelations matches: open issues that\nblock an open one",
           "name": "blocking",
           "short": null,
           "type": "boolean"

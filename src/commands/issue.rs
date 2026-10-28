@@ -1,7 +1,7 @@
 use crate::cli::{Args, Cmd, Ctx, Flag};
 use crate::fail::{self, Fail, R, ambiguous, failed, missing, usage};
 use crate::json::{marshal, quote_go};
-use crate::queries::{self, ISSUE_ROW_FIELDS};
+use crate::queries::{self, ISSUE_ROW_EXTRAS, ISSUE_ROW_FIELDS};
 use crate::run::{Run, dry_run};
 use crate::time;
 use crate::util::*;
@@ -27,6 +27,13 @@ pub fn show_fields() -> Vec<&'static str> {
     f
 }
 
+/// issue list's --fields: the row's, and what a row carries only when asked.
+fn list_fields() -> Vec<&'static str> {
+    let mut f = ISSUE_ROW_FIELDS.to_vec();
+    f.extend(ISSUE_ROW_EXTRAS);
+    f
+}
+
 pub fn command() -> Cmd {
     Cmd::group(
         "issue",
@@ -47,10 +54,19 @@ that team, as Linear's team search does.\n\
 --project and --milestone are looked up first, both in one request: one that finds\n\
 nothing fails with NOT_FOUND, a name more than one shares with AMBIGUOUS and its\n\
 candidates. Names match ignoring case; none needs no lookup.\n\
---team falls back to LINEARCTL_TEAM, then to default-team in config.",
+--team falls back to LINEARCTL_TEAM, then to default-team in config.\n\
+--blocked and --blocking send Linear's hasBlockedByRelations and\n\
+hasBlockingRelations, and Linear decides what matches: a blocks relation counts\n\
+only while both of its issues are open (triage, backlog, unstarted or started).\n\
+A completed or canceled issue on either end does not count (measured\n\
+2026-10-27); a duplicate-state one was not measured.\n\
+parent, relations and inverseRelations are in a row only when --fields names\n\
+them, as issue show has them (each side of a relation with its state); they\n\
+cost one more request per 250 rows, and one per issue with more than 250\n\
+relations.",
         )
         .example(
-            "  linearctl issue list --assignee me --state-type started --json\n  linearctl issue list --team ENG --label bug --updated-since 7d --fields identifier,title --json\n  linearctl issue list --query \"login timeout\" --limit 10",
+            "  linearctl issue list --assignee me --state-type started --json\n  linearctl issue list --team ENG --label bug --updated-since 7d --fields identifier,title --json\n  linearctl issue list --query \"login timeout\" --limit 10\n  linearctl issue list --project Q4 --limit 0 --fields identifier,parent,inverseRelations --json",
         )
         .run(list);
     let mut c = filter_flags(c)
@@ -65,7 +81,7 @@ candidates. Names match ignoring case; none needs no lookup.\n\
         .flag(Flag::bool("reverse", "reverse the order of --sort"))
         .flag(limit_flag(25))
         .flag(cursor_flag());
-    c = fields_flag_spec(c, ISSUE_ROW_FIELDS);
+    c = fields_flag_spec(c, &list_fields());
     c
 }
 
@@ -96,14 +112,20 @@ pub fn filter_flags(c: Cmd) -> Cmd {
         .flag(Flag::str("updated-since", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h"))
         .flag(Flag::str("creator", "only issues created by `WHO`: me, none, or an email"))
         .flag(Flag::str("completed-since", "only issues completed since `WHEN`: a date, an RFC 3339 time, 7d or 24h"))
-        .flag(Flag::bool("blocked", "only issues blocked by an open issue"))
-        .flag(Flag::bool("blocking", "only issues that block another"))
+        .flag(Flag::bool(
+            "blocked",
+            "only issues Linear's hasBlockedByRelations matches: open issues an\nopen one blocks (open: triage, backlog, unstarted or started)",
+        ))
+        .flag(Flag::bool(
+            "blocking",
+            "only issues Linear's hasBlockingRelations matches: open issues that\nblock an open one",
+        ))
         .flag(Flag::str("due-before", "only issues due on or before `DATE` (2026-11-30)"))
         .flag(Flag::str("due-after", "only issues due on or after `DATE`"))
 }
 
 fn list(run: &mut Run, ctx: &Ctx) -> R {
-    let fields = fields_flag(ctx, ISSUE_ROW_FIELDS)?;
+    let fields = fields_flag(ctx, &list_fields())?;
     let mut filter = list_filter(ctx)?;
     let cursor = cursor_value(ctx)?;
     let query = ctx.str("query");
@@ -195,7 +217,7 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
         }
     }
     vars.insert("filter".into(), filter.map_or(Value::Null, Value::Object));
-    let (items, next) = collect(limit, cursor, |first, after| {
+    let (mut items, next) = collect(limit, cursor, |first, after| {
         vars.insert("first".into(), json!(first));
         vars.insert("after".into(), optional(after));
         let mut data = cl.query(run, doc, Value::Object(vars.clone()))?;
@@ -228,6 +250,7 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
         }
         Ok(Page::take(&mut data[conn]))
     })?;
+    add_relations(run, &cl, &mut items, &fields)?;
     // Asked-for issues that did not come back: partial, never silent.
     let problems: Vec<Value> = ids
         .iter()
@@ -646,6 +669,34 @@ fn read_all(run: &mut Run, cl: &crate::client::Client, issue: &mut Value) -> R {
     }
     if let Some(labels) = m.shift_remove("allLabels") {
         m.insert("labels".into(), labels);
+    }
+    Ok(())
+}
+
+/// Gives issue rows the parent, relations and inverse relations that
+/// fields names, 250 rows to a request, each relation read in full. A row
+/// whose issue the read did not find has them null.
+fn add_relations(run: &mut Run, cl: &crate::client::Client, items: &mut [Value], fields: &[String]) -> R {
+    let want: Vec<&str> = ISSUE_ROW_EXTRAS.iter().copied().filter(|f| fields.iter().any(|x| x == f)).collect();
+    if want.is_empty() {
+        return Ok(());
+    }
+    for rows in items.chunks_mut(PAGE_SIZE as usize) {
+        let ids: Vec<String> = rows.iter().map(|it| str_at(it, "id")).collect();
+        let vars = json!({"ids": ids, "withParent": want.contains(&"parent"),
+            "withRelations": want.contains(&"relations"), "withInverse": want.contains(&"inverseRelations")});
+        let mut data = cl.query(run, queries::ISSUE_RELATIONS, vars)?;
+        let mut found = data["issues"]["nodes"].as_array_mut().map(std::mem::take).unwrap_or_default();
+        for got in &mut found {
+            read_all(run, cl, got)?;
+        }
+        for row in rows.iter_mut() {
+            let got = found.iter_mut().find(|g| str_at(g, "id") == str_at(row, "id"));
+            let mut got = got.map(Value::take).unwrap_or(Value::Null);
+            for f in &want {
+                row[*f] = got[*f].take();
+            }
+        }
     }
     Ok(())
 }
@@ -1416,6 +1467,17 @@ fn archive_run(run: &mut Run, ctx: &Ctx, archive: bool) -> R {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// What a list row adds on request is what issue show has under the
+    /// same names, and never part of the default row.
+    #[test]
+    fn row_extras_are_show_fields_outside_the_row() {
+        for f in ISSUE_ROW_EXTRAS {
+            assert!(show_fields().contains(f), "{f} is not an issue show field");
+            assert!(!ISSUE_ROW_FIELDS.contains(f), "{f} is in the default row");
+            assert!(list_fields().contains(f));
+        }
+    }
 
     /// The resolve queries declare non-null variables that resolve_vars
     /// must supply; a missing one is an error only Linear reports.

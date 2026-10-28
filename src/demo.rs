@@ -890,6 +890,13 @@ impl Resolver<'_> {
                     }
                     continue;
                 }
+                "hasBlockedByRelations" | "hasBlockingRelations" => {
+                    let has = self.open_blocks(node, k == "hasBlockedByRelations");
+                    if !compare(&json!(has), cond.as_object().unwrap_or(&Map::new())) {
+                        return false;
+                    }
+                    continue;
+                }
                 _ => {}
             }
             if node.is_none() {
@@ -939,6 +946,25 @@ impl Resolver<'_> {
             }
         }
         true
+    }
+
+    /// hasBlockedByRelations (blocked) and hasBlockingRelations as Linear
+    /// answers them (measured 2026-10-27 on a real workspace, every issue
+    /// with a blocks relation checked): a blocks relation counts only while
+    /// both of its issues are in a triage, backlog, unstarted or started
+    /// state. A completed or canceled issue on either end does not count;
+    /// no duplicate-state issue was there to measure.
+    fn open_blocks(&self, node: Option<&V>, blocked: bool) -> bool {
+        let text = |n: Option<&V>, k: &str| match self.get(n, k) {
+            Some(V::S(v)) => sprint(v),
+            _ => String::new(),
+        };
+        let open = |n: Option<&V>| {
+            ["triage", "backlog", "unstarted", "started"].contains(&text(self.get(n, "state"), "type").as_str())
+        };
+        let (list, other) = if blocked { ("inverseRelations", "issue") } else { ("relations", "relatedIssue") };
+        let Some(V::L(rels)) = self.get(node, list) else { return false };
+        open(node) && rels.iter().any(|r| text(Some(r), "type") == "blocks" && open(self.get(Some(r), other)))
     }
 
     fn match_list(&self, items: &[V], c: &Map<String, Value>) -> bool {

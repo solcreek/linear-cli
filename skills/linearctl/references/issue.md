@@ -78,10 +78,19 @@ that team, as Linear's team search does.
 nothing fails with NOT_FOUND, a name more than one shares with AMBIGUOUS and its
 candidates. Names match ignoring case; none needs no lookup.
 --team falls back to LINEARCTL_TEAM, then to default-team in config.
+--blocked and --blocking send Linear's hasBlockedByRelations and
+hasBlockingRelations, and Linear decides what matches: a blocks relation counts
+only while both of its issues are open (triage, backlog, unstarted or started).
+A completed or canceled issue on either end does not count (measured
+2026-10-27); a duplicate-state one was not measured.
+parent, relations and inverseRelations are in a row only when --fields names
+them, as issue show has them (each side of a relation with its state); they
+cost one more request per 250 rows, and one per issue with more than 250
+relations.
 
 Fields: id, identifier, title, priority, priorityLabel, url, createdAt,
 updatedAt, dueDate, estimate, state, assignee, delegate, team, project, cycle,
-projectMilestone, labels
+projectMilestone, labels, parent, relations, inverseRelations
 
 Usage:
   linearctl issue list [flags]
@@ -90,13 +99,16 @@ Examples:
   linearctl issue list --assignee me --state-type started --json
   linearctl issue list --team ENG --label bug --updated-since 7d --fields identifier,title --json
   linearctl issue list --query "login timeout" --limit 10
+  linearctl issue list --project Q4 --limit 0 --fields identifier,parent,inverseRelations --json
 
 Flags:
       --any-label NAME         only issues with label NAME (repeatable; any of)
       --assignee WHO           only issues assigned to WHO: me, none, or an email
       --attachment-url URL     only issues with an attachment at URL (e.g. a linked pull request)
-      --blocked                only issues blocked by an open issue
-      --blocking               only issues that block another
+      --blocked                only issues Linear's hasBlockedByRelations matches: open issues an
+                               open one blocks (open: triage, backlog, unstarted or started)
+      --blocking               only issues Linear's hasBlockingRelations matches: open issues that
+                               block an open one
       --completed-since WHEN   only issues completed since WHEN: a date, an RFC 3339 time, 7d or 24h
       --creator WHO            only issues created by WHO: me, none, or an email
       --cursor CURSOR          continue after CURSOR (nextCursor from the previous page)

@@ -20,6 +20,19 @@ names are only ever added, never renamed or removed.
   `--fields` names it); `--fields issues` brings it along. `issues` stays a list of rows. More remaining also prints
   "N issues shown, more remain; --all-issues for all" on stderr, and the
   text output's heading reads "N issues (more remain)".
+- `issue show`: each side of a relation (`relations[].issue` and
+  `.relatedIssue`, the same in `inverseRelations`) and the `parent` carry
+  `state {id, name, type}`, and the parent its `id`. A caller can tell an
+  open blocker from a completed one without reading it.
+- `issue list --fields` takes `parent`, `relations` and `inverseRelations`,
+  in issue show's shape, so a caller listing a project can say which issue
+  blocks which, or group by parent, without one `issue show` per issue.
+  They are never in the default row: asking for any of them costs one more
+  request per 250 rows (3,805 complexity points for all three, measured),
+  plus one per issue with more than 250 relations, which are read in full.
+- `tests/live.rs` checks `--blocked` against Linear (`make live`, a sandbox
+  team): a blocked issue drops out when its blocker is completed or
+  canceled, and comes back when it is reopened.
 
 ### Changed
 
@@ -31,6 +44,13 @@ names are only ever added, never renamed or removed.
   costs no request.
 - The demo workspace has project milestones (Beta in two projects) and two
   projects whose names differ only in case.
+- `--blocked` and `--blocking` (issue list, watch) say what they match, in
+  the help, the README and docs/design.md: Linear's `hasBlockedByRelations`
+  and `hasBlockingRelations`, which count a blocks relation only while both
+  of its issues are open (triage, backlog, unstarted or started). The help
+  used to say "blocked by an open issue", leaving out that the blocked issue
+  must be open too, and `--blocking` said nothing about either. The filters
+  sent are unchanged.
 
 ### Fixed
 
@@ -41,6 +61,10 @@ names are only ever added, never renamed or removed.
   several projects `AMBIGUOUS` with `candidates`, each with `kind` and
   `name`. `--milestone` likewise, for a name milestones of several projects
   share. `--milestone NAME` with `--project none` is a usage error (exit 2).
+- Demo mode answers `--blocked` and `--blocking` as Linear does, where they
+  used to list nothing: ENG-140 (in review) blocks ENG-158, so ENG-158 is
+  blocked and ENG-140 blocking; ENG-131 (done) blocks ENG-144, which counts
+  for neither.
 
 ## [0.12.0] - 2026-10-27
 

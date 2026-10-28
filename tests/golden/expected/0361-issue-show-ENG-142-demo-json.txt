@@ -116,7 +116,13 @@ exit: 0
       }
     ],
     "parent": {
+      "id": "492b4c72-dc3c-5d84-b1be-ac894e21ec7a",
       "identifier": "ENG-120",
+      "state": {
+        "id": "4c7db0ed-4c47-5173-9c6d-4eea911f1ab2",
+        "name": "In Progress",
+        "type": "started"
+      },
       "title": "Checkout v2 rollout plan"
     },
     "priority": 1,
@@ -139,11 +145,21 @@ exit: 0
         "issue": {
           "id": "0c2f9a92-0646-5558-ac78-3d2797476b00",
           "identifier": "ENG-142",
+          "state": {
+            "id": "4c7db0ed-4c47-5173-9c6d-4eea911f1ab2",
+            "name": "In Progress",
+            "type": "started"
+          },
           "title": "Checkout fails when a coupon code has trailing whitespace"
         },
         "relatedIssue": {
           "id": "34615f14-72a8-586a-9a9b-206abb5751b9",
           "identifier": "ENG-131",
+          "state": {
+            "id": "9284ce19-ff34-5b73-9b29-7738dfd3c182",
+            "name": "Done",
+            "type": "completed"
+          },
           "title": "Show a clear error when a coupon has expired"
         },
         "type": "related"

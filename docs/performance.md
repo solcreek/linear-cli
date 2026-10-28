@@ -55,6 +55,29 @@ Requests per command: reads 1; `issue create`/`update`/`archive` and
 `comment create` 2 (resolve, then mutate) on one connection; `--limit 0`
 one per page of 100.
 
+## Query complexity (measured 2026-10-27)
+
+`X-Complexity` of read-only queries through `api query`, live API, one real
+workspace. Linear refuses a query over 10,000 points ("The query is too
+complex"). A top-level connection's `first` does not multiply its cost; a
+nested one's does:
+
+| query | points |
+|---|---:|
+| `issues(first: 1)`, `(first: 50)` or `(first: 250)` of `issueRow` | 18 |
+| the same rows nested, `customViews(first: 1) { issues(first: 250) }` (`--view`) | 3,751 |
+| top-level rows plus `parent` and `relations`/`inverseRelations(first: 50)`, both sides with state | 780 |
+| the same nested under `customViews`, 250 rows at `first: 10` | 42,401 (refused) |
+| the same nested, 10 rows at `first: 50` | 7,777 |
+| `IssueRelations`: 250 issues by id, `parent`, `relations(first: 250)`, `inverseRelations(first: 250)` | 3,805 |
+| `IssueRelations`, `parent` alone | 5 |
+| a field under `@include(if: false)` | 0 |
+
+A relation with both sides and their states is ~7.6 points. So issue list's
+`parent`/`relations`/`inverseRelations` are read by id in a query of their
+own, which costs the same under `--view` as without it, rather than inside
+the row query.
+
 ## How to measure
 
 One binary, every scenario (start, help, describe, list and show against
@@ -76,8 +99,7 @@ them).
 Linear's edge for these runs was Cloudflare `DFW`, origin behind Google
 (`via: 1.1 google`); HTTP/2, and `alt-svc` offers HTTP/3.
 
-Not yet measured, needs a real key: per-query complexity (`X-Complexity`),
-whether answers are gzip-compressed, and server time by query (search is
+Not yet measured, needs a real key: whether answers are gzip-compressed, and server time by query (search is
 rate-limited to 30/min and may be slower).
 
 ## Before Rust: the Go build (0.2.0 and earlier)
@@ -106,8 +128,6 @@ in 0.07 ms and pretty-printed in 0.38 ms; peak RSS 12.7–15.6 MB; the binary
 
 ## Open, needs a real key
 
-- Page size above 100 for `--limit 0` (fewer round trips). Linear documents
-  no maximum `first`, only 10,000 complexity points per query; by its formula
-  an `issueRow` is ~30 points (20 of them `labels(first: 20)`), so 250 per
-  page is ~7,400. Linear checks auth before arguments, so this cannot be
-  probed without a key.
+- Page size for `--limit 0`: linearctl asks for 250 rows a page (Linear's
+  cap). Complexity does not stand in the way of it: a top-level page of
+  rows costs 18 points at any `first` (see Query complexity).
