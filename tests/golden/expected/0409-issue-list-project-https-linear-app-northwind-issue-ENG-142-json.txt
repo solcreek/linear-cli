@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"code":"USAGE","error":"--project: not a linear.app project URL: https://linear.app/northwind/issue/ENG-142","usage":true}
+
+--- stderr
+linearctl: --project: not a linear.app project URL: https://linear.app/northwind/issue/ENG-142
+Run 'linearctl --help' for usage.

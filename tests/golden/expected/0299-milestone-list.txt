@@ -1,4 +1,7 @@
 exit: 0
 --- stdout
+Checkout v2	Beta	<DATE>
+Checkout v2	GA	<DATE>
+Mobile 3.0	Beta	<DATE>
 
 --- stderr

@@ -5,7 +5,9 @@
 ## linearctl watch
 
 ```
-Stream changes to the issues a filter matches. With --json each line is one event:
+Stream changes to the issues a filter matches; the filter flags are issue list's,
+and --project and --milestone are looked up once, at start. With --json each line
+is one event:
   ready      {mode, since, known, everything}: up to date from since
   upsert     {issue}: an issue that matches, in issue list's row shape
   remove     {id, identifier, reason}: it stopped matching; reason is filter,
@@ -53,13 +55,15 @@ Flags:
       --heartbeat N            print a heartbeat every N seconds (default 30)
   -h, --help                   help for watch
       --label NAME             only issues with label NAME (repeatable; all of)
-      --milestone NAME         only issues in project milestone NAME (none: in no milestone)
+      --milestone MILESTONE    only issues in project milestone MILESTONE: its UUID or name
+                               (none: in no milestone); with --project, one of that project's
       --mode MODE              MODE: auto (subscribe or poll), subscription, poll (default "auto")
       --no-share               hold a subscription of its own, not one shared by the key's watches
       --poll-interval N        when polling, ask Linear every N seconds (default 60)
       --priority PRIORITY      only issues of PRIORITY: 0-4 or none, urgent, high, medium, low
                                (repeatable, any of)
-      --project NAME           only issues in project NAME (none: in no project)
+      --project PROJECT        only issues in project PROJECT: its URL, slugId, UUID or name
+                               (none: in no project)
       --reconcile N            with subscriptions, re-read missed changes every N s (default 300)
       --since WHEN             first replay changes since WHEN (a date, RFC 3339 time, 7d, 24h)
       --state NAME             only issues in workflow state NAME (repeatable; any of)

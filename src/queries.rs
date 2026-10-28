@@ -288,6 +288,10 @@ pub const PROJECT_ISSUES: &str = concat!(
 
 pub const PROJECT_UPDATE: &str = "mutation ProjectUpdate($id: String!, $input: ProjectUpdateInput!) {\n  projectUpdate(id: $id, input: $input) { success }\n}";
 
+/// issue list's and watch's --project and --milestone, resolved to ids
+/// together before the issues are read.
+pub const PLACE_RESOLVE: &str = "query PlaceResolve($project: ProjectFilter!, $withProject: Boolean!,\n  $milestone: ProjectMilestoneFilter!, $withMilestone: Boolean!) {\n  projects(filter: $project, first: 50) @include(if: $withProject) { nodes { id name slugId url } }\n  projectMilestones(filter: $milestone, first: 50) @include(if: $withMilestone) { nodes { id name project { id name } } }\n}";
+
 pub const MILESTONES: &str = concat!(
     "query Milestones($filter: ProjectMilestoneFilter, $first: Int!, $after: String) {\n  projectMilestones(filter: $filter, first: $first, after: $after) { nodes { id name targetDate progress project { id name } } ",
     page_info!(),
@@ -406,6 +410,7 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("LabelsByID", LABELS_BY_ID),
         ("Users", USERS),
         ("Projects", PROJECTS),
+        ("PlaceResolve", PLACE_RESOLVE),
         ("Cycles", CYCLES),
         ("IssueListView", ISSUE_LIST_VIEW),
         ("Views", VIEWS),

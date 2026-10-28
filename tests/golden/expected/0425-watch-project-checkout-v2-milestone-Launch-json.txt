@@ -1,0 +1,7 @@
+exit: 1
+--- stdout
+{"code":"NOT_FOUND","error":"not found: milestone \"Launch\" in project \"checkout v2\" (or this API key cannot see it)","hint":"'linearctl milestone list' lists the milestones this key can see","kind":"milestone","name":"Launch","usage":false}
+
+--- stderr
+linearctl: not found: milestone "Launch" in project "checkout v2" (or this API key cannot see it)
+hint: 'linearctl milestone list' lists the milestones this key can see

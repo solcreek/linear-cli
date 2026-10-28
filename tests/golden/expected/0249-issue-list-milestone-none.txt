@@ -1,12 +1,8 @@
 exit: 0
 --- stdout
-ENG-158	Todo	Jonas Berg	Customers in Brazil can't pay with Pix
-ENG-142	In Progress	Maya Patel	Checkout fails when a coupon code has trailing whitespace
-ENG-143	In Review	Maya Patel	Trim and uppercase coupon codes on the server before lookup
 ENG-149	In Review	Aiko Tanaka	Dashboard takes 4 s to load for workspaces with 10k+ projects
 ENG-140	In Review	Maya Patel	Upgrade the payments SDK to v5 before the v4 sunset
 ENG-120	In Progress	Maya Patel	Checkout v2 rollout plan
-ENG-147	In Progress	Sofia Romero	iOS: push notifications arrive twice after reinstalling the app
 ENG-157	Triage	-	Search ignores accents: "café" does not match "cafe"
 ENG-155	Backlog	-	Dark mode for the settings pages
 ENG-156	Triage	-	Export invoices as CSV

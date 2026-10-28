@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"items":[{"identifier":"ENG-158","project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"}},{"identifier":"ENG-142","project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"}},{"identifier":"ENG-143","project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"}},{"identifier":"ENG-140","project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"}},{"identifier":"ENG-120","project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"}},{"identifier":"ENG-144","project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"}},{"identifier":"ENG-131","project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"}}],"nextCursor":null,"shown":7,"total":null,"truncated":false}
+
+--- stderr

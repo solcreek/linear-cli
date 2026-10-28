@@ -1,0 +1,5 @@
+exit: 1
+--- stdout
+
+--- stderr
+linearctl: more than one project is named "platform reliability" (https://linear.app/northwind/project/platform-reliability-9dd21914662d, https://linear.app/northwind/project/platform-reliability-61eabafda48b); pass its URL or slugId

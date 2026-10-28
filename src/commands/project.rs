@@ -1,6 +1,6 @@
 use crate::cli::{Args, Cmd, Ctx, Flag};
 use crate::client::Client;
-use crate::fail::{R, ambiguous, missing, usage};
+use crate::fail::{Fail, R, ambiguous, missing, usage};
 use crate::json::quote_go;
 use crate::queries;
 use crate::run::{Run, dry_run};
@@ -44,20 +44,21 @@ pub fn commands() -> Vec<Cmd> {
     vec![show_cmd(), update_cmd()]
 }
 
-/// A PROJECT given as a linear.app project URL, its slugId (the hex at the
-/// end of that URL), a UUID, or its exact name.
-fn project_filter(s: &str) -> R<Value> {
-    plain("PROJECT", s)?;
+/// A project given as a linear.app project URL, its slugId (the hex at the
+/// end of that URL), a UUID, or its name, as Linear's ProjectFilter; `what`
+/// names the argument in usage errors.
+pub fn project_filter(what: &str, s: &str) -> R<Value> {
+    plain(what, s)?;
     if s.starts_with("https://") {
         let parts: Option<Vec<String>> = parse_url(s)
             .filter(|u| u.host == "linear.app")
             .map(|u| u.path.trim_matches('/').split('/').map(String::from).collect());
         let Some(p) = parts.filter(|p| p.len() >= 3 && p[1] == "project") else {
-            return Err(usage(format!("PROJECT: not a linear.app project URL: {s}")));
+            return Err(usage(format!("{what}: not a linear.app project URL: {s}")));
         };
         let slug = p[2].rsplit('-').next().unwrap_or("");
         if !is_slug(slug) {
-            return Err(usage(format!("PROJECT: no project id at the end of {s}")));
+            return Err(usage(format!("{what}: no project id at the end of {s}")));
         }
         return Ok(json!({"slugId": {"eq": slug}}));
     }
@@ -76,15 +77,21 @@ fn find_project(run: &mut Run, cl: &Client, r: &str, filter: Value, issues: u64)
     let mut data =
         cl.query(run, queries::PROJECT_FIND, json!({"filter": filter, "issues": issues, "withIssues": issues > 0}))?;
     super::issue::complete_labels(run, cl, &mut data)?;
-    let not_found = || {
-        missing(format!("not found: project {r} (or this API key cannot see it)"))
-            .with(sought("project", r))
-            .hint("'linearctl project list' lists the projects this key can see")
-    };
-    let n = super::issue::nodes(&data["matches"]);
+    one_project(r, &super::issue::nodes(&data["matches"]))?;
+    super::issue::nodes(&data["projects"]).into_iter().next().ok_or_else(|| project_not_found(r))
+}
+
+fn project_not_found(r: &str) -> Fail {
+    missing(format!("not found: project {r} (or this API key cannot see it)"))
+        .with(sought("project", r))
+        .hint("'linearctl project list' lists the projects this key can see")
+}
+
+/// The one project of those a filter for r found.
+pub fn one_project(r: &str, n: &[Value]) -> R<Value> {
     match n.len() {
-        0 => Err(not_found()),
-        1 => super::issue::nodes(&data["projects"]).into_iter().next().ok_or_else(not_found),
+        0 => Err(project_not_found(r)),
+        1 => Ok(n[0].clone()),
         _ => Err(ambiguous(format!(
             "more than one project is named {} ({}, {}); pass its URL or slugId",
             quote_go(r),
@@ -92,7 +99,7 @@ fn find_project(run: &mut Run, cl: &Client, r: &str, filter: Value, issues: u64)
             str_at(&n[1], "url")
         ))
         .with(sought("project", r))
-        .with(json!({"candidates": candidates(&n)}))),
+        .with(json!({"candidates": candidates(n)}))),
     }
 }
 
@@ -143,7 +150,7 @@ or its exact name.",
 }
 
 fn show(run: &mut Run, ctx: &Ctx) -> R {
-    let filter = project_filter(&ctx.args[0])?;
+    let filter = project_filter("PROJECT", &ctx.args[0])?;
     let fields = with_truncated(fields_flag(ctx, FIELDS)?);
     let all = ctx.bool("all-issues");
     let issues = if all { 250 } else { ctx.whole("issues") };
@@ -216,7 +223,7 @@ Changes things: pass --dry-run to preview, --yes to apply.",
 
 fn update(run: &mut Run, ctx: &Ctx) -> R {
     let dry = dry_run(ctx)?;
-    let filter = project_filter(&ctx.args[0])?;
+    let filter = project_filter("PROJECT", &ctx.args[0])?;
     let mut input = Map::new();
     if ctx.changed("name") {
         let name = ctx.str("name");

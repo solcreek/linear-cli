@@ -1,0 +1,6 @@
+exit: 1
+--- stdout
+{"candidates":[{"id":"ab3e1c37-f53b-513d-9d35-9dd21914662d","name":"Platform reliability","slugId":"9dd21914662d"},{"id":"39eafc39-b5bf-5451-8cd0-61eabafda48b","name":"Platform Reliability","slugId":"61eabafda48b"}],"code":"AMBIGUOUS","error":"more than one project is named \"platform reliability\" (https://linear.app/northwind/project/platform-reliability-9dd21914662d, https://linear.app/northwind/project/platform-reliability-61eabafda48b); pass its URL or slugId","kind":"project","name":"platform reliability","usage":false}
+
+--- stderr
+linearctl: more than one project is named "platform reliability" (https://linear.app/northwind/project/platform-reliability-9dd21914662d, https://linear.app/northwind/project/platform-reliability-61eabafda48b); pass its URL or slugId

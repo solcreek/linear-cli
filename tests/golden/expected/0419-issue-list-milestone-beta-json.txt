@@ -1,0 +1,6 @@
+exit: 1
+--- stdout
+{"candidates":[{"id":"ac0845c6-4c40-5517-86b9-d0c03f1e50d0","name":"Beta","project":"Checkout v2"},{"id":"404755bd-b65b-5e2d-aa1d-eaf56847fffc","name":"Beta","project":"Mobile 3.0"}],"code":"AMBIGUOUS","error":"2 milestones are named \"beta\" (projects: Checkout v2, Mobile 3.0); pass --project or its id","kind":"milestone","name":"beta","usage":false}
+
+--- stderr
+linearctl: 2 milestones are named "beta" (projects: Checkout v2, Mobile 3.0); pass --project or its id

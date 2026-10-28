@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"code":"USAGE","error":"--milestone is a project's milestone; it cannot go with --project none","usage":true}
+
+--- stderr
+linearctl: --milestone is a project's milestone; it cannot go with --project none
+Run 'linearctl --help' for usage.

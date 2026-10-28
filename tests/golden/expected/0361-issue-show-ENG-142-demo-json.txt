@@ -129,7 +129,10 @@ exit: 0
         "type": "started"
       }
     },
-    "projectMilestone": null,
+    "projectMilestone": {
+      "id": "ac0845c6-4c40-5517-86b9-d0c03f1e50d0",
+      "name": "Beta"
+    },
     "relations": [
       {
         "id": "815d98f8-ac42-5b70-a78e-97d5aff9dc96",
