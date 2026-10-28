@@ -82,24 +82,30 @@ fn find_project(run: &mut Run, cl: &Client, r: &str, filter: Value, issues: u64)
     }
 }
 
-/// Reads the rest of a project's documents, 250 at a time, and leaves
-/// them as {nodes} for flatten.
-fn all_documents(run: &mut Run, cl: &Client, p: &mut Value) -> R {
+/// Reads the rest of the project's connection key, 250 at a time with doc,
+/// into p's key, which then has no more to read.
+fn read_rest(run: &mut Run, cl: &Client, p: &mut Value, key: &str, doc: &str) -> R {
     let id = str_at(p, "id");
-    while p["documents"]["pageInfo"]["hasNextPage"] == json!(true) {
-        let after = p["documents"]["pageInfo"]["endCursor"].clone();
-        let mut page = cl.query(run, queries::PROJECT_DOCUMENTS, json!({"id": id, "after": after}))?;
-        let got = &mut page["project"]["documents"];
+    while p[key]["pageInfo"]["hasNextPage"] == json!(true) {
+        let after = p[key]["pageInfo"]["endCursor"].clone();
+        let mut page = cl.query(run, doc, json!({"id": id, "after": after}))?;
+        super::issue::complete_labels(run, cl, &mut page)?;
+        let got = &mut page["project"][key];
         let nodes = got["nodes"].as_array_mut().map(std::mem::take).unwrap_or_default();
-        if let Some(have) = p["documents"]["nodes"].as_array_mut() {
+        if let Some(have) = p[key]["nodes"].as_array_mut() {
             have.extend(nodes);
         }
-        p["documents"]["pageInfo"] = got["pageInfo"].take();
-    }
-    if let Some(Value::Object(d)) = p.get_mut("documents") {
-        d.shift_remove("pageInfo");
+        p[key]["pageInfo"] = got["pageInfo"].take();
     }
     Ok(())
+}
+
+/// Takes the pageInfo off p's connection key, leaving {nodes} for flatten,
+/// and says whether it had more to read; None when key is absent.
+fn take_more(p: &mut Value, key: &str) -> Option<bool> {
+    let Some(Value::Object(c)) = p.get_mut(key) else { return None };
+    let info = c.shift_remove("pageInfo").unwrap_or(Value::Null);
+    Some(info["hasNextPage"] == json!(true))
 }
 
 fn show_cmd() -> Cmd {
@@ -128,7 +134,8 @@ fn show(run: &mut Run, ctx: &Ctx) -> R {
     }
     let cl = run.client()?;
     let mut p = find_project(run, &cl, &ctx.args[0], filter, issues)?;
-    all_documents(run, &cl, &mut p)?;
+    read_rest(run, &cl, &mut p, "documents", queries::PROJECT_DOCUMENTS)?;
+    take_more(&mut p, "documents");
     let p = flatten(p);
     if run.json {
         return run.print_json(json!({"project": pick(p, &fields)}));
