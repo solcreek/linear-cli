@@ -9,6 +9,13 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Added
+
+- `issue show`: each side of a relation (`relations[].issue` and
+  `.relatedIssue`, the same in `inverseRelations`) and the `parent` carry
+  `state {id, name, type}`, and the parent its `id`. A caller can tell an
+  open blocker from a completed one without reading it.
+
 ## [0.12.0] - 2026-10-27
 
 ### Changed

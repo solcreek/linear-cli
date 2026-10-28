@@ -294,6 +294,39 @@ func TestIssueShow(t *testing.T) {
 	}
 }
 
+// Each side of a relation, and the parent, says which state its issue is
+// in, so a caller can tell an open blocker from a finished one without
+// reading it.
+func TestIssueShowRelationSidesCarryState(t *testing.T) {
+	t.Parallel()
+	side := func(ident, state, kind string) map[string]any {
+		return map[string]any{"id": "id-" + ident, "identifier": ident, "title": "t",
+			"state": map[string]any{"id": "s-" + state, "name": state, "type": kind}}
+	}
+	answer := showAnswer()
+	is := answer["issue"].(map[string]any)
+	is["parent"] = side("ENG-1", "In Progress", "started")
+	is["inverseRelations"] = nodes(map[string]any{"id": "r1", "type": "blocks",
+		"issue": side("ENG-3", "Done", "completed"), "relatedIssue": side("ENG-12", "Todo", "unstarted")})
+	api := newFake(t).on("IssueShow", answer)
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "show", "ENG-12", "--fields", "parent,inverseRelations", "--json")
+	got := decode(t, r.out)["issue"].(map[string]any)
+	rel := got["inverseRelations"].([]any)[0].(map[string]any)
+	if r.code != 0 || jsonOf(rel["issue"].(map[string]any)["state"]) != `{"id":"s-Done","name":"Done","type":"completed"}` ||
+		jsonOf(got["parent"].(map[string]any)["state"]) != `{"id":"s-In Progress","name":"In Progress","type":"started"}` {
+		t.Fatalf("exit %d, %q", r.code, r.out)
+	}
+	q := api.last("IssueShow").Query
+	for _, want := range []string{
+		"parent { id identifier title state { id name type } }",
+		"issue { id identifier title state { id name type } } relatedIssue { id identifier title state { id name type } }",
+	} {
+		if !strings.Contains(q, want) {
+			t.Errorf("IssueShow does not select %q", want)
+		}
+	}
+}
+
 func TestIssueShowNotFound(t *testing.T) {
 	t.Parallel()
 	api := newFake(t).onFunc("IssueShow", linearErr("Entity not found: Issue", "INVALID_INPUT"))

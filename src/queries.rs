@@ -36,10 +36,19 @@ macro_rules! show_connections {
     };
 }
 
-/// A relation as issue show has it: both issues, each with its title.
+/// Another issue as a relation or a parent names it: enough to tell what
+/// it is and whether it is still open, without reading it.
+macro_rules! issue_side {
+    () => {
+        "id identifier title state { id name type }"
+    };
+}
+
+/// A relation as issue show has it: both issues, each with its title and
+/// its state.
 macro_rules! relation_node {
     () => {
-        "id type issue { id identifier title } relatedIssue { id identifier title }"
+        concat!("id type issue { ", issue_side!(), " } relatedIssue { ", issue_side!(), " }")
     };
 }
 
@@ -115,7 +124,9 @@ pub const ISSUE_SEARCH: &str = concat!(
 pub const ISSUE_SHOW: &str = concat!(
     "query IssueShow($id: String!, $comments: Int!, $withComments: Boolean!) {\n  issue(id: $id) {",
     issue_row!(),
-    "\n    description dueDate estimate branchName startedAt completedAt canceledAt archivedAt\n    creator { id name email }\n    cycle { name startsAt endsAt }\n    project { status { name type } }\n    parent { identifier title }\n    ",
+    "\n    description dueDate estimate branchName startedAt completedAt canceledAt archivedAt\n    creator { id name email }\n    cycle { name startsAt endsAt }\n    project { status { name type } }\n    parent { ",
+    issue_side!(),
+    " }\n    ",
     show_connections!(""),
     "\n    comments(first: $comments) @include(if: $withComments) { nodes { id body createdAt url user { name email } parent { id } } }\n  }\n}"
 );
