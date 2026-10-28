@@ -278,6 +278,8 @@ fn build() -> World {
         ("canceled", "Canceled"),
     ];
     let mut projects: HashMap<String, usize> = HashMap::new();
+    // A milestone by "project/milestone": names repeat across projects.
+    let mut milestones: HashMap<String, usize> = HashMap::new();
     for p in seed["projects"].as_array().into_iter().flatten() {
         let name = p["name"].as_str().unwrap_or("").to_string();
         let full = demo_id("project", &name);
@@ -316,6 +318,22 @@ fn build() -> World {
                 ("updatedAt".into(), at(&seed["anchor"])),
             ]),
         );
+        for ms in p["milestones"].as_array().into_iter().flatten() {
+            let ms_name = ms["name"].as_str().unwrap_or("").to_string();
+            let m = add(
+                &mut w,
+                HashMap::from([
+                    ("id".into(), s(&demo_id("milestone", &format!("{name}/{ms_name}")))),
+                    ("name".into(), s(&ms_name)),
+                    ("targetDate".into(), at(&ms["targetDate"])),
+                    ("progress".into(), V::S(num(ms["progress"].as_f64().unwrap_or(0.0)))),
+                    ("project".into(), V::N(id)),
+                ]),
+            );
+            push(&mut w.nodes[id], "projectMilestones", V::N(m));
+            w.root.entry("projectMilestones".into()).or_default().push(V::N(m));
+            milestones.insert(format!("{name}/{ms_name}"), m);
+        }
         projects.insert(name, id);
         w.root.entry("projects".into()).or_default().push(V::N(id));
     }
@@ -361,7 +379,12 @@ fn build() -> World {
             ("creator".into(), lookup(&users, &sd["creator"])),
             ("delegate".into(), NULL),
             ("project".into(), lookup(&projects, &sd["project"])),
-            ("projectMilestone".into(), NULL),
+            (
+                "projectMilestone".into(),
+                milestones
+                    .get(&format!("{}/{}", sprint(&sd["project"]), sprint(&sd["milestone"])))
+                    .map_or(NULL, |i| V::N(*i)),
+            ),
             ("parent".into(), NULL),
             ("children".into(), V::L(vec![])),
             ("relations".into(), V::L(vec![])),

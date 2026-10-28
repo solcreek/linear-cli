@@ -1,5 +1,5 @@
 exit: 0
 --- stdout
-{"items":[],"nextCursor":null,"shown":0,"total":null,"truncated":false}
+{"items":[{"id":"ac0845c6-4c40-5517-86b9-d0c03f1e50d0","name":"Beta","progress":0.4,"project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"},"targetDate":"<DATE>"},{"id":"e1fa7d75-0c69-599a-b3d6-40c3218d7594","name":"GA","progress":0,"project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"},"targetDate":"<DATE>"},{"id":"404755bd-b65b-5e2d-aa1d-eaf56847fffc","name":"Beta","progress":0,"project":{"id":"70e07509-792f-5809-bc99-42f8c729824e","name":"Mobile 3.0"},"targetDate":"<DATE>"}],"nextCursor":null,"shown":3,"total":null,"truncated":false}
 
 --- stderr
