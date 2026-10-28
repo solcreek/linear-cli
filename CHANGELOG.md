@@ -9,6 +9,12 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Fixed
+
+- `project show` returned a project's first 50 milestones and dropped the
+  rest without saying so. It now reads them all, 250 a request, as it does
+  documents.
+
 ## [0.13.0] - 2026-10-27
 
 ### Added

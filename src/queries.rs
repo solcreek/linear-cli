@@ -300,13 +300,22 @@ pub const PROJECT_DOCUMENTS: &str = concat!(
     " } }\n}"
 );
 
+/// project show: a project's milestones after the first 250.
+pub const PROJECT_MILESTONES: &str = concat!(
+    "query ProjectMilestones($id: String!, $after: String) {\n  project(id: $id) { projectMilestones(first: 250, after: $after) { nodes { id name targetDate progress } ",
+    page_info!(),
+    " } }\n}"
+);
+
 /// matches asks for two, so a name two projects share shows up as ambiguous;
 /// the detail asks for one, since first multiplies the cost of everything
 /// nested (as for cycles: two at 250 issues each is over Linear's 10,000).
 pub const PROJECT_FIND: &str = concat!(
     "query ProjectFind($filter: ProjectFilter!, $issues: Int!, $withIssues: Boolean!) {\n  matches: projects(filter: $filter, first: 2) { nodes { id name slugId url } }\n  projects(filter: $filter, first: 1) { nodes {\n    id name slugId url description content startDate targetDate progress health createdAt updatedAt\n    status { id name type } lead { id name email }\n    teams(first: 20) { nodes { id key name } }\n    documents(first: 250) { nodes { id title url } ",
     page_info!(),
-    " }\n    projectMilestones(first: 50) { nodes { id name targetDate progress } }\n    issues(first: $issues) @include(if: $withIssues) { nodes {",
+    " }\n    projectMilestones(first: 250) { nodes { id name targetDate progress } ",
+    page_info!(),
+    " }\n    issues(first: $issues) @include(if: $withIssues) { nodes {",
     issue_row!(),
     " } ",
     page_info!(),
@@ -469,6 +478,7 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("Milestones", MILESTONES),
         ("ProjectFind", PROJECT_FIND),
         ("ProjectDocuments", PROJECT_DOCUMENTS),
+        ("ProjectMilestones", PROJECT_MILESTONES),
         ("ProjectIssues", PROJECT_ISSUES),
         ("ProjectUpdate", PROJECT_UPDATE),
     ]
