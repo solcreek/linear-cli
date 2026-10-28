@@ -36,7 +36,10 @@ exit: 0
         "id": "5dc3e15c-4273-5511-8167-baac88349ee8",
         "name": "Checkout v2"
       },
-      "projectMilestone": null,
+      "projectMilestone": {
+        "id": "ac0845c6-4c40-5517-86b9-d0c03f1e50d0",
+        "name": "Beta"
+      },
       "state": {
         "color": "#e2e2e2",
         "id": "02dcafa4-1d1c-5ecf-944a-e1044774c710",
@@ -86,7 +89,10 @@ exit: 0
         "id": "5dc3e15c-4273-5511-8167-baac88349ee8",
         "name": "Checkout v2"
       },
-      "projectMilestone": null,
+      "projectMilestone": {
+        "id": "ac0845c6-4c40-5517-86b9-d0c03f1e50d0",
+        "name": "Beta"
+      },
       "state": {
         "color": "#f2c94c",
         "id": "4c7db0ed-4c47-5173-9c6d-4eea911f1ab2",
@@ -131,7 +137,10 @@ exit: 0
         "id": "5dc3e15c-4273-5511-8167-baac88349ee8",
         "name": "Checkout v2"
       },
-      "projectMilestone": null,
+      "projectMilestone": {
+        "id": "e1fa7d75-0c69-599a-b3d6-40c3218d7594",
+        "name": "GA"
+      },
       "state": {
         "color": "#0f9d58",
         "id": "8a4ebe6b-a587-5631-9875-620904d1fb6d",
@@ -313,7 +322,10 @@ exit: 0
         "id": "70e07509-792f-5809-bc99-42f8c729824e",
         "name": "Mobile 3.0"
       },
-      "projectMilestone": null,
+      "projectMilestone": {
+        "id": "404755bd-b65b-5e2d-aa1d-eaf56847fffc",
+        "name": "Beta"
+      },
       "state": {
         "color": "#f2c94c",
         "id": "4c7db0ed-4c47-5173-9c6d-4eea911f1ab2",

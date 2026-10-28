@@ -36,6 +36,14 @@ names are only ever added, never renamed or removed.
 
 ### Changed
 
+- `issue list` and `watch` look `--project` and `--milestone` up first, in
+  one request, and filter the issues by id. `--project` takes what
+  `project show` takes: a linear.app project URL, a slugId, a UUID or a
+  name (ignoring case); `--milestone` a UUID or a name, which with
+  `--project` is looked for in that project only. `none` is as before and
+  costs no request.
+- The demo workspace has project milestones (Beta in two projects) and two
+  projects whose names differ only in case.
 - `--blocked` and `--blocking` (issue list, watch) say what they match, in
   the help, the README and docs/design.md: Linear's `hasBlockedByRelations`
   and `hasBlockingRelations`, which count a blocks relation only while both
@@ -46,6 +54,13 @@ names are only ever added, never renamed or removed.
 
 ### Fixed
 
+- `issue list --project` and `watch --project` given the UUID, slugId or
+  URL that `project list` and `project show` hand out listed no issues,
+  with exit 0; a name two projects share listed the issues of both. A
+  reference that finds nothing is now `NOT_FOUND`, and a name that finds
+  several projects `AMBIGUOUS` with `candidates`, each with `kind` and
+  `name`. `--milestone` likewise, for a name milestones of several projects
+  share. `--milestone NAME` with `--project none` is a usage error (exit 2).
 - Demo mode answers `--blocked` and `--blocking` as Linear does, where they
   used to list nothing: ENG-140 (in review) blocks ENG-158, so ENG-158 is
   blocked and ENG-140 blocking; ENG-131 (done) blocks ENG-144, which counts

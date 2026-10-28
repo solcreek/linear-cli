@@ -6,6 +6,9 @@ List issues, most recently updated first. Filters combine with AND; a repeated
 --query searches titles, descriptions and comments, ranked by relevance unless
 --sort is given; Linear allows 30 searches a minute. With one --team, it searches
 that team, as Linear's team search does.
+--project and --milestone are looked up first, both in one request: one that finds
+nothing fails with NOT_FOUND, a name more than one shares with AMBIGUOUS and its
+candidates. Names match ignoring case; none needs no lookup.
 --team falls back to LINEARCTL_TEAM, then to default-team in config.
 --blocked and --blocking send Linear's hasBlockedByRelations and
 hasBlockingRelations, and Linear decides what matches: a blocks relation counts
@@ -52,10 +55,12 @@ Flags:
       --include-comments       with --query, also match the text of comments
       --label NAME             only issues with label NAME (repeatable; all of)
       --limit N                show at most N items; 0 for all (default 25)
-      --milestone NAME         only issues in project milestone NAME (none: in no milestone)
+      --milestone MILESTONE    only issues in project milestone MILESTONE: its UUID or name
+                               (none: in no milestone); with --project, one of that project's
       --priority PRIORITY      only issues of PRIORITY: 0-4 or none, urgent, high, medium, low
                                (repeatable, any of)
-      --project NAME           only issues in project NAME (none: in no project)
+      --project PROJECT        only issues in project PROJECT: its URL, slugId, UUID or name
+                               (none: in no project)
       --query TEXT             full-text search for TEXT
       --reverse                reverse the order of --sort
       --sort FIELD             FIELD: updated (default), created, priority, due-date, title, state

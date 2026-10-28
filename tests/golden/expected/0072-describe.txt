@@ -2039,7 +2039,7 @@ exit: 0
             },
             {
               "default": null,
-              "description": "only issues in project milestone NAME (none: in no milestone)",
+              "description": "only issues in project milestone MILESTONE: its UUID or name\n(none: in no milestone); with --project, one of that project's",
               "name": "milestone",
               "short": null,
               "type": "string"
@@ -2053,7 +2053,7 @@ exit: 0
             },
             {
               "default": null,
-              "description": "only issues in project NAME (none: in no project)",
+              "description": "only issues in project PROJECT: its URL, slugId, UUID or name\n(none: in no project)",
               "name": "project",
               "short": null,
               "type": "string"
@@ -4130,7 +4130,7 @@ exit: 0
         },
         {
           "default": null,
-          "description": "only issues in project milestone NAME (none: in no milestone)",
+          "description": "only issues in project milestone MILESTONE: its UUID or name\n(none: in no milestone); with --project, one of that project's",
           "name": "milestone",
           "short": null,
           "type": "string"
@@ -4165,7 +4165,7 @@ exit: 0
         },
         {
           "default": null,
-          "description": "only issues in project NAME (none: in no project)",
+          "description": "only issues in project PROJECT: its URL, slugId, UUID or name\n(none: in no project)",
           "name": "project",
           "short": null,
           "type": "string"

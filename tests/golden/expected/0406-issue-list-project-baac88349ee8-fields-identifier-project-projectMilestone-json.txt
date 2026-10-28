@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"items":[{"identifier":"ENG-158","project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"},"projectMilestone":{"id":"ac0845c6-4c40-5517-86b9-d0c03f1e50d0","name":"Beta"}},{"identifier":"ENG-142","project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"},"projectMilestone":{"id":"ac0845c6-4c40-5517-86b9-d0c03f1e50d0","name":"Beta"}},{"identifier":"ENG-143","project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"},"projectMilestone":{"id":"e1fa7d75-0c69-599a-b3d6-40c3218d7594","name":"GA"}},{"identifier":"ENG-140","project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"},"projectMilestone":null},{"identifier":"ENG-120","project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"},"projectMilestone":null},{"identifier":"ENG-144","project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"},"projectMilestone":null},{"identifier":"ENG-131","project":{"id":"5dc3e15c-4273-5511-8167-baac88349ee8","name":"Checkout v2"},"projectMilestone":null}],"nextCursor":null,"shown":7,"total":null,"truncated":false}
+
+--- stderr

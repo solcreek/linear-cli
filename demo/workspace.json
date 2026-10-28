@@ -32,9 +32,12 @@
     { "name": "Customer reported", "color": "#26b5ce" }
   ],
   "projects": [
-    { "name": "Checkout v2", "status": "started", "lead": "maya@northwind.example", "targetDate": "2026-11-20" },
-    { "name": "Mobile 3.0", "status": "started", "lead": "sofia@northwind.example", "targetDate": "2026-12-15" },
-    { "name": "Platform reliability", "status": "planned", "lead": "daniel@northwind.example", "targetDate": null }
+    { "name": "Checkout v2", "status": "started", "lead": "maya@northwind.example", "targetDate": "2026-11-20",
+      "milestones": [{ "name": "Beta", "targetDate": "2026-11-06", "progress": 0.4 }, { "name": "GA", "targetDate": "2026-11-20" }] },
+    { "name": "Mobile 3.0", "status": "started", "lead": "sofia@northwind.example", "targetDate": "2026-12-15",
+      "milestones": [{ "name": "Beta", "targetDate": "2026-11-27" }] },
+    { "name": "Platform reliability", "status": "planned", "lead": "daniel@northwind.example", "targetDate": null },
+    { "name": "Platform Reliability", "status": "completed", "lead": "daniel@northwind.example", "targetDate": "2026-06-30" }
   ],
   "cycles": [
     { "number": 23, "startsAt": "2026-10-12T00:00:00.000Z", "endsAt": "2026-10-19T00:00:00.000Z" },
@@ -55,6 +58,7 @@
       "creator": "aiko@northwind.example",
       "labels": ["Bug", "Customer reported"],
       "project": "Checkout v2",
+      "milestone": "Beta",
       "cycle": 24,
       "estimate": 3,
       "createdAt": "2026-10-26T09:12:00.000Z",
@@ -73,6 +77,7 @@
       "creator": "jonas@northwind.example",
       "labels": ["Bug", "Customer reported"],
       "project": "Checkout v2",
+      "milestone": "Beta",
       "cycle": 24,
       "parent": "ENG-120",
       "estimate": 2,
@@ -100,6 +105,7 @@
       "creator": "maya@northwind.example",
       "labels": ["Bug"],
       "project": "Checkout v2",
+      "milestone": "GA",
       "cycle": 24,
       "parent": "ENG-142",
       "estimate": 1,
@@ -199,6 +205,7 @@
       "creator": "sofia@northwind.example",
       "labels": ["Bug"],
       "project": "Mobile 3.0",
+      "milestone": "Beta",
       "cycle": 24,
       "estimate": 2,
       "createdAt": "2026-10-19T10:00:00.000Z",

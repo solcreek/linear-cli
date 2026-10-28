@@ -95,6 +95,18 @@ unchanged by a hint, so callers that match on it keep working.
   Linear as names: `issue list` filters by name, and `issue create`/`update`
   resolve every name to an id in the same single request that checks the
   issue. No local cache is needed. Ambiguous name: failed (1), with a count.
+- `PROJECT` (`project show`/`update`, and `--project` on `issue list` and
+  `watch`): a `https://linear.app/<ws>/project/<slug>-<slugId>` URL, the
+  slugId (12 hex digits), a UUID, or a name (ignoring case). `issue list`
+  and `watch` resolve `--project` and `--milestone` (a UUID or a name; with
+  `--project`, looked for in that project only) to ids in one request made
+  before the issues are read, then filter by id: names repeat in Linear
+  (two projects, or milestones of different projects), and a filter by
+  name would list no issues for an id, or the issues of every project of
+  that name. Nothing found: `NOT_FOUND`; more than one: `AMBIGUOUS` with
+  `candidates`. `none` (in no project or milestone) is a filter of its own,
+  with no request; `--milestone NAME` with `--project none` is usage (2).
+  `watch` resolves them once, at start.
 - Long text (`--description`, `--body`) also comes as `--description-file PATH`
   or `-` for stdin.
 
@@ -121,7 +133,8 @@ Example: `pbpaste | linearctl auth login --yes`
 
     linearctl issue list   [--team KEY] [--assignee me|EMAIL|none] [--state NAME]...
                            [--state-type backlog|unstarted|started|completed|canceled]...
-                           [--label NAME]... [--project NAME] [--cycle current|next|N]
+                           [--label NAME]... [--project PROJECT] [--milestone MILESTONE]
+                           [--cycle current|next|N]
                            [--query TEXT] [--updated-since DATE]
                            [--sort updated|created|priority] [--limit N] [--cursor C]
                            [--fields LIST]
