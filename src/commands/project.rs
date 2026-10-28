@@ -76,12 +76,15 @@ fn find_project(run: &mut Run, cl: &Client, r: &str, filter: Value, issues: u64)
     let mut data =
         cl.query(run, queries::PROJECT_FIND, json!({"filter": filter, "issues": issues, "withIssues": issues > 0}))?;
     super::issue::complete_labels(run, cl, &mut data)?;
-    let n = super::issue::nodes(&data["projects"]);
-    match n.len() {
-        0 => Err(missing(format!("not found: project {r} (or this API key cannot see it)"))
+    let not_found = || {
+        missing(format!("not found: project {r} (or this API key cannot see it)"))
             .with(sought("project", r))
-            .hint("'linearctl project list' lists the projects this key can see")),
-        1 => Ok(n[0].clone()),
+            .hint("'linearctl project list' lists the projects this key can see")
+    };
+    let n = super::issue::nodes(&data["matches"]);
+    match n.len() {
+        0 => Err(not_found()),
+        1 => super::issue::nodes(&data["projects"]).into_iter().next().ok_or_else(not_found),
         _ => Err(ambiguous(format!(
             "more than one project is named {} ({}, {}); pass its URL or slugId",
             quote_go(r),

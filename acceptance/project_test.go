@@ -12,9 +12,22 @@ func projectNode(name string) map[string]any {
 		"status": map[string]any{"name": "In Progress"}, "issues": nodes(issueNode("ENG-1", "One"))}
 }
 
+// projectFind is ProjectFind's answer: every project found as a match, the
+// first in full.
+func projectFind(found ...map[string]any) map[string]any {
+	var matches, detail []any
+	for i, p := range found {
+		matches = append(matches, map[string]any{"id": p["id"], "name": p["name"], "slugId": p["slugId"], "url": p["url"]})
+		if i == 0 {
+			detail = append(detail, p)
+		}
+	}
+	return map[string]any{"matches": conn("", matches...), "projects": conn("", detail...)}
+}
+
 func TestProjectShowRefs(t *testing.T) {
 	t.Parallel()
-	api := newFake(t).on("ProjectFind", map[string]any{"projects": conn("", projectNode("q4"))})
+	api := newFake(t).on("ProjectFind", projectFind(projectNode("q4")))
 	for ref, want := range map[string]string{
 		"https://linear.app/acme/project/q4-launch-0527ca4c9128": `{"slugId":{"eq":"0527ca4c9128"}}`,
 		"0527ca4c9128":                         `{"slugId":{"eq":"0527ca4c9128"}}`,
@@ -50,12 +63,12 @@ func TestProjectShowRefs(t *testing.T) {
 
 func TestProjectShowNotFoundAndAmbiguous(t *testing.T) {
 	t.Parallel()
-	api := newFake(t).on("ProjectFind", map[string]any{"projects": conn("")})
+	api := newFake(t).on("ProjectFind", projectFind())
 	r := runWith(t, opts{api: api, key: testKey}, "project", "show", "Nope", "--json")
 	if e, _ := decode(t, r.out)["error"].(string); r.code != exitFailed || !strings.Contains(e, "not found: project Nope") {
 		t.Errorf("none: exit %d, %q", r.code, r.out)
 	}
-	api = newFake(t).on("ProjectFind", map[string]any{"projects": conn("", projectNode("a"), projectNode("b"))})
+	api = newFake(t).on("ProjectFind", projectFind(projectNode("a"), projectNode("b")))
 	r = runWith(t, opts{api: api, key: testKey}, "project", "show", "Twin", "--json")
 	if e, _ := decode(t, r.out)["error"].(string); r.code != exitFailed || !strings.Contains(e, "more than one project is named") {
 		t.Errorf("two: exit %d, %q", r.code, r.out)
@@ -64,7 +77,7 @@ func TestProjectShowNotFoundAndAmbiguous(t *testing.T) {
 
 func TestProjectUpdate(t *testing.T) {
 	t.Parallel()
-	api := newFake(t).on("ProjectFind", map[string]any{"projects": conn("", projectNode("q4"))}).
+	api := newFake(t).on("ProjectFind", projectFind(projectNode("q4"))).
 		on("ProjectUpdate", map[string]any{"projectUpdate": map[string]any{"success": true}})
 	r := runWith(t, opts{api: api, key: testKey, stdin: "# Overview\nnew"}, "project", "update", "q4",
 		"--content-file", "-", "--description", "Ship it", "--dry-run", "--json")
@@ -99,7 +112,7 @@ func TestProjectShowReadsEveryDocument(t *testing.T) {
 	p["health"], p["documents"] = "atRisk", conn("d1", doc("a"))
 	p["teams"] = nodes(map[string]any{"id": "t-eng", "key": "ENG", "name": "Engineering"})
 	var after []any
-	api := newFake(t).on("ProjectFind", map[string]any{"projects": conn("", p)}).
+	api := newFake(t).on("ProjectFind", projectFind(p)).
 		onFunc("ProjectDocuments", func(v map[string]any) (int, any, map[string]string) {
 			after = append(after, v["after"])
 			return 200, map[string]any{"data": map[string]any{"project": map[string]any{"documents": conn("", doc("b"))}}}, nil
@@ -114,7 +127,11 @@ func TestProjectShowReadsEveryDocument(t *testing.T) {
 		t.Errorf("follow-ups %v", after)
 	}
 	q := api.last("ProjectFind").Query
-	for _, want := range []string{"health", "createdAt", "updatedAt", "teams(first: 20) { nodes { id key name } }"} {
+	// Only the two matches are fetched twice over; the detail, issues and all,
+	// once, or 250 issues under first: 2 is over Linear's complexity limit.
+	for _, want := range []string{"health", "createdAt", "updatedAt", "teams(first: 20) { nodes { id key name } }",
+		"matches: projects(filter: $filter, first: 2) { nodes { id name slugId url } }",
+		"projects(filter: $filter, first: 1) { nodes {"} {
 		if !strings.Contains(q, want) {
 			t.Errorf("ProjectFind lacks %q", want)
 		}
@@ -126,7 +143,7 @@ func TestProjectShowAllIssues(t *testing.T) {
 	p := projectNode("q4")
 	p["issues"] = conn("i1", issueNode("ENG-1", "One"))
 	var after []any
-	api := newFake(t).on("ProjectFind", map[string]any{"projects": conn("", p)}).
+	api := newFake(t).on("ProjectFind", projectFind(p)).
 		onFunc("ProjectIssues", func(v map[string]any) (int, any, map[string]string) {
 			after = append(after, v["after"])
 			page := conn("i2", issueNode("ENG-2", "Two"))
@@ -165,7 +182,7 @@ func TestProjectShowSaysWhenIssuesAreLeftOut(t *testing.T) {
 	t.Parallel()
 	more := projectNode("q4")
 	more["issues"] = conn("i1", issueNode("ENG-1", "One"))
-	api := newFake(t).on("ProjectFind", map[string]any{"projects": conn("", more)})
+	api := newFake(t).on("ProjectFind", projectFind(more))
 	r := runWith(t, opts{api: api, key: testKey}, "project", "show", "q4", "--issues", "1", "--json")
 	got, _ := decode(t, r.out)["project"].(map[string]any)
 	if is, _ := got["issues"].([]any); r.code != 0 || len(is) != 1 || got["issuesTruncated"] != true {
@@ -189,7 +206,7 @@ func TestProjectShowSaysWhenIssuesAreLeftOut(t *testing.T) {
 
 	all := projectNode("q4")
 	all["issues"] = conn("", issueNode("ENG-1", "One"))
-	api = newFake(t).on("ProjectFind", map[string]any{"projects": conn("", all)})
+	api = newFake(t).on("ProjectFind", projectFind(all))
 	r = runWith(t, opts{api: api, key: testKey}, "project", "show", "q4", "--json")
 	got, _ = decode(t, r.out)["project"].(map[string]any)
 	if r.code != 0 || got["issuesTruncated"] != false || r.err != "" {
@@ -202,7 +219,7 @@ func TestProjectShowSaysWhenIssuesAreLeftOut(t *testing.T) {
 
 	none := projectNode("q4")
 	delete(none, "issues")
-	api = newFake(t).on("ProjectFind", map[string]any{"projects": conn("", none)})
+	api = newFake(t).on("ProjectFind", projectFind(none))
 	r = runWith(t, opts{api: api, key: testKey}, "project", "show", "q4", "--issues", "0", "--json")
 	got, _ = decode(t, r.out)["project"].(map[string]any)
 	_, hasIssues := got["issues"]
