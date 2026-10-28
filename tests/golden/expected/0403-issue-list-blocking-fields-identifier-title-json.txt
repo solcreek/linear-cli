@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"items":[{"identifier":"ENG-140","title":"Upgrade the payments SDK to v5 before the v4 sunset"}],"nextCursor":null,"shown":1,"total":null,"truncated":false}
+
+--- stderr

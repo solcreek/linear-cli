@@ -24,9 +24,10 @@ names are only ever added, never renamed or removed.
 
 ### Fixed
 
-- Demo mode answers `--blocked` as Linear does, where it used to list
-  nothing: ENG-140 (in review) blocks ENG-158, which is listed; ENG-131
-  (done) blocks ENG-144, which is not.
+- Demo mode answers `--blocked` and `--blocking` as Linear does, where they
+  used to list nothing: ENG-140 (in review) blocks ENG-158, so ENG-158 is
+  blocked and ENG-140 blocking; ENG-131 (done) blocks ENG-144, which counts
+  for neither.
 
 ## [0.12.0] - 2026-10-27
 
