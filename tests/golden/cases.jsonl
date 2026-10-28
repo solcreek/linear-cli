@@ -398,6 +398,12 @@
 {"args": ["view", "list", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["issue", "list", "--view", "checkout bugs", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["issue", "list", "--view", "Mobile 3.0 open", "--sort", "title"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Checkout v2", "--all-issues", "--fields", "name,issues", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Checkout v2", "--all-issues"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Checkout v2", "--issues", "3", "--fields", "name,issues", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Checkout v2", "--issues", "3"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Checkout v2", "--issues", "7", "--fields", "issuesTruncated", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Checkout v2", "--issues", "0", "--fields", "name,issuesTruncated", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["issue", "list", "--project", "baac88349ee8", "--fields", "identifier,project,projectMilestone", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["issue", "list", "--project", "5DC3E15C-4273-5511-8167-BAAC88349EE8", "--fields", "identifier,project", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["issue", "list", "--project", "https://linear.app/northwind/project/checkout-v2-baac88349ee8/overview"], "env": {"LINEARCTL_DEMO": "1"}}

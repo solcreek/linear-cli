@@ -22,7 +22,7 @@ func TestFailureCodes(t *testing.T) {
 		{"usage", opts{key: testKey}, []string{"issue", "show", "nope"}, "USAGE", exitUsage},
 		{"not found", opts{api: newFake(t).onFunc("IssueShow", linearErr("Entity not found: Issue", "INPUT_ERROR")), key: testKey},
 			[]string{"issue", "show", "ENG-9"}, "NOT_FOUND", exitFailed},
-		{"ambiguous", opts{api: newFake(t).on("ProjectFind", map[string]any{"projects": conn("", projectNode("a"), projectNode("b"))}), key: testKey},
+		{"ambiguous", opts{api: newFake(t).on("ProjectFind", projectFind(projectNode("a"), projectNode("b"))), key: testKey},
 			[]string{"project", "show", "Twin"}, "AMBIGUOUS", exitFailed},
 		{"linear error", opts{api: newFake(t).onFunc("IssueShow", linearErr("Title is too long", "INPUT_ERROR")), key: testKey},
 			[]string{"issue", "show", "ENG-9"}, "LINEAR_ERROR", exitFailed},

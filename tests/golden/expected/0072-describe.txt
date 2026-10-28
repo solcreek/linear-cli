@@ -3026,9 +3026,17 @@ exit: 0
           "commands": [],
           "examples": [
             "linearctl project show https://linear.app/acme/project/q4-launch-0527ca4c9128",
-            "linearctl project show \"Q4 launch\" --issues 100 --fields name,content,issues --json"
+            "linearctl project show \"Q4 launch\" --issues 100 --fields name,content,issues --json",
+            "linearctl project show \"Q4 launch\" --all-issues --fields name,issues --json"
           ],
           "flags": [
+            {
+              "default": null,
+              "description": "include every issue, however many (overrides --issues)",
+              "name": "all-issues",
+              "short": null,
+              "type": "boolean"
+            },
             {
               "default": null,
               "description": "return only these comma-separated FIELDS (see Fields above)",

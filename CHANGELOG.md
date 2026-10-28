@@ -9,6 +9,18 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Added
+
+- `project show --all-issues` returns every issue in the project, however
+  many, 250 a request, as `cycle show --all-issues` does. `--issues N` alone
+  still stops at 250, and `--issues 0` still means none.
+- `project show` says when it left issues out. `issuesTruncated` is true when
+  the project has more issues than came (`--issues`, default 50), false when
+  they all did, and absent with `--issues 0`, as `issues` is (null when
+  `--fields` names it); `--fields issues` brings it along. `issues` stays a list of rows. More remaining also prints
+  "N issues shown, more remain; --all-issues for all" on stderr, and the
+  text output's heading reads "N issues (more remain)".
+
 ### Changed
 
 - `issue list` and `watch` look `--project` and `--milestone` up first, in
