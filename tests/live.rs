@@ -1,7 +1,7 @@
 //! The live tests talk to api.linear.app with a real key and change a real
 //! workspace, so they run only when asked: LINEARCTL_LIVE_TEAM names a team
 //! whose issues may be created and archived (a sandbox), and LINEAR_API_KEY a
-//! key for it. Each run leaves one archived issue behind, titled
+//! key for it. Each run leaves three archived issues behind, titled
 //! "linearctl live test …"; linearctl has no delete.
 //!
 //!     LINEARCTL_LIVE_TEAM=SANDBOX LINEAR_API_KEY=… make live
@@ -178,6 +178,100 @@ fn new_id() -> String {
     b[8] = (b[8] & 0x3f) | 0x80;
     let h: String = b.iter().map(|x| format!("{x:02x}")).collect();
     format!("{}-{}-{}-{}-{}", &h[..8], &h[8..12], &h[12..16], &h[16..20], &h[20..])
+}
+
+/// Runs a command that may exit 3 (an --id not found) and says whether
+/// issue list listed ident.
+fn listed(args: &[&str], ident: &str) -> bool {
+    let dir = scratch();
+    let mut all = args.to_vec();
+    all.extend(["--id", ident, "--json"]);
+    let out = command(&dir, &all).output().unwrap();
+    let code = out.status.code();
+    assert!(matches!(code, Some(0 | 3)), "{all:?}: {}\n{}", out.status, String::from_utf8_lossy(&out.stderr));
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    v["items"].as_array().unwrap().iter().any(|it| at(it, "identifier") == ident)
+}
+
+/// Waits up to 60 s for issue list --blocked to list ident or not, as
+/// want says: Linear's filter may follow a change a moment later.
+fn wait_blocked(ident: &str, want: bool, why: &str) {
+    let deadline = Instant::now() + Duration::from_secs(60);
+    loop {
+        if listed(&["issue", "list", "--blocked"], ident) == want {
+            eprintln!("live: {ident} {} --blocked: {why}", if want { "in" } else { "out of" });
+            return;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "{ident} still {} --blocked 60 s after: {why}",
+            if want { "out of" } else { "in" }
+        );
+        std::thread::sleep(Duration::from_secs(2));
+    }
+}
+
+/// --blocked is Linear's hasBlockedByRelations, and Linear counts a
+/// blocker only while it is open: completed or canceled, it drops out;
+/// reopened, it counts again. Each side of the relation carries the
+/// blocker's state, in issue show and in issue list's inverseRelations.
+/// Whether a duplicate-state blocker counts is printed, not asserted: it
+/// was never measured. Both issues are archived at the end.
+#[test]
+fn blocked_counts_only_an_open_blocker() {
+    let Some(team) = live_team() else { return };
+    let stamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let create = |what: &str| {
+        let title = format!("linearctl live test {stamp} {what}");
+        let v = live(&["issue", "create", "--team", &team, "--title", &title, "--id", &new_id(), "--yes"]);
+        at(&v, "issue.identifier").to_string()
+    };
+    let blocker = create("blocker");
+    let mut keep_blocker = Archive(blocker.clone(), false);
+    let blocked = create("blocked");
+    let mut keep_blocked = Archive(blocked.clone(), false);
+    eprintln!("live: {blocker} blocks {blocked}");
+    live(&["relation", "create", &blocker, "blocks", &blocked, "--yes"]);
+    wait_blocked(&blocked, true, "an open blocker");
+
+    let state_of_blocker = || {
+        let v = live(&["issue", "list", "--id", &blocked, "--fields", "identifier,inverseRelations"]);
+        let rel = &v["items"][0]["inverseRelations"][0];
+        assert_eq!(at(rel, "issue.identifier"), blocker, "inverseRelations {v}");
+        let shown = live(&["issue", "show", &blocked, "--fields", "inverseRelations"]);
+        assert_eq!(shown["issue"]["inverseRelations"][0]["issue"]["state"], rel["issue"]["state"]);
+        at(rel, "issue.state.type").to_string()
+    };
+    live(&["issue", "update", &blocker, "--state-type", "completed", "--yes"]);
+    assert_eq!(state_of_blocker(), "completed");
+    wait_blocked(&blocked, false, "its blocker completed");
+
+    live(&["issue", "update", &blocker, "--state-type", "unstarted", "--yes"]);
+    assert_eq!(state_of_blocker(), "unstarted");
+    wait_blocked(&blocked, true, "its blocker reopened");
+
+    live(&["issue", "update", &blocker, "--state-type", "canceled", "--yes"]);
+    assert_eq!(state_of_blocker(), "canceled");
+    wait_blocked(&blocked, false, "its blocker canceled");
+
+    let dir = scratch();
+    let dup =
+        command(&dir, &["issue", "update", &blocker, "--state-type", "duplicate", "--yes", "--json"]).output().unwrap();
+    if dup.status.success() {
+        std::thread::sleep(Duration::from_secs(10));
+        let counts = listed(&["issue", "list", "--blocked"], &blocked);
+        eprintln!(
+            "live: a blocker in a duplicate-type state {} (after 10 s)",
+            if counts { "counts" } else { "does not count" }
+        );
+    } else {
+        eprintln!("live: no duplicate-type state to try: {}", String::from_utf8_lossy(&dup.stdout).trim());
+    }
+
+    for (ident, keep) in [(&blocked, &mut keep_blocked), (&blocker, &mut keep_blocker)] {
+        live(&["issue", "archive", ident, "--yes"]);
+        keep.1 = true;
+    }
 }
 
 /// A change made in Linear reaches watch: an issue created, its title

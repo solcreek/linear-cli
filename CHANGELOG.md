@@ -21,6 +21,9 @@ names are only ever added, never renamed or removed.
   They are never in the default row: asking for any of them costs one more
   request per 250 rows (3,805 complexity points for all three, measured),
   plus one per issue with more than 250 relations, which are read in full.
+- `tests/live.rs` checks `--blocked` against Linear (`make live`, a sandbox
+  team): a blocked issue drops out when its blocker is completed or
+  canceled, and comes back when it is reopened.
 
 ### Changed
 
