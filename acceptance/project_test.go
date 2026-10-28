@@ -138,7 +138,7 @@ func TestProjectShowAllIssues(t *testing.T) {
 	r := runWith(t, opts{api: api, key: testKey}, "project", "show", "q4", "--all-issues", "--fields", "issues", "--json")
 	got, _ := decode(t, r.out)["project"].(map[string]any)
 	is, _ := got["issues"].([]any)
-	if r.code != 0 || len(is) != 3 || r.err != "" {
+	if r.code != 0 || len(is) != 3 || got["issuesTruncated"] != false || r.err != "" {
 		t.Fatalf("exit %d, %q, stderr %q", r.code, r.out, r.err)
 	}
 	for i, want := range []string{"ENG-1", "ENG-2", "ENG-3"} {
@@ -158,5 +158,56 @@ func TestProjectShowAllIssues(t *testing.T) {
 	}
 	if v := api.last("ProjectFind").Vars; v["issues"] != 250.0 {
 		t.Errorf("--issues 999 reached Linear: %v", v)
+	}
+}
+
+func TestProjectShowSaysWhenIssuesAreLeftOut(t *testing.T) {
+	t.Parallel()
+	more := projectNode("q4")
+	more["issues"] = conn("i1", issueNode("ENG-1", "One"))
+	api := newFake(t).on("ProjectFind", map[string]any{"projects": conn("", more)})
+	r := runWith(t, opts{api: api, key: testKey}, "project", "show", "q4", "--issues", "1", "--json")
+	got, _ := decode(t, r.out)["project"].(map[string]any)
+	if is, _ := got["issues"].([]any); r.code != 0 || len(is) != 1 || got["issuesTruncated"] != true {
+		t.Fatalf("exit %d, %q", r.code, r.out)
+	}
+	if r.err != "1 issues shown, more remain; --all-issues for all\n" {
+		t.Errorf("stderr %q", r.err)
+	}
+	if slices.Contains(api.ops(), "ProjectIssues") {
+		t.Error("read past --issues without --all-issues")
+	}
+	r = runWith(t, opts{api: api, key: testKey}, "project", "show", "q4", "--issues", "1", "--fields", "name,issues", "--json")
+	got, _ = decode(t, r.out)["project"].(map[string]any)
+	if len(got) != 3 || got["issuesTruncated"] != true {
+		t.Errorf("--fields name,issues: %q", r.out)
+	}
+	r = runWith(t, opts{api: api, key: testKey}, "project", "show", "q4", "--issues", "1")
+	if r.code != 0 || !strings.Contains(r.out, "\n1 issues (more remain)\nENG-1\t") || !strings.Contains(r.err, "more remain") {
+		t.Errorf("text: exit %d, %q, stderr %q", r.code, r.out, r.err)
+	}
+
+	all := projectNode("q4")
+	all["issues"] = conn("", issueNode("ENG-1", "One"))
+	api = newFake(t).on("ProjectFind", map[string]any{"projects": conn("", all)})
+	r = runWith(t, opts{api: api, key: testKey}, "project", "show", "q4", "--json")
+	got, _ = decode(t, r.out)["project"].(map[string]any)
+	if r.code != 0 || got["issuesTruncated"] != false || r.err != "" {
+		t.Errorf("all there: exit %d, %q, stderr %q", r.code, r.out, r.err)
+	}
+	r = runWith(t, opts{api: api, key: testKey}, "project", "show", "q4")
+	if r.code != 0 || !strings.Contains(r.out, "\n1 issues\nENG-1\t") || r.err != "" {
+		t.Errorf("all there, text: exit %d, %q, stderr %q", r.code, r.out, r.err)
+	}
+
+	none := projectNode("q4")
+	delete(none, "issues")
+	api = newFake(t).on("ProjectFind", map[string]any{"projects": conn("", none)})
+	r = runWith(t, opts{api: api, key: testKey}, "project", "show", "q4", "--issues", "0", "--json")
+	got, _ = decode(t, r.out)["project"].(map[string]any)
+	_, hasIssues := got["issues"]
+	_, hasTruncated := got["issuesTruncated"]
+	if r.code != 0 || hasIssues || hasTruncated || r.err != "" || api.last("ProjectFind").Vars["withIssues"] != false {
+		t.Errorf("--issues 0: exit %d, %q, stderr %q", r.code, r.out, r.err)
 	}
 }

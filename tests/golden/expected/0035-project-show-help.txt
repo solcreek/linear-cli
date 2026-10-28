@@ -2,13 +2,14 @@ exit: 0
 --- stdout
 Show a project: its description, overview (content), status, health, documents,
 milestones and issues. Documents are read in full; issues up to --issues, and
---all-issues reads every one, 250 a request.
+--all-issues reads every one, 250 a request. issuesTruncated is true when more
+issues exist than came; --fields issues brings it along.
 PROJECT is a linear.app project URL, its slugId (the hex the URL ends with), a UUID,
 or its exact name.
 
 Fields: id, name, slugId, url, description, content, status, lead, startDate,
 targetDate, progress, health, createdAt, updatedAt, teams, documents,
-projectMilestones, issues
+projectMilestones, issues, issuesTruncated
 
 Usage:
   linearctl project show PROJECT [flags]

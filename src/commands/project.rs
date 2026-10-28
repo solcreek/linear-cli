@@ -26,7 +26,18 @@ const FIELDS: &[&str] = &[
     "documents",
     "projectMilestones",
     "issues",
+    "issuesTruncated",
 ];
+
+/// --fields with issues brings issuesTruncated along, so that picking the
+/// issues never hides that some were left out.
+fn with_truncated(mut fields: Vec<String>) -> Vec<String> {
+    let has = |f: &str| fields.iter().any(|x| x == f);
+    if has("issues") && !has("issuesTruncated") {
+        fields.push("issuesTruncated".into());
+    }
+    fields
+}
 
 /// show and update, added to the project command project list made.
 pub fn commands() -> Vec<Cmd> {
@@ -113,7 +124,8 @@ fn show_cmd() -> Cmd {
         .long(
             "Show a project: its description, overview (content), status, health, documents,\n\
 milestones and issues. Documents are read in full; issues up to --issues, and\n\
---all-issues reads every one, 250 a request.\n\
+--all-issues reads every one, 250 a request. issuesTruncated is true when more\n\
+issues exist than came; --fields issues brings it along.\n\
 PROJECT is a linear.app project URL, its slugId (the hex the URL ends with), a UUID,\n\
 or its exact name.",
         )
@@ -129,7 +141,7 @@ or its exact name.",
 
 fn show(run: &mut Run, ctx: &Ctx) -> R {
     let filter = project_filter(&ctx.args[0])?;
-    let fields = fields_flag(ctx, FIELDS)?;
+    let fields = with_truncated(fields_flag(ctx, FIELDS)?);
     let all = ctx.bool("all-issues");
     let issues = if all { 250 } else { ctx.whole("issues") };
     if issues > 250 {
@@ -142,8 +154,15 @@ fn show(run: &mut Run, ctx: &Ctx) -> R {
     if all {
         read_rest(run, &cl, &mut p, "issues", queries::PROJECT_ISSUES)?;
     }
-    take_more(&mut p, "issues");
-    let p = flatten(p);
+    let more = take_more(&mut p, "issues");
+    let mut p = flatten(p);
+    let shown = p["issues"].as_array().map_or(0, Vec::len);
+    if let Some(more) = more {
+        p["issuesTruncated"] = json!(more);
+        if more {
+            run.eprint(&format!("{shown} issues shown, more remain; --all-issues for all\n"));
+        }
+    }
     if run.json {
         return run.print_json(json!({"project": pick(p, &fields)}));
     }
@@ -163,7 +182,8 @@ fn show(run: &mut Run, ctx: &Ctx) -> R {
     }
     run.print(&s)?;
     if let Some(is) = p["issues"].as_array().filter(|i| !i.is_empty()) {
-        run.print(&format!("\n{} issues\n", is.len()))?;
+        let more = if more == Some(true) { " (more remain)" } else { "" };
+        run.print(&format!("\n{shown} issues{more}\n"))?;
         rows(run, is, &["identifier", "state.name", "assignee.name", "title"])?;
     }
     Ok(())
@@ -222,4 +242,32 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     }
     cl.query(run, queries::PROJECT_UPDATE, json!({"id": p["id"], "input": input}))?;
     run.output(doc, &format!("updated {name}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn take_more_reads_and_drops_page_info() {
+        let mut p = json!({
+            "issues": {"nodes": [1], "pageInfo": {"hasNextPage": true, "endCursor": "c"}},
+            "documents": {"nodes": [], "pageInfo": {"hasNextPage": false, "endCursor": null}},
+            "teams": {"nodes": []},
+        });
+        assert_eq!(take_more(&mut p, "issues"), Some(true));
+        assert_eq!(take_more(&mut p, "documents"), Some(false));
+        assert_eq!(take_more(&mut p, "teams"), Some(false));
+        assert_eq!(take_more(&mut p, "absent"), None);
+        assert_eq!(flatten(p), json!({"issues": [1], "documents": [], "teams": []}));
+    }
+
+    #[test]
+    fn fields_with_issues_bring_issues_truncated() {
+        let f = |v: &[&str]| with_truncated(v.iter().map(|s| s.to_string()).collect());
+        assert_eq!(f(&["name", "issues"]), ["name", "issues", "issuesTruncated"]);
+        assert_eq!(f(&["issuesTruncated", "issues"]), ["issuesTruncated", "issues"]);
+        assert_eq!(f(&["name"]), ["name"]);
+        assert!(f(&[]).is_empty());
+    }
 }

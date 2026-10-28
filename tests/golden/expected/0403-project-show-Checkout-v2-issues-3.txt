@@ -1,0 +1,12 @@
+exit: 0
+--- stdout
+Checkout v2  (In Progress)
+https://linear.app/northwind/project/checkout-v2-baac88349ee8
+
+3 issues (more remain)
+ENG-158	Todo	Jonas Berg	Customers in Brazil can't pay with Pix
+ENG-142	In Progress	Maya Patel	Checkout fails when a coupon code has trailing whitespace
+ENG-143	In Review	Maya Patel	Trim and uppercase coupon codes on the server before lookup
+
+--- stderr
+3 issues shown, more remain; --all-issues for all
