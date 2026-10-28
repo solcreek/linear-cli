@@ -36,6 +36,9 @@ before guessing a flag. Always pass `--json`.
   Keep output small with `--fields` and `--limit`.
 - Names: `--state`, `--label`, `--project` and `--assignee EMAIL` take names;
   get them from `state list`, `label list`, `project list`, `user list`.
+  On `issue list` and `watch`, `--project` also takes the `url`, `slugId` or
+  `id` that `project list` gives, and `--milestone` an `id` from
+  `milestone list`; with `--project`, a milestone name is that project's.
   `--team` falls back to `LINEARCTL_TEAM`, then `config set default-team`.
 - Labels: `issue list --label A --label B` is all of them, `--any-label` any of
   them, `--without-label` none of them (unlabelled issues included).

@@ -83,6 +83,7 @@ linearctl issue list --assignee me --state-type started
 linearctl issue list --team ENG --label bug --updated-since 7d --json
 linearctl issue list --query "login timeout" --limit 10
 linearctl issue list --any-label bug --any-label regression --without-label wontfix
+linearctl issue list --project 0527ca4c9128 --milestone Beta   # a project's slugId, URL, UUID or name
 linearctl issue show ENG-123
 linearctl issue show ENG-123 --signed-urls 300 --json   # image URLs that open without the key
 
@@ -105,7 +106,7 @@ flags and exit codes as JSON.
 | command | does | changes things |
 |---|---|---|
 | `auth login` / `status` / `logout` | store, check, remove the API key | login, logout |
-| `issue list` | list and search issues; filter by team, assignee, state, label, project, cycle, date | |
+| `issue list` | list and search issues; filter by team, assignee, state, label, project, milestone, cycle, date | |
 | `issue show` | one issue with description, comments, sub-issues, relations, attachments | |
 | `issue create` / `update` / `archive` | change issues | yes |
 | `comment list` / `create` | read and post comments | create |
@@ -134,6 +135,12 @@ flags and exit codes as JSON.
   `code` (`NOT_FOUND`, `AMBIGUOUS`, `NETWORK`, …; `describe` lists them all),
   not on the words of `error`. A name that did not resolve adds `kind` and
   `name`, `available` (for a state or label) or `candidates` (for `AMBIGUOUS`).
+- `issue list` and `watch` take `--project` as a linear.app project URL, a
+  slugId, a UUID or a name, and `--milestone` as a UUID or a name (looked for
+  in `--project` when given). Both are looked up first, in one request, and
+  the issues filtered by id: one that finds nothing is `NOT_FOUND`, and a name
+  more than one project (or milestone) has is `AMBIGUOUS`, never an empty or
+  mixed list. `none` means in no project (milestone) and needs no lookup.
 
 | exit | meaning |
 |---|---|
