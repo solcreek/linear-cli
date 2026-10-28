@@ -9,6 +9,12 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Added
+
+- `project show --all-issues` returns every issue in the project, however
+  many, 250 a request, as `cycle show --all-issues` does. `--issues N` alone
+  still stops at 250, and `--issues 0` still means none.
+
 ## [0.12.0] - 2026-10-27
 
 ### Changed

@@ -1,7 +1,8 @@
 exit: 0
 --- stdout
 Show a project: its description, overview (content), status, health, documents,
-milestones and issues. Documents are read in full.
+milestones and issues. Documents are read in full; issues up to --issues, and
+--all-issues reads every one, 250 a request.
 PROJECT is a linear.app project URL, its slugId (the hex the URL ends with), a UUID,
 or its exact name.
 
@@ -15,8 +16,10 @@ Usage:
 Examples:
   linearctl project show https://linear.app/acme/project/q4-launch-0527ca4c9128
   linearctl project show "Q4 launch" --issues 100 --fields name,content,issues --json
+  linearctl project show "Q4 launch" --all-issues --fields name,issues --json
 
 Flags:
+      --all-issues      include every issue, however many (overrides --issues)
       --fields FIELDS   return only these comma-separated FIELDS (see Fields above)
   -h, --help            help for show
       --issues N        include the first N issues; 0 for none (default 50)

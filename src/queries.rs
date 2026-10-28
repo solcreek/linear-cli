@@ -270,7 +270,18 @@ pub const PROJECT_FIND: &str = concat!(
     page_info!(),
     " }\n    projectMilestones(first: 50) { nodes { id name targetDate progress } }\n    issues(first: $issues) @include(if: $withIssues) { nodes {",
     issue_row!(),
-    " } }\n  } }\n}"
+    " } ",
+    page_info!(),
+    " }\n  } }\n}"
+);
+
+/// project show --all-issues: a project's issues after the first page.
+pub const PROJECT_ISSUES: &str = concat!(
+    "query ProjectIssues($id: String!, $after: String) {\n  project(id: $id) { issues(first: 250, after: $after) { nodes {",
+    issue_row!(),
+    " } ",
+    page_info!(),
+    " } }\n}"
 );
 
 pub const PROJECT_UPDATE: &str = "mutation ProjectUpdate($id: String!, $input: ProjectUpdateInput!) {\n  projectUpdate(id: $id, input: $input) { success }\n}";
@@ -414,6 +425,7 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("Milestones", MILESTONES),
         ("ProjectFind", PROJECT_FIND),
         ("ProjectDocuments", PROJECT_DOCUMENTS),
+        ("ProjectIssues", PROJECT_ISSUES),
         ("ProjectUpdate", PROJECT_UPDATE),
     ]
 }

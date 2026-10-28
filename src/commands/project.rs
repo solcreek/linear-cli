@@ -112,30 +112,37 @@ fn show_cmd() -> Cmd {
     let c = Cmd::new("show PROJECT", "Show a project: its overview, milestones and issues")
         .long(
             "Show a project: its description, overview (content), status, health, documents,\n\
-milestones and issues. Documents are read in full.\n\
+milestones and issues. Documents are read in full; issues up to --issues, and\n\
+--all-issues reads every one, 250 a request.\n\
 PROJECT is a linear.app project URL, its slugId (the hex the URL ends with), a UUID,\n\
 or its exact name.",
         )
         .example(
-            "  linearctl project show https://linear.app/acme/project/q4-launch-0527ca4c9128\n  linearctl project show \"Q4 launch\" --issues 100 --fields name,content,issues --json",
+            "  linearctl project show https://linear.app/acme/project/q4-launch-0527ca4c9128\n  linearctl project show \"Q4 launch\" --issues 100 --fields name,content,issues --json\n  linearctl project show \"Q4 launch\" --all-issues --fields name,issues --json",
         )
         .args(Args::Exact(1))
         .run(show)
-        .flag(Flag::whole("issues", 50, "include the first `N` issues; 0 for none"));
+        .flag(Flag::whole("issues", 50, "include the first `N` issues; 0 for none"))
+        .flag(Flag::bool("all-issues", "include every issue, however many (overrides --issues)"));
     fields_flag_spec(c, FIELDS)
 }
 
 fn show(run: &mut Run, ctx: &Ctx) -> R {
     let filter = project_filter(&ctx.args[0])?;
     let fields = fields_flag(ctx, FIELDS)?;
-    let issues = ctx.whole("issues");
+    let all = ctx.bool("all-issues");
+    let issues = if all { 250 } else { ctx.whole("issues") };
     if issues > 250 {
-        return Err(usage("--issues is at most 250; page with 'linearctl issue list --project'"));
+        return Err(usage("--issues is at most 250; pass --all-issues, or page with 'linearctl issue list --project'"));
     }
     let cl = run.client()?;
     let mut p = find_project(run, &cl, &ctx.args[0], filter, issues)?;
     read_rest(run, &cl, &mut p, "documents", queries::PROJECT_DOCUMENTS)?;
     take_more(&mut p, "documents");
+    if all {
+        read_rest(run, &cl, &mut p, "issues", queries::PROJECT_ISSUES)?;
+    }
+    take_more(&mut p, "issues");
     let p = flatten(p);
     if run.json {
         return run.print_json(json!({"project": pick(p, &fields)}));

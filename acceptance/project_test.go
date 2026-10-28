@@ -120,3 +120,43 @@ func TestProjectShowReadsEveryDocument(t *testing.T) {
 		}
 	}
 }
+
+func TestProjectShowAllIssues(t *testing.T) {
+	t.Parallel()
+	p := projectNode("q4")
+	p["issues"] = conn("i1", issueNode("ENG-1", "One"))
+	var after []any
+	api := newFake(t).on("ProjectFind", map[string]any{"projects": conn("", p)}).
+		onFunc("ProjectIssues", func(v map[string]any) (int, any, map[string]string) {
+			after = append(after, v["after"])
+			page := conn("i2", issueNode("ENG-2", "Two"))
+			if len(after)%2 == 0 {
+				page = conn("", issueNode("ENG-3", "Three"))
+			}
+			return 200, map[string]any{"data": map[string]any{"project": map[string]any{"issues": page}}}, nil
+		})
+	r := runWith(t, opts{api: api, key: testKey}, "project", "show", "q4", "--all-issues", "--fields", "issues", "--json")
+	got, _ := decode(t, r.out)["project"].(map[string]any)
+	is, _ := got["issues"].([]any)
+	if r.code != 0 || len(is) != 3 || r.err != "" {
+		t.Fatalf("exit %d, %q, stderr %q", r.code, r.out, r.err)
+	}
+	for i, want := range []string{"ENG-1", "ENG-2", "ENG-3"} {
+		if id := is[i].(map[string]any)["identifier"]; id != want {
+			t.Errorf("issue %d is %v, want %s", i, id, want)
+		}
+	}
+	if v := api.last("ProjectFind").Vars; v["issues"] != 250.0 || v["withIssues"] != true {
+		t.Errorf("first page vars %v", v)
+	}
+	if jsonOf(after) != `["i1","i2"]` || api.last("ProjectIssues").Vars["id"] != "p-q4" {
+		t.Errorf("follow-ups after %v, vars %v", after, api.last("ProjectIssues").Vars)
+	}
+	r = runWith(t, opts{api: api, key: testKey}, "project", "show", "q4", "--all-issues", "--issues", "999")
+	if r.code != 0 || !strings.Contains(r.out, "\n3 issues\n") {
+		t.Errorf("--all-issues over --issues 999: exit %d, %q", r.code, r.out)
+	}
+	if v := api.last("ProjectFind").Vars; v["issues"] != 250.0 {
+		t.Errorf("--issues 999 reached Linear: %v", v)
+	}
+}

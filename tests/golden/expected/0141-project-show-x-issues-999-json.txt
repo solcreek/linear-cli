@@ -1,7 +1,7 @@
 exit: 2
 --- stdout
-{"code":"USAGE","error":"--issues is at most 250; page with 'linearctl issue list --project'","usage":true}
+{"code":"USAGE","error":"--issues is at most 250; pass --all-issues, or page with 'linearctl issue list --project'","usage":true}
 
 --- stderr
-linearctl: --issues is at most 250; page with 'linearctl issue list --project'
+linearctl: --issues is at most 250; pass --all-issues, or page with 'linearctl issue list --project'
 Run 'linearctl --help' for usage.
