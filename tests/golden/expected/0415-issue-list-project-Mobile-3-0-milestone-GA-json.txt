@@ -1,0 +1,7 @@
+exit: 1
+--- stdout
+{"code":"NOT_FOUND","error":"not found: milestone \"GA\" in project \"Mobile 3.0\" (or this API key cannot see it)","hint":"'linearctl milestone list' lists the milestones this key can see","kind":"milestone","name":"GA","usage":false}
+
+--- stderr
+linearctl: not found: milestone "GA" in project "Mobile 3.0" (or this API key cannot see it)
+hint: 'linearctl milestone list' lists the milestones this key can see

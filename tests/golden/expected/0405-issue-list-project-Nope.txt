@@ -1,0 +1,6 @@
+exit: 1
+--- stdout
+
+--- stderr
+linearctl: not found: project Nope (or this API key cannot see it)
+hint: 'linearctl project list' lists the projects this key can see

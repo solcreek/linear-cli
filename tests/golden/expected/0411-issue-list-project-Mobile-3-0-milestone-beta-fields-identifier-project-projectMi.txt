@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"items":[{"identifier":"ENG-147","project":{"id":"70e07509-792f-5809-bc99-42f8c729824e","name":"Mobile 3.0"},"projectMilestone":{"id":"404755bd-b65b-5e2d-aa1d-eaf56847fffc","name":"Beta"}}],"nextCursor":null,"shown":1,"total":null,"truncated":false}
+
+--- stderr

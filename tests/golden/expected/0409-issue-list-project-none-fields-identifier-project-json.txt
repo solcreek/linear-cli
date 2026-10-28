@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"items":[{"identifier":"ENG-157","project":null},{"identifier":"ENG-155","project":null},{"identifier":"ENG-156","project":null},{"identifier":"ENG-152","project":null},{"identifier":"ENG-146","project":null}],"nextCursor":null,"shown":5,"total":null,"truncated":false}
+
+--- stderr

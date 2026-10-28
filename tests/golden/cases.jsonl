@@ -398,3 +398,23 @@
 {"args": ["view", "list", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["issue", "list", "--view", "checkout bugs", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["issue", "list", "--view", "Mobile 3.0 open", "--sort", "title"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "baac88349ee8", "--fields", "identifier,project,projectMilestone", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "5DC3E15C-4273-5511-8167-BAAC88349EE8", "--fields", "identifier,project", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "https://linear.app/northwind/project/checkout-v2-baac88349ee8/overview"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "https://linear.app/northwind/issue/ENG-142", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "Nope", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "Nope"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "platform reliability", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "platform reliability"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "9dd21914662d"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "none", "--fields", "identifier,project", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--milestone", "ac0845c6-4c40-5517-86b9-d0c03f1e50d0", "--fields", "identifier,projectMilestone", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "Mobile 3.0", "--milestone", "beta", "--fields", "identifier,project,projectMilestone", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "checkout v2", "--milestone", "BETA"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--milestone", "beta", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--milestone", "beta"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "Mobile 3.0", "--milestone", "GA", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["issue", "list", "--project", "none", "--milestone", "Beta", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["watch", "--project", "Nope", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["watch", "--project", "platform reliability", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["watch", "--project", "checkout v2", "--milestone", "Launch", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
