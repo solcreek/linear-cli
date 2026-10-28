@@ -10,7 +10,7 @@
 //! share one: the first starts a hub (watch/hub.rs), a background linearctl
 //! that holds it and relays the changed ids to every watch on the key.
 
-use super::issue::{complete_labels, filter_flags, list_filter, nodes, when};
+use super::issue::{complete_labels, filter_flags, list_filter, nodes, resolve_places, when};
 use crate::cli::{Cmd, Ctx, Flag};
 use crate::client::{Client, endpoint};
 use crate::fail::{R, failed, usage};
@@ -50,7 +50,9 @@ const RECONCILE_SKEW: i64 = 5 * SECOND;
 pub fn command() -> Cmd {
     let c = Cmd::new("watch", "Stream changes to the issues a filter matches, one JSON line each")
         .long(
-            "Stream changes to the issues a filter matches. With --json each line is one event:\n  \
+            "Stream changes to the issues a filter matches; the filter flags are issue list's,\n\
+and --project and --milestone are looked up once, at start. With --json each line\n\
+is one event:\n  \
 ready      {mode, since, known, everything}: up to date from since\n  \
 upsert     {issue}: an issue that matches, in issue list's row shape\n  \
 remove     {id, identifier, reason}: it stopped matching; reason is filter,\n             \
@@ -103,7 +105,7 @@ pub fn hub_command() -> Cmd {
 }
 
 fn watch(run: &mut Run, ctx: &Ctx) -> R {
-    let filter = list_filter(ctx)?;
+    let mut filter = list_filter(ctx)?;
     let fields = fields_flag(ctx, ISSUE_ROW_FIELDS)?;
     let mode = ctx.str("mode");
     if !["auto", "subscription", "poll"].contains(&mode.as_str()) {
@@ -130,6 +132,7 @@ fn watch(run: &mut Run, ctx: &Ctx) -> R {
     let poll = seconds("poll-interval", 10)?;
     let batch = ctx.whole("batch-ms") as i64 * 1_000_000;
     let cl = run.client()?;
+    resolve_places(run, &cl, ctx, &mut filter)?;
     let mut w = Watcher {
         cl,
         filter: filter.map(Value::Object),

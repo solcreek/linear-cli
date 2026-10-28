@@ -22,9 +22,9 @@ exit: 0
 --include-comments	with --query, also match the text of comments
 --label	only issues with label `NAME` (repeatable; all of)
 --limit	show at most `N` items; 0 for all
---milestone	only issues in project milestone `NAME` (none: in no milestone)
+--milestone	only issues in project milestone `MILESTONE`: its UUID or name
 --priority	only issues of `PRIORITY`: 0-4 or none, urgent, high, medium, low
---project	only issues in project `NAME` (none: in no project)
+--project	only issues in project `PROJECT`: its URL, slugId, UUID or name
 --query	full-text search for `TEXT`
 --reverse	reverse the order of --sort
 --sort	`FIELD`: updated (default), created, priority, due-date, title, state

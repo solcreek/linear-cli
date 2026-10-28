@@ -74,8 +74,8 @@ func TestIssueUpdateMilestone(t *testing.T) {
 
 func TestMilestoneFilterAndList(t *testing.T) {
 	t.Parallel()
-	for arg, want := range map[string]string{"Beta": `{"projectMilestone":{"name":{"eqIgnoreCase":"Beta"}}}`, "none": `{"projectMilestone":{"null":true}}`} {
-		api := listFake(t, conn(""))
+	for arg, want := range map[string]string{"Beta": `{"projectMilestone":{"id":{"eq":"m1"}}}`, "none": `{"projectMilestone":{"null":true}}`} {
+		api := listFake(t, conn("")).on("PlaceResolve", map[string]any{"projectMilestones": nodes(milestone("m1", "Beta", "p1"))})
 		runWith(t, opts{api: api, key: testKey}, "issue", "list", "--milestone", arg)
 		if got := jsonOf(api.last("IssueList").Vars["filter"]); got != want {
 			t.Errorf("--milestone %s: %s", arg, got)

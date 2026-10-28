@@ -44,6 +44,9 @@ fn list_cmd() -> Cmd {
 --query searches titles, descriptions and comments, ranked by relevance unless\n\
 --sort is given; Linear allows 30 searches a minute. With one --team, it searches\n\
 that team, as Linear's team search does.\n\
+--project and --milestone are looked up first, both in one request: one that finds\n\
+nothing fails with NOT_FOUND, a name more than one shares with AMBIGUOUS and its\n\
+candidates. Names match ignoring case; none needs no lookup.\n\
 --team falls back to LINEARCTL_TEAM, then to default-team in config.",
         )
         .example(
@@ -79,8 +82,14 @@ pub fn filter_flags(c: Cmd) -> Cmd {
         .flag(Flag::strs("label", "only issues with label `NAME` (repeatable; all of)"))
         .flag(Flag::strs("any-label", "only issues with label `NAME` (repeatable; any of)"))
         .flag(Flag::strs("without-label", "only issues without label `NAME` (repeatable; none of)"))
-        .flag(Flag::str("project", "only issues in project `NAME` (none: in no project)"))
-        .flag(Flag::str("milestone", "only issues in project milestone `NAME` (none: in no milestone)"))
+        .flag(Flag::str(
+            "project",
+            "only issues in project `PROJECT`: its URL, slugId, UUID or name\n(none: in no project)",
+        ))
+        .flag(Flag::str(
+            "milestone",
+            "only issues in project milestone `MILESTONE`: its UUID or name\n(none: in no milestone); with --project, one of that project's",
+        ))
         .flag(Flag::str("delegate", "only issues delegated to the agent `WHO` (name, email, me, any, none)"))
         .flag(Flag::str("attachment-url", "only issues with an attachment at `URL` (e.g. a linked pull request)"))
         .flag(Flag::str("cycle", "only issues in cycle `CYCLE`: current, next, previous, a number, a UUID"))
@@ -167,6 +176,7 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
         }
     }
     let cl = run.client()?;
+    resolve_places(run, &cl, ctx, &mut filter)?;
     // A search of one team passes it as searchIssues' teamId too: Linear
     // then searches that team, which finds hits a workspace search filtered
     // to the team misses (measured 2026-10-27). teamId takes one team.
@@ -262,7 +272,8 @@ fn ids_flag(ctx: &Ctx) -> R<Vec<String>> {
 const STATE_TYPES: &[&str] = &["triage", "backlog", "unstarted", "started", "completed", "canceled", "duplicate"];
 
 /// Linear's IssueFilter for issue list's flags; None when there is none.
-/// Names go to Linear as names, so listing needs no lookups.
+/// Names go to Linear as names, so listing needs no lookups; --project and
+/// --milestone are as given here, and resolve_places makes them ids.
 pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
     let mut filter = Map::new();
     let mut and: Vec<Value> = vec![];
@@ -326,9 +337,12 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
         filter.insert("and".into(), Value::Array(and));
     }
     let p = ctx.str("project");
-    if !p.is_empty() {
-        plain("--project", &p)?;
-        let f = if p == "none" { json!({"null": true}) } else { json!({"name": {"eqIgnoreCase": p}}) };
+    let mut project = None;
+    if p == "none" {
+        filter.insert("project".into(), json!({"null": true}));
+    } else if !p.is_empty() {
+        let f = super::project::project_filter("--project", &p)?;
+        project = Some(f.clone());
         filter.insert("project".into(), f);
     }
     let u = ctx.str("attachment-url");
@@ -355,7 +369,21 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
     let m = ctx.str("milestone");
     if !m.is_empty() {
         plain("--milestone", &m)?;
-        let f = if m == "none" { json!({"null": true}) } else { json!({"name": {"eqIgnoreCase": m}}) };
+        let mut f = if m == "none" {
+            json!({"null": true})
+        } else if is_uuid(&m) {
+            json!({"id": {"eq": m.to_lowercase()}})
+        } else {
+            json!({"name": {"eqIgnoreCase": m}})
+        };
+        if m != "none" {
+            if p == "none" {
+                return Err(usage("--milestone is a project's milestone; it cannot go with --project none"));
+            }
+            if let Some(pf) = project {
+                f["project"] = pf;
+            }
+        }
         filter.insert("projectMilestone".into(), f);
     }
     let cy = ctx.str("cycle");
@@ -400,6 +428,62 @@ pub fn list_filter(ctx: &Ctx) -> R<Option<Map<String, Value>>> {
         filter.insert("updatedAt".into(), json!({"gte": when(&since)?}));
     }
     Ok((!filter.is_empty()).then_some(filter))
+}
+
+/// Makes list_filter's --project and --milestone ids, with one request for
+/// both: a reference that finds nothing is NOT_FOUND, and a name that finds
+/// more than one project or milestone is AMBIGUOUS, where filtering by the
+/// name would list no issues or the issues of several. none needs no request.
+pub fn resolve_places(
+    run: &mut Run,
+    cl: &crate::client::Client,
+    ctx: &Ctx,
+    filter: &mut Option<Map<String, Value>>,
+) -> R {
+    let Some(f) = filter.as_mut() else { return Ok(()) };
+    let named = |k: &str| f.get(k).filter(|v| v["null"].is_null()).cloned();
+    let (project, milestone) = (named("project"), named("projectMilestone"));
+    if project.is_none() && milestone.is_none() {
+        return Ok(());
+    }
+    let data = cl.query(
+        run,
+        queries::PLACE_RESOLVE,
+        json!({"project": project.clone().unwrap_or(json!({})), "withProject": project.is_some(),
+               "milestone": milestone.clone().unwrap_or(json!({})), "withMilestone": milestone.is_some()}),
+    )?;
+    let p = ctx.str("project");
+    if project.is_some() {
+        let found = super::project::one_project(&p, &nodes(&data["projects"]))?;
+        f.insert("project".into(), json!({"id": {"eq": str_at(&found, "id")}}));
+    }
+    if milestone.is_none() {
+        return Ok(());
+    }
+    let m = ctx.str("milestone");
+    let scope = if project.is_some() { format!(" in project {}", quote_go(&p)) } else { String::new() };
+    let found = nodes(&data["projectMilestones"]);
+    match found.as_slice() {
+        [] => Err(missing(format!("not found: milestone {}{scope} (or this API key cannot see it)", quote_go(&m)))
+            .with(sought("milestone", &m))
+            .hint("'linearctl milestone list' lists the milestones this key can see")),
+        [one] => {
+            f.insert("projectMilestone".into(), json!({"id": {"eq": str_at(one, "id")}}));
+            Ok(())
+        }
+        _ => {
+            let projects: Vec<String> = found.iter().map(|n| str_at(n, "project.name")).collect();
+            let pass = if project.is_some() { "pass its id" } else { "pass --project or its id" };
+            Err(ambiguous(format!(
+                "{} milestones are named {}{scope} (projects: {}); {pass}",
+                found.len(),
+                quote_go(&m),
+                projects.join(", ")
+            ))
+            .with(sought("milestone", &m))
+            .with(json!({"candidates": candidates(&found)})))
+        }
+    }
 }
 
 /// A NullableUserFilter for me, none or an email.
@@ -1350,6 +1434,57 @@ mod tests {
             declared.sort();
             supplied.sort();
             assert_eq!(declared, supplied);
+        }
+    }
+
+    fn filter_of(flags: &[&str]) -> R<Value> {
+        let mut args = vec!["issue".to_string(), "list".to_string()];
+        args.extend(flags.iter().map(|s| s.to_string()));
+        let root = crate::commands::root();
+        let crate::cli::Outcome::Run(ctx) = crate::cli::parse(&root, &args) else {
+            panic!("{flags:?} did not parse");
+        };
+        let mut f = list_filter(&ctx)?.unwrap_or_default();
+        f.remove("team"); // LINEARCTL_TEAM or default-team, if set where the tests run
+        Ok(Value::Object(f))
+    }
+
+    /// --project and --milestone as list_filter leaves them for
+    /// resolve_places: each also a filter Linear's projects and
+    /// projectMilestones take.
+    #[test]
+    fn places_before_resolving() {
+        let uuid = "5F1E2A3B-4C5D-4E6F-8A9B-0C1D2E3F4A5B";
+        for (flags, want) in [
+            (vec!["--project", uuid], json!({"project": {"id": {"eq": uuid.to_lowercase()}}})),
+            (vec!["--project", "0527ca4c9128"], json!({"project": {"slugId": {"eq": "0527ca4c9128"}}})),
+            (
+                vec!["--project", "https://linear.app/acme/project/q4-0527ca4c9128"],
+                json!({"project": {"slugId": {"eq": "0527ca4c9128"}}}),
+            ),
+            (vec!["--project", "Q4"], json!({"project": {"name": {"eqIgnoreCase": "Q4"}}})),
+            (vec!["--project", "none"], json!({"project": {"null": true}})),
+            (vec!["--milestone", uuid], json!({"projectMilestone": {"id": {"eq": uuid.to_lowercase()}}})),
+            (vec!["--milestone", "Beta"], json!({"projectMilestone": {"name": {"eqIgnoreCase": "Beta"}}})),
+            (
+                vec!["--project", "Q4", "--milestone", "Beta"],
+                json!({"project": {"name": {"eqIgnoreCase": "Q4"}},
+                       "projectMilestone": {"name": {"eqIgnoreCase": "Beta"}, "project": {"name": {"eqIgnoreCase": "Q4"}}}}),
+            ),
+            (
+                vec!["--project", "Q4", "--milestone", "none"],
+                json!({"project": {"name": {"eqIgnoreCase": "Q4"}}, "projectMilestone": {"null": true}}),
+            ),
+        ] {
+            assert_eq!(filter_of(&flags).unwrap(), want, "{flags:?}");
+        }
+        for flags in [
+            vec!["--project", "none", "--milestone", "Beta"],
+            vec!["--project", "https://linear.app/acme/team/ENG"],
+            vec!["--project", "https://linear.app/acme/project/q4"],
+            vec!["--milestone", "a\u{7}"],
+        ] {
+            assert!(matches!(filter_of(&flags), Err(Fail::Usage(_))), "{flags:?}");
         }
     }
 
