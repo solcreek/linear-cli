@@ -867,6 +867,12 @@ impl Resolver<'_> {
                     }
                     continue;
                 }
+                "hasBlockedByRelations" => {
+                    if !compare(&json!(self.blocked(node)), cond.as_object().unwrap_or(&Map::new())) {
+                        return false;
+                    }
+                    continue;
+                }
                 _ => {}
             }
             if node.is_none() {
@@ -916,6 +922,23 @@ impl Resolver<'_> {
             }
         }
         true
+    }
+
+    /// hasBlockedByRelations as Linear answers it (measured 2026-10-27 on
+    /// 3,476 open issues): some issue in a triage, backlog, unstarted or
+    /// started state blocks it. A completed or canceled blocker does not
+    /// count; no duplicate-state blocker was there to measure.
+    fn blocked(&self, node: Option<&V>) -> bool {
+        let Some(V::L(rels)) = self.get(node, "inverseRelations") else { return false };
+        let text = |n: Option<&V>, k: &str| match self.get(n, k) {
+            Some(V::S(v)) => sprint(v),
+            _ => String::new(),
+        };
+        rels.iter().any(|r| {
+            let state = self.get(self.get(Some(r), "issue"), "state");
+            text(Some(r), "type") == "blocks"
+                && ["triage", "backlog", "unstarted", "started"].contains(&text(state, "type").as_str())
+        })
     }
 
     fn match_list(&self, items: &[V], c: &Map<String, Value>) -> bool {

@@ -16,6 +16,12 @@ names are only ever added, never renamed or removed.
   `state {id, name, type}`, and the parent its `id`. A caller can tell an
   open blocker from a completed one without reading it.
 
+### Fixed
+
+- Demo mode answers `--blocked` as Linear does, where it used to list
+  nothing: ENG-140 (in review) blocks ENG-158, which is listed; ENG-131
+  (done) blocks ENG-144, which is not.
+
 ## [0.12.0] - 2026-10-27
 
 ### Changed
