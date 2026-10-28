@@ -22,6 +22,16 @@ names are only ever added, never renamed or removed.
   request per 250 rows (3,805 complexity points for all three, measured),
   plus one per issue with more than 250 relations, which are read in full.
 
+### Changed
+
+- `--blocked` and `--blocking` (issue list, watch) say what they match, in
+  the help, the README and docs/design.md: Linear's `hasBlockedByRelations`
+  and `hasBlockingRelations`, which count a blocks relation only while both
+  of its issues are open (triage, backlog, unstarted or started). The help
+  used to say "blocked by an open issue", leaving out that the blocked issue
+  must be open too, and `--blocking` said nothing about either. The filters
+  sent are unchanged.
+
 ### Fixed
 
 - Demo mode answers `--blocked` and `--blocking` as Linear does, where they

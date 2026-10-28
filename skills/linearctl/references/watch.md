@@ -41,8 +41,10 @@ Flags:
       --any-label NAME         only issues with label NAME (repeatable; any of)
       --assignee WHO           only issues assigned to WHO: me, none, or an email
       --attachment-url URL     only issues with an attachment at URL (e.g. a linked pull request)
-      --blocked                only issues blocked by an open issue
-      --blocking               only issues that block another
+      --blocked                only issues Linear's hasBlockedByRelations matches: open issues an
+                               open one blocks (open: triage, backlog, unstarted or started)
+      --blocking               only issues Linear's hasBlockingRelations matches: open issues that
+                               block an open one
       --completed-since WHEN   only issues completed since WHEN: a date, an RFC 3339 time, 7d or 24h
       --creator WHO            only issues created by WHO: me, none, or an email
       --cycle CYCLE            only issues in cycle CYCLE: current, next, previous, a number, a UUID

@@ -148,6 +148,17 @@ Example: `pbpaste | linearctl auth login --yes`
   what one issue's relations do (3,805 points of 10,000 for all three,
   measured 2026-10-27); the same selection inside the row query would be
   multiplied per row under a saved view (`--view`), over the limit.
+- `--blocked` and `--blocking` (issue list and watch) send Linear's
+  `hasBlockedByRelations` and `hasBlockingRelations` filters, `{eq: true}`,
+  and nothing else: Linear decides what is blocked, and linearctl computes
+  nothing. As Linear answered on 2026-10-27 (a real workspace, read only,
+  every issue with a `blocks` relation checked), a relation counts only
+  while both of its issues are open, in a triage, backlog, unstarted or
+  started state: completed or canceled on either end, it does not, so a
+  blocked issue drops out of `--blocked` when its last open blocker is
+  completed. A duplicate-state issue was not there to measure.
+  `tests/live.rs` (`make live`) pins the completed and canceled cases and
+  prints what Linear does with a duplicate-state blocker.
 - `issue show` adds `description`, `comments[]` (default 20), `attachments[]`,
   `parent`, `children[]`, `relations[]`, `inverseRelations[]`. Each side of a
   relation, and the parent, is `{id, identifier, title, state {id, name,

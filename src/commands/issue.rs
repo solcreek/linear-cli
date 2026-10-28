@@ -52,6 +52,11 @@ fn list_cmd() -> Cmd {
 --sort is given; Linear allows 30 searches a minute. With one --team, it searches\n\
 that team, as Linear's team search does.\n\
 --team falls back to LINEARCTL_TEAM, then to default-team in config.\n\
+--blocked and --blocking send Linear's hasBlockedByRelations and\n\
+hasBlockingRelations, and Linear decides what matches: a blocks relation counts\n\
+only while both of its issues are open (triage, backlog, unstarted or started).\n\
+A completed or canceled issue on either end does not count (measured\n\
+2026-10-27); a duplicate-state one was not measured.\n\
 parent, relations and inverseRelations are in a row only when --fields names\n\
 them, as issue show has them (each side of a relation with its state); they\n\
 cost one more request per 250 rows, and one per issue with more than 250\n\
@@ -98,8 +103,14 @@ pub fn filter_flags(c: Cmd) -> Cmd {
         .flag(Flag::str("updated-since", "only issues updated since `WHEN`: a date, an RFC 3339 time, 7d or 24h"))
         .flag(Flag::str("creator", "only issues created by `WHO`: me, none, or an email"))
         .flag(Flag::str("completed-since", "only issues completed since `WHEN`: a date, an RFC 3339 time, 7d or 24h"))
-        .flag(Flag::bool("blocked", "only issues blocked by an open issue"))
-        .flag(Flag::bool("blocking", "only issues that block another"))
+        .flag(Flag::bool(
+            "blocked",
+            "only issues Linear's hasBlockedByRelations matches: open issues an\nopen one blocks (open: triage, backlog, unstarted or started)",
+        ))
+        .flag(Flag::bool(
+            "blocking",
+            "only issues Linear's hasBlockingRelations matches: open issues that\nblock an open one",
+        ))
         .flag(Flag::str("due-before", "only issues due on or before `DATE` (2026-11-30)"))
         .flag(Flag::str("due-after", "only issues due on or after `DATE`"))
 }
