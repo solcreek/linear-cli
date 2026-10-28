@@ -141,8 +141,17 @@ Example: `pbpaste | linearctl auth login --yes`
 - `issue list` items (default fields): `id, identifier, title, state{name,type},
   assignee{name,email}, priority, labels[], project{name}, updatedAt, url`.
   `--fields identifier,title,state` trims them (A6).
+- `issue list --fields` also takes `parent`, `relations` and
+  `inverseRelations`, never in the default row: they are read after the rows
+  by id (`IssueRelations`, 250 rows a request), each relation in full. Linear
+  prices a top-level connection's rows once, not per row, so that read costs
+  what one issue's relations do (3,805 points of 10,000 for all three,
+  measured 2026-10-27); the same selection inside the row query would be
+  multiplied per row under a saved view (`--view`), over the limit.
 - `issue show` adds `description`, `comments[]` (default 20), `attachments[]`,
-  `parent`, `children[]`, `relations[]`. `--signed-urls 300` sends
+  `parent`, `children[]`, `relations[]`, `inverseRelations[]`. Each side of a
+  relation, and the parent, is `{id, identifier, title, state {id, name,
+  type}}`. `--signed-urls 300` sends
   `public-file-urls-expire-in: 300`, so image URLs in the JSON open without a token.
 - `issue create` is rerun-safe by construction: `--yes` requires `--id UUID`
   (usage, 2, without it). `--dry-run` without `--id` generates one and prints it

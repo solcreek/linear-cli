@@ -1,7 +1,7 @@
 use crate::cli::{Args, Cmd, Ctx, Flag};
 use crate::fail::{self, Fail, R, ambiguous, failed, missing, usage};
 use crate::json::{marshal, quote_go};
-use crate::queries::{self, ISSUE_ROW_FIELDS};
+use crate::queries::{self, ISSUE_ROW_EXTRAS, ISSUE_ROW_FIELDS};
 use crate::run::{Run, dry_run};
 use crate::time;
 use crate::util::*;
@@ -27,6 +27,13 @@ pub fn show_fields() -> Vec<&'static str> {
     f
 }
 
+/// issue list's --fields: the row's, and what a row carries only when asked.
+fn list_fields() -> Vec<&'static str> {
+    let mut f = ISSUE_ROW_FIELDS.to_vec();
+    f.extend(ISSUE_ROW_EXTRAS);
+    f
+}
+
 pub fn command() -> Cmd {
     Cmd::group(
         "issue",
@@ -44,10 +51,14 @@ fn list_cmd() -> Cmd {
 --query searches titles, descriptions and comments, ranked by relevance unless\n\
 --sort is given; Linear allows 30 searches a minute. With one --team, it searches\n\
 that team, as Linear's team search does.\n\
---team falls back to LINEARCTL_TEAM, then to default-team in config.",
+--team falls back to LINEARCTL_TEAM, then to default-team in config.\n\
+parent, relations and inverseRelations are in a row only when --fields names\n\
+them, as issue show has them (each side of a relation with its state); they\n\
+cost one more request per 250 rows, and one per issue with more than 250\n\
+relations.",
         )
         .example(
-            "  linearctl issue list --assignee me --state-type started --json\n  linearctl issue list --team ENG --label bug --updated-since 7d --fields identifier,title --json\n  linearctl issue list --query \"login timeout\" --limit 10",
+            "  linearctl issue list --assignee me --state-type started --json\n  linearctl issue list --team ENG --label bug --updated-since 7d --fields identifier,title --json\n  linearctl issue list --query \"login timeout\" --limit 10\n  linearctl issue list --project \"Q4 launch\" --limit 0 --fields identifier,state,parent,inverseRelations --json",
         )
         .run(list);
     let mut c = filter_flags(c)
@@ -62,7 +73,7 @@ that team, as Linear's team search does.\n\
         .flag(Flag::bool("reverse", "reverse the order of --sort"))
         .flag(limit_flag(25))
         .flag(cursor_flag());
-    c = fields_flag_spec(c, ISSUE_ROW_FIELDS);
+    c = fields_flag_spec(c, &list_fields());
     c
 }
 
@@ -94,7 +105,7 @@ pub fn filter_flags(c: Cmd) -> Cmd {
 }
 
 fn list(run: &mut Run, ctx: &Ctx) -> R {
-    let fields = fields_flag(ctx, ISSUE_ROW_FIELDS)?;
+    let fields = fields_flag(ctx, &list_fields())?;
     let mut filter = list_filter(ctx)?;
     let cursor = cursor_value(ctx)?;
     let query = ctx.str("query");
@@ -185,7 +196,7 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
         }
     }
     vars.insert("filter".into(), filter.map_or(Value::Null, Value::Object));
-    let (items, next) = collect(limit, cursor, |first, after| {
+    let (mut items, next) = collect(limit, cursor, |first, after| {
         vars.insert("first".into(), json!(first));
         vars.insert("after".into(), optional(after));
         let mut data = cl.query(run, doc, Value::Object(vars.clone()))?;
@@ -218,6 +229,7 @@ fn list(run: &mut Run, ctx: &Ctx) -> R {
         }
         Ok(Page::take(&mut data[conn]))
     })?;
+    add_relations(run, &cl, &mut items, &fields)?;
     // Asked-for issues that did not come back: partial, never silent.
     let problems: Vec<Value> = ids
         .iter()
@@ -562,6 +574,34 @@ fn read_all(run: &mut Run, cl: &crate::client::Client, issue: &mut Value) -> R {
     }
     if let Some(labels) = m.shift_remove("allLabels") {
         m.insert("labels".into(), labels);
+    }
+    Ok(())
+}
+
+/// Gives issue rows the parent, relations and inverse relations that
+/// fields names, 250 rows to a request, each relation read in full. A row
+/// whose issue the read did not find has them null.
+fn add_relations(run: &mut Run, cl: &crate::client::Client, items: &mut [Value], fields: &[String]) -> R {
+    let want: Vec<&str> = ISSUE_ROW_EXTRAS.iter().copied().filter(|f| fields.iter().any(|x| x == f)).collect();
+    if want.is_empty() {
+        return Ok(());
+    }
+    for rows in items.chunks_mut(PAGE_SIZE as usize) {
+        let ids: Vec<String> = rows.iter().map(|it| str_at(it, "id")).collect();
+        let vars = json!({"ids": ids, "withParent": want.contains(&"parent"),
+            "withRelations": want.contains(&"relations"), "withInverse": want.contains(&"inverseRelations")});
+        let mut data = cl.query(run, queries::ISSUE_RELATIONS, vars)?;
+        let mut found = data["issues"]["nodes"].as_array_mut().map(std::mem::take).unwrap_or_default();
+        for got in &mut found {
+            read_all(run, cl, got)?;
+        }
+        for row in rows.iter_mut() {
+            let got = found.iter_mut().find(|g| str_at(g, "id") == str_at(row, "id"));
+            let mut got = got.map(Value::take).unwrap_or(Value::Null);
+            for f in &want {
+                row[*f] = got[*f].take();
+            }
+        }
     }
     Ok(())
 }

@@ -86,6 +86,10 @@ pub const ISSUE_ROW_FIELDS: &[&str] = &[
     "labels",
 ];
 
+/// What issue list adds to its rows when --fields names it, and only then:
+/// each is read by IssueRelations, one more request per page of rows.
+pub const ISSUE_ROW_EXTRAS: &[&str] = &["parent", "relations", "inverseRelations"];
+
 pub const VIEWER: &str = "query Viewer { viewer { id name email } organization { name urlKey } }";
 
 /// The issues a saved custom view matches, its own filter applied by Linear
@@ -137,6 +141,27 @@ pub const ISSUE_SHOW_MORE: &str = concat!(
     "query IssueShowMore($id: String!, $labels: String, $withLabels: Boolean!, $children: String, $withChildren: Boolean!,\n  $relations: String, $withRelations: Boolean!, $inverse: String, $withInverse: Boolean!,\n  $attachments: String, $withAttachments: Boolean!) {\n  issue(id: $id) {\n    ",
     show_connections!("more"),
     "\n  }\n}"
+);
+
+/// The parent and relations of up to 250 issue rows, by id. Linear does
+/// not multiply a top-level connection's cost by its first, so this costs
+/// what one issue's relations do (3,805 points with all three, measured
+/// 2026-10-27), where the same selection nested in a saved view's issues
+/// is multiplied per row (42,401 points for 250 rows at first: 10, over
+/// the 10,000 a query may cost). An issue with more than 250 relations
+/// has the rest read by IssueShowMore.
+pub const ISSUE_RELATIONS: &str = concat!(
+    "query IssueRelations($ids: [ID!]!, $withParent: Boolean!, $withRelations: Boolean!, $withInverse: Boolean!) {\n  issues(filter: { id: { in: $ids } }, first: 250, includeArchived: true) { nodes { id\n    parent @include(if: $withParent) { ",
+    issue_side!(),
+    " }\n    relations(first: 250) @include(if: $withRelations) { nodes { ",
+    relation_node!(),
+    " } ",
+    page_info!(),
+    " }\n    inverseRelations(first: 250) @include(if: $withInverse) { nodes { ",
+    relation_node!(),
+    " } ",
+    page_info!(),
+    " } } }\n}"
 );
 
 /// What issue create needs resolved, in one request: names to ids, and
@@ -380,6 +405,7 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("IssueSearch", ISSUE_SEARCH),
         ("IssueShow", ISSUE_SHOW),
         ("IssueShowMore", ISSUE_SHOW_MORE),
+        ("IssueRelations", ISSUE_RELATIONS),
         ("CreateResolve", CREATE_RESOLVE),
         ("IssueCreate", ISSUE_CREATE),
         ("UpdateResolve", UPDATE_RESOLVE),

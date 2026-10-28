@@ -1907,7 +1907,8 @@ exit: 0
           "examples": [
             "linearctl issue list --assignee me --state-type started --json",
             "linearctl issue list --team ENG --label bug --updated-since 7d --fields identifier,title --json",
-            "linearctl issue list --query \"login timeout\" --limit 10"
+            "linearctl issue list --query \"login timeout\" --limit 10",
+            "linearctl issue list --project \"Q4 launch\" --limit 0 --fields identifier,state,parent,inverseRelations --json"
           ],
           "flags": [
             {

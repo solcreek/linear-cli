@@ -223,6 +223,74 @@ func TestIssueListFieldsAndText(t *testing.T) {
 	}
 }
 
+// parent, relations and inverseRelations come in a row only when --fields
+// names them, read by id after the rows, each relation in full; an issue
+// the read does not find has them null.
+func TestIssueListRelationFields(t *testing.T) {
+	t.Parallel()
+	side := func(ident, kind string) map[string]any {
+		return map[string]any{"id": "id-" + ident, "identifier": ident, "title": "t",
+			"state": map[string]any{"id": "s-" + kind, "name": kind, "type": kind}}
+	}
+	blocks := func(from, to string) map[string]any {
+		return map[string]any{"id": "r-" + from + to, "type": "blocks", "issue": side(from, "started"), "relatedIssue": side(to, "unstarted")}
+	}
+	var sent []map[string]any
+	api := listFake(t, conn("", issueNode("ENG-1", "One"), issueNode("ENG-2", "Two"))).
+		onFunc("IssueRelations", func(v map[string]any) (int, any, map[string]string) {
+			sent = append(sent, v)
+			found := map[string]any{"id": "id-ENG-1", "parent": side("ENG-9", "completed"), "inverseRelations": conn("inv1", blocks("ENG-3", "ENG-1"))}
+			return 200, map[string]any{"data": map[string]any{"issues": conn("", found)}}, nil
+		}).
+		onFunc("IssueShowMore", func(v map[string]any) (int, any, map[string]string) {
+			if v["id"] != "id-ENG-1" || v["inverse"] != "inv1" || v["withInverse"] != true || v["withRelations"] != false {
+				t.Errorf("IssueShowMore %v", v)
+			}
+			return 200, map[string]any{"data": map[string]any{"issue": map[string]any{"inverseRelations": conn("", blocks("ENG-4", "ENG-1"))}}}, nil
+		})
+
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "list", "--json")
+	if item := decode(t, r.out)["items"].([]any)[0].(map[string]any); r.code != 0 || item["relations"] != nil || item["parent"] != nil ||
+		slices.Contains(api.ops(), "IssueRelations") {
+		t.Fatalf("default row: exit %d, %v, %v", r.code, item, api.ops())
+	}
+
+	r = runWith(t, opts{api: api, key: testKey}, "issue", "list", "--fields", "identifier,parent,inverseRelations", "--json")
+	items := decode(t, r.out)["items"].([]any)
+	one, two := items[0].(map[string]any), items[1].(map[string]any)
+	if r.code != 0 || len(one) != 3 || jsonOf(one["parent"]) != jsonOf(side("ENG-9", "completed")) {
+		t.Fatalf("exit %d, %q", r.code, r.out)
+	}
+	inv := one["inverseRelations"].([]any)
+	if len(inv) != 2 || jsonOf(inv[0]) != jsonOf(blocks("ENG-3", "ENG-1")) || jsonOf(inv[1]) != jsonOf(blocks("ENG-4", "ENG-1")) {
+		t.Errorf("inverseRelations %v", inv)
+	}
+	if two["parent"] != nil || two["inverseRelations"] != nil {
+		t.Errorf("an issue the read did not find: %v", two)
+	}
+	if len(sent) != 1 || jsonOf(sent[0]["ids"]) != `["id-ENG-1","id-ENG-2"]` ||
+		sent[0]["withParent"] != true || sent[0]["withRelations"] != false || sent[0]["withInverse"] != true {
+		t.Errorf("IssueRelations %v", sent)
+	}
+
+	// 250 rows to a request.
+	full := []any{}
+	for i := range pageSize {
+		full = append(full, issueNode(fmt.Sprintf("ENG-%d", i+1), "x"))
+	}
+	sent = nil
+	api = listFake(t, conn("c1", full...), conn("", issueNode("ENG-251", "x"))).
+		onFunc("IssueRelations", func(v map[string]any) (int, any, map[string]string) {
+			sent = append(sent, v)
+			return 200, map[string]any{"data": map[string]any{"issues": conn("")}}, nil
+		})
+	r = runWith(t, opts{api: api, key: testKey}, "issue", "list", "--limit", "0", "--fields", "relations", "--json")
+	if r.code != 0 || len(sent) != 2 || len(sent[0]["ids"].([]any)) != pageSize || jsonOf(sent[1]["ids"]) != `["id-ENG-251"]` ||
+		sent[1]["withRelations"] != true || sent[1]["withParent"] != false {
+		t.Errorf("exit %d, %d reads", r.code, len(sent))
+	}
+}
+
 func showAnswer() map[string]any {
 	issue := issueNode("ENG-12", "Login times out")
 	issue["description"] = "Steps:\n1. log in\n![shot](https://uploads.linear.app/a/b/c)"

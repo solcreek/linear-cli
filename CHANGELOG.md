@@ -15,6 +15,12 @@ names are only ever added, never renamed or removed.
   `.relatedIssue`, the same in `inverseRelations`) and the `parent` carry
   `state {id, name, type}`, and the parent its `id`. A caller can tell an
   open blocker from a completed one without reading it.
+- `issue list --fields` takes `parent`, `relations` and `inverseRelations`,
+  in issue show's shape, so a caller listing a project can say which issue
+  blocks which, or group by parent, without one `issue show` per issue.
+  They are never in the default row: asking for any of them costs one more
+  request per 250 rows (3,805 complexity points for all three, measured),
+  plus one per issue with more than 250 relations, which are read in full.
 
 ### Fixed
 

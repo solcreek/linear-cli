@@ -105,7 +105,7 @@ flags and exit codes as JSON.
 | command | does | changes things |
 |---|---|---|
 | `auth login` / `status` / `logout` | store, check, remove the API key | login, logout |
-| `issue list` | list and search issues; filter by team, assignee, state, label, project, cycle, date | |
+| `issue list` | list and search issues; filter by team, assignee, state, label, project, cycle, date; `--fields` adds each row's `parent` and relations | |
 | `issue show` | one issue with description, comments, sub-issues, relations, attachments | |
 | `issue create` / `update` / `archive` | change issues | yes |
 | `comment list` / `create` | read and post comments | create |
