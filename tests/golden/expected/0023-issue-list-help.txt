@@ -28,7 +28,7 @@ Examples:
   linearctl issue list --assignee me --state-type started --json
   linearctl issue list --team ENG --label bug --updated-since 7d --fields identifier,title --json
   linearctl issue list --query "login timeout" --limit 10
-  linearctl issue list --project "Q4 launch" --limit 0 --fields identifier,state,parent,inverseRelations --json
+  linearctl issue list --project Q4 --limit 0 --fields identifier,parent,inverseRelations --json
 
 Flags:
       --any-label NAME         only issues with label NAME (repeatable; any of)

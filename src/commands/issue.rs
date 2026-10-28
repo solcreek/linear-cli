@@ -63,7 +63,7 @@ cost one more request per 250 rows, and one per issue with more than 250\n\
 relations.",
         )
         .example(
-            "  linearctl issue list --assignee me --state-type started --json\n  linearctl issue list --team ENG --label bug --updated-since 7d --fields identifier,title --json\n  linearctl issue list --query \"login timeout\" --limit 10\n  linearctl issue list --project \"Q4 launch\" --limit 0 --fields identifier,state,parent,inverseRelations --json",
+            "  linearctl issue list --assignee me --state-type started --json\n  linearctl issue list --team ENG --label bug --updated-since 7d --fields identifier,title --json\n  linearctl issue list --query \"login timeout\" --limit 10\n  linearctl issue list --project Q4 --limit 0 --fields identifier,parent,inverseRelations --json",
         )
         .run(list);
     let mut c = filter_flags(c)
