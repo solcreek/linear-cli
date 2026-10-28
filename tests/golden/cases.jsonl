@@ -398,3 +398,9 @@
 {"args": ["view", "list", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["issue", "list", "--view", "checkout bugs", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["issue", "list", "--view", "Mobile 3.0 open", "--sort", "title"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Checkout v2", "--all-issues", "--fields", "name,issues", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Checkout v2", "--all-issues"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Checkout v2", "--issues", "3", "--fields", "name,issues", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Checkout v2", "--issues", "3"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Checkout v2", "--issues", "7", "--fields", "issuesTruncated", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["project", "show", "Checkout v2", "--issues", "0", "--fields", "name,issuesTruncated", "--json"], "env": {"LINEARCTL_DEMO": "1"}}

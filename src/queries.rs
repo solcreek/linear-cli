@@ -257,7 +257,6 @@ pub const PROJECTS: &str = concat!(
     " }\n}"
 );
 
-/// first: 2 so a name two projects share shows up as ambiguous.
 /// project show: a project's documents after the first 250.
 pub const PROJECT_DOCUMENTS: &str = concat!(
     "query ProjectDocuments($id: String!, $after: String) {\n  project(id: $id) { documents(first: 250, after: $after) { nodes { id title url } ",
@@ -265,12 +264,26 @@ pub const PROJECT_DOCUMENTS: &str = concat!(
     " } }\n}"
 );
 
+/// matches asks for two, so a name two projects share shows up as ambiguous;
+/// the detail asks for one, since first multiplies the cost of everything
+/// nested (as for cycles: two at 250 issues each is over Linear's 10,000).
 pub const PROJECT_FIND: &str = concat!(
-    "query ProjectFind($filter: ProjectFilter!, $issues: Int!, $withIssues: Boolean!) {\n  projects(filter: $filter, first: 2) { nodes {\n    id name slugId url description content startDate targetDate progress health createdAt updatedAt\n    status { id name type } lead { id name email }\n    teams(first: 20) { nodes { id key name } }\n    documents(first: 250) { nodes { id title url } ",
+    "query ProjectFind($filter: ProjectFilter!, $issues: Int!, $withIssues: Boolean!) {\n  matches: projects(filter: $filter, first: 2) { nodes { id name slugId url } }\n  projects(filter: $filter, first: 1) { nodes {\n    id name slugId url description content startDate targetDate progress health createdAt updatedAt\n    status { id name type } lead { id name email }\n    teams(first: 20) { nodes { id key name } }\n    documents(first: 250) { nodes { id title url } ",
     page_info!(),
     " }\n    projectMilestones(first: 50) { nodes { id name targetDate progress } }\n    issues(first: $issues) @include(if: $withIssues) { nodes {",
     issue_row!(),
-    " } }\n  } }\n}"
+    " } ",
+    page_info!(),
+    " }\n  } }\n}"
+);
+
+/// project show --all-issues: a project's issues after the first page.
+pub const PROJECT_ISSUES: &str = concat!(
+    "query ProjectIssues($id: String!, $after: String) {\n  project(id: $id) { issues(first: 250, after: $after) { nodes {",
+    issue_row!(),
+    " } ",
+    page_info!(),
+    " } }\n}"
 );
 
 pub const PROJECT_UPDATE: &str = "mutation ProjectUpdate($id: String!, $input: ProjectUpdateInput!) {\n  projectUpdate(id: $id, input: $input) { success }\n}";
@@ -414,6 +427,7 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("Milestones", MILESTONES),
         ("ProjectFind", PROJECT_FIND),
         ("ProjectDocuments", PROJECT_DOCUMENTS),
+        ("ProjectIssues", PROJECT_ISSUES),
         ("ProjectUpdate", PROJECT_UPDATE),
     ]
 }

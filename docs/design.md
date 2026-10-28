@@ -169,6 +169,12 @@ Example: `pbpaste | linearctl auth login --yes`
     linearctl user list    [--active] [--limit N]
     linearctl project list [--team KEY] [--status TYPE]... [--limit N]
     linearctl cycle list   [--team KEY] [--limit N]
+    linearctl project show PROJECT [--issues N | --all-issues] [--fields LIST]
+
+- `project show` returns `issues` as a list of rows, the first `--issues`
+  (default 50, at most 250, 0 for none), and `issuesTruncated`: Linear's
+  `hasNextPage` for them, so a caller knows when rows were left out.
+  `--all-issues` pages through every one, 250 a request.
 
 ### Files
 
