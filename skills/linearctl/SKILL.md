@@ -45,6 +45,9 @@ before guessing a flag. Always pass `--json`.
 - Lists: `{items, total: null, shown, truncated, nextCursor}`. `total` is
   always null (Linear does not count); continue with `--cursor nextCursor`.
   Keep output small with `--fields` and `--limit`.
+- `project show` and `cycle show` return the first 50 issues: `issuesTruncated`
+  (`issues.truncated` on cycle show) is true when more exist, and
+  `--all-issues` reads every one.
 - Names: `--state`, `--label`, `--project` and `--assignee EMAIL` take names;
   get them from `state list`, `label list`, `project list`, `user list`.
   `--team` falls back to `LINEARCTL_TEAM`, then `config set default-team`.

@@ -110,6 +110,7 @@ flags and exit codes as JSON.
 | `issue create` / `update` / `archive` | change issues | yes |
 | `comment list` / `create` | read and post comments | create |
 | `team` / `state` / `label` / `user` / `project` / `cycle list` | the names other commands take | |
+| `project show` | one project with its overview, documents, milestones and first 50 issues; `--all-issues` for every one, `issuesTruncated` says when some were left out | |
 | `file download` | save an image or attachment from `uploads.linear.app` | yes |
 | `config show` / `set` | `default-team` | set |
 | `api query` | send your own GraphQL query (read-only) | |
