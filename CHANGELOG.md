@@ -9,30 +9,34 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-27
+
 ### Added
 
 - `project show --all-issues` returns every issue in the project, however
   many, 250 a request, as `cycle show --all-issues` does. `--issues N` alone
-  still stops at 250, and `--issues 0` still means none.
+  still stops at 250, and `--issues 0` still means none (#7).
 - `project show` says when it left issues out. `issuesTruncated` is true when
   the project has more issues than came (`--issues`, default 50), false when
   they all did, and absent with `--issues 0`, as `issues` is (null when
-  `--fields` names it); `--fields issues` brings it along. `issues` stays a list of rows. More remaining also prints
-  "N issues shown, more remain; --all-issues for all" on stderr, and the
-  text output's heading reads "N issues (more remain)".
+  `--fields` names it); `--fields issues` brings it along. `issues` stays a
+  list of rows. More remaining also prints "N issues shown, more remain;
+  --all-issues for all" on stderr, and the text output's heading reads
+  "N issues (more remain)" (#7).
 - `issue show`: each side of a relation (`relations[].issue` and
   `.relatedIssue`, the same in `inverseRelations`) and the `parent` carry
   `state {id, name, type}`, and the parent its `id`. A caller can tell an
-  open blocker from a completed one without reading it.
+  open blocker from a completed one without reading it (#9).
 - `issue list --fields` takes `parent`, `relations` and `inverseRelations`,
   in issue show's shape, so a caller listing a project can say which issue
   blocks which, or group by parent, without one `issue show` per issue.
   They are never in the default row: asking for any of them costs one more
   request per 250 rows (3,805 complexity points for all three, measured),
-  plus one per issue with more than 250 relations, which are read in full.
+  plus one per issue with more than 250 relations, which are read in full
+  (#9).
 - `tests/live.rs` checks `--blocked` against Linear (`make live`, a sandbox
   team): a blocked issue drops out when its blocker is completed or
-  canceled, and comes back when it is reopened.
+  canceled, and comes back when it is reopened (#9).
 
 ### Changed
 
@@ -41,16 +45,16 @@ names are only ever added, never renamed or removed.
   `project show` takes: a linear.app project URL, a slugId, a UUID or a
   name (ignoring case); `--milestone` a UUID or a name, which with
   `--project` is looked for in that project only. `none` is as before and
-  costs no request.
+  costs no request (#8).
 - The demo workspace has project milestones (Beta in two projects) and two
-  projects whose names differ only in case.
+  projects whose names differ only in case (#8).
 - `--blocked` and `--blocking` (issue list, watch) say what they match, in
   the help, the README and docs/design.md: Linear's `hasBlockedByRelations`
   and `hasBlockingRelations`, which count a blocks relation only while both
   of its issues are open (triage, backlog, unstarted or started). The help
   used to say "blocked by an open issue", leaving out that the blocked issue
   must be open too, and `--blocking` said nothing about either. The filters
-  sent are unchanged.
+  sent are unchanged (#9).
 
 ### Fixed
 
@@ -60,11 +64,12 @@ names are only ever added, never renamed or removed.
   reference that finds nothing is now `NOT_FOUND`, and a name that finds
   several projects `AMBIGUOUS` with `candidates`, each with `kind` and
   `name`. `--milestone` likewise, for a name milestones of several projects
-  share. `--milestone NAME` with `--project none` is a usage error (exit 2).
+  share. `--milestone NAME` with `--project none` is a usage error (exit 2)
+  (#8).
 - Demo mode answers `--blocked` and `--blocking` as Linear does, where they
   used to list nothing: ENG-140 (in review) blocks ENG-158, so ENG-158 is
   blocked and ENG-140 blocking; ENG-131 (done) blocks ENG-144, which counts
-  for neither.
+  for neither (#9).
 
 ## [0.12.0] - 2026-10-27
 
@@ -417,7 +422,8 @@ names are only ever added, never renamed or removed.
 - Releases for linux, darwin and windows, and the npm package
   `@solcreek/linear-cli` with one native binary per platform.
 
-[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/solcreek/linear-cli/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/solcreek/linear-cli/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/solcreek/linear-cli/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/solcreek/linear-cli/compare/v0.10.0...v0.11.0
