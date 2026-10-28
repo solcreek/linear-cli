@@ -133,9 +133,9 @@ fn show_cmd() -> Cmd {
     let c = Cmd::new("show PROJECT", "Show a project: its overview, milestones and issues")
         .long(
             "Show a project: its description, overview (content), status, health, documents,\n\
-milestones and issues. Documents are read in full; issues up to --issues, and\n\
---all-issues reads every one, 250 a request. issuesTruncated is true when more\n\
-issues exist than came; --fields issues brings it along.\n\
+milestones and issues. Documents and milestones are read in full; issues up to\n\
+--issues, and --all-issues reads every one, 250 a request. issuesTruncated is\n\
+true when more issues exist than came; --fields issues brings it along.\n\
 PROJECT is a linear.app project URL, its slugId (the hex the URL ends with), a UUID,\n\
 or its exact name.",
         )
@@ -161,6 +161,8 @@ fn show(run: &mut Run, ctx: &Ctx) -> R {
     let mut p = find_project(run, &cl, &ctx.args[0], filter, issues)?;
     read_rest(run, &cl, &mut p, "documents", queries::PROJECT_DOCUMENTS)?;
     take_more(&mut p, "documents");
+    read_rest(run, &cl, &mut p, "projectMilestones", queries::PROJECT_MILESTONES)?;
+    take_more(&mut p, "projectMilestones");
     if all {
         read_rest(run, &cl, &mut p, "issues", queries::PROJECT_ISSUES)?;
     }

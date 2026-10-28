@@ -103,6 +103,40 @@ func TestProjectUpdate(t *testing.T) {
 	}
 }
 
+func TestProjectShowReadsEveryMilestone(t *testing.T) {
+	t.Parallel()
+	ms := func(n string) map[string]any {
+		return map[string]any{"id": "m-" + n, "name": n, "targetDate": nil, "progress": 0}
+	}
+	p := projectNode("q4")
+	p["projectMilestones"] = conn("m1", ms("a"))
+	var after []any
+	api := newFake(t).on("ProjectFind", projectFind(p)).
+		onFunc("ProjectMilestones", func(v map[string]any) (int, any, map[string]string) {
+			after = append(after, v["after"])
+			page := conn("m2", ms("b"))
+			if v["after"] == "m2" {
+				page = conn("", ms("c"))
+			}
+			return 200, map[string]any{"data": map[string]any{"project": map[string]any{"projectMilestones": page}}}, nil
+		})
+	r := runWith(t, opts{api: api, key: testKey}, "project", "show", "q4", "--fields", "projectMilestones", "--json")
+	got, _ := decode(t, r.out)["project"].(map[string]any)
+	var names []any
+	for _, m := range got["projectMilestones"].([]any) {
+		names = append(names, m.(map[string]any)["name"])
+	}
+	if r.code != 0 || jsonOf(names) != `["a","b","c"]` {
+		t.Fatalf("exit %d, %q", r.code, r.out)
+	}
+	if jsonOf(after) != `["m1","m2"]` || api.last("ProjectMilestones").Vars["id"] != "p-q4" {
+		t.Errorf("follow-ups %v", after)
+	}
+	if q := api.last("ProjectFind").Query; !strings.Contains(q, "projectMilestones(first: 250) { nodes { id name targetDate progress } pageInfo") {
+		t.Errorf("ProjectFind does not page milestones: %s", q)
+	}
+}
+
 func TestProjectShowReadsEveryDocument(t *testing.T) {
 	t.Parallel()
 	doc := func(n string) map[string]any {
