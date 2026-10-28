@@ -9,11 +9,13 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-10-27
+
 ### Fixed
 
 - `project show` returned a project's first 50 milestones and dropped the
   rest without saying so. It now reads them all, 250 a request, as it does
-  documents.
+  documents (#10).
 
 ## [0.13.0] - 2026-10-27
 
@@ -428,7 +430,8 @@ names are only ever added, never renamed or removed.
 - Releases for linux, darwin and windows, and the npm package
   `@solcreek/linear-cli` with one native binary per platform.
 
-[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/solcreek/linear-cli/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/solcreek/linear-cli/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/solcreek/linear-cli/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/solcreek/linear-cli/compare/v0.11.0...v0.11.1
