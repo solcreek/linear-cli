@@ -9,13 +9,15 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-30
+
 ### Added
 
 - `project create` maps onto Linear's `projectCreate`: `--name`, `--team`
   (repeatable), `--description`, `--content`, `--lead`, `--status`,
   `--priority`, `--start-date`, `--target-date`, and `--json-input` for the
   rest of `ProjectCreateInput`. Like `issue create`, `--yes` needs `--id`, so
-  a rerun returns the existing project with `changed: false`.
+  a rerun returns the existing project with `changed: false` (#11).
 - Demo mode answers `projectStatuses`.
 
 ## [0.13.1] - 2026-10-27
@@ -439,7 +441,8 @@ names are only ever added, never renamed or removed.
 - Releases for linux, darwin and windows, and the npm package
   `@solcreek/linear-cli` with one native binary per platform.
 
-[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.13.1...HEAD
+[Unreleased]: https://github.com/solcreek/linear-cli/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/solcreek/linear-cli/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/solcreek/linear-cli/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/solcreek/linear-cli/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/solcreek/linear-cli/compare/v0.11.1...v0.12.0
