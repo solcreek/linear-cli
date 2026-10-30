@@ -112,6 +112,7 @@ flags and exit codes as JSON.
 | `comment list` / `create` | read and post comments | create |
 | `team` / `state` / `label` / `user` / `project` / `cycle list` | the names other commands take | |
 | `project show` | one project with its overview, documents, milestones and first 50 issues; `--all-issues` for every one, `issuesTruncated` says when some were left out | |
+| `project create` / `update` | create a project in one or more teams; change its name, summary or overview | yes |
 | `file download` | save an image or attachment from `uploads.linear.app` | yes |
 | `config show` / `set` | `default-team` | set |
 | `api query` | send your own GraphQL query (read-only) | |
@@ -169,8 +170,8 @@ flags and exit codes as JSON.
   or for a command that reads none, and your write to the pipe then fails with
   EPIPE: ignore that error and use the exit code.
 - Retry on `NETWORK`, and on `RATE_LIMITED` after `retryAt`. Changes are safe to
-  rerun (`changed: false`); `issue create`, `comment create` and `cycle create`
-  need `--id` for that.
+  rerun (`changed: false`); `issue create`, `comment create`, `cycle create`
+  and `project create` need `--id` for that.
 - Making many calls: `serve --stdio` answers them from one process, about 80 ms
   less each. A request's `"stdin"` is its command's standard input (for
   `--json-input=-`), and `--concurrency N` runs up to N at once, answers matched

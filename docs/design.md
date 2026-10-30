@@ -209,6 +209,29 @@ Example: `pbpaste | linearctl auth login --yes`
   `hasNextPage` for them, so a caller knows when rows were left out.
   `--all-issues` pages through every one, 250 a request.
 
+    linearctl project create --name TEXT [--team KEY]... [--description TEXT|--description-file PATH|-]
+                           [--content TEXT|--content-file PATH|-] [--lead me|EMAIL]
+                           [--status NAME] [--priority 0-4] [--start-date DATE]
+                           [--target-date DATE] [--json-input PATH|-] --id UUID           M
+
+- `projectCreate`, one to one. `--team` is repeatable and becomes `teamIds`
+  in the order given (the first team is the one Linear's `useDefaultTemplate`
+  reads); without it, `teamIds` from `--json-input`, then the default team.
+- One request (`ProjectCreateResolve`) resolves the team keys, the lead's
+  email and the status name, and looks for a project with the chosen id,
+  archived ones included. `projectStatuses` takes no filter, so the status
+  name is matched here, ignoring case, among every status (past 250, the
+  rest are read a page at a request); a name nothing matches fails with
+  `available`, the workspace's status names. Linear answering
+  `success: false` with no project is a failure, not a project made.
+- `--yes` requires `--id`, as for `issue create`: a rerun returns the
+  existing project with `changed: false`.
+- `--json-input` takes `ProjectCreateInput` as is (icon, color, labelIds,
+  memberIds, templateId, …); flags win over its fields.
+- Verified against Linear 2026-10-30: a project created with a lead,
+  status, priority, target date and content came back with each; a rerun
+  with its id, before and after `projectArchive`, was `changed: false`.
+
 ### Files
 
     linearctl file download URL [--output PATH]                                     M

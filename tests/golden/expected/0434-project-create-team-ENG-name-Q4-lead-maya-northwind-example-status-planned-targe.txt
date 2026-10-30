@@ -1,0 +1,5 @@
+exit: 0
+--- stdout
+{"changed":true,"dryRun":true,"id":"7d1e2a3b-4c5d-4e6f-8a9b-0c1d2e3f4a5b","input":{"id":"7d1e2a3b-4c5d-4e6f-8a9b-0c1d2e3f4a5b","leadId":"af30a989-2809-5e5d-a29c-d755f04fc468","name":"Q4","statusId":"295a75cb-7f6b-517d-a73d-be35cfe9a25b","targetDate":"<DATE>","teamIds":["681fd49c-6431-524c-8341-d16f248b011e"]}}
+
+--- stderr

@@ -23,9 +23,10 @@ before guessing a flag. Always pass `--json`.
   `auth logout`, `comment create`, `comment delete`, `comment update`,
   `config set`, `cycle archive`, `cycle create`, `cycle update`,
   `file download`, `issue archive`, `issue create`, `issue unarchive`,
-  `issue update`, `project update`, `relation create`, `relation delete`. Run
-  each with `--dry-run` first, then `--yes`.
-- `issue create`, `comment create` and `cycle create` need `--id UUID` with
+  `issue update`, `project create`, `project update`, `relation create`,
+  `relation delete`. Run each with `--dry-run` first, then `--yes`.
+- `issue create`, `comment create`, `cycle create` and `project create` need
+  `--id UUID` with
   `--yes`. Take the `id` that `--dry-run` prints and pass it to `--yes`;
   retrying with the same id returns the existing item with `"changed": false`,
   never a duplicate.
@@ -135,6 +136,7 @@ asks for the following. They are the caller's to do, built from these commands:
 | [`linearctl label list`](references/label.md) | List issue labels |  |
 | [`linearctl milestone list`](references/milestone.md) | List project milestones |  |
 | [`linearctl notification list`](references/notification.md) | List your inbox notifications, newest first |  |
+| [`linearctl project create`](references/project.md) | Create a project in one or more teams | M |
 | [`linearctl project list`](references/project.md) | List projects |  |
 | [`linearctl project show PROJECT`](references/project.md) | Show a project: its overview, milestones and issues |  |
 | [`linearctl project update PROJECT`](references/project.md) | Change a project's name, description or overview | M |
@@ -166,7 +168,7 @@ binary: when a flag here is refused (exit 2), the installed binary's
 - [label](references/label.md): list
 - [milestone](references/milestone.md): list
 - [notification](references/notification.md): list
-- [project](references/project.md): list, show, update
+- [project](references/project.md): create, list, show, update
 - [relation](references/relation.md): create, delete
 - [serve](references/serve.md): serve
 - [state](references/state.md): list

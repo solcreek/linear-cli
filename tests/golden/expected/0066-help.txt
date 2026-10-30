@@ -28,7 +28,7 @@ Available Commands:
   label        List issue labels
   milestone    List project milestones
   notification List your inbox notifications, newest first
-  project      List, show and update projects
+  project      List, show, create and update projects
   relation     Create and delete relations between issues (blocks, duplicate, related)
   serve        Answer linearctl invocations over stdin and stdout, one JSON line each
   state        List workflow states, by team and position

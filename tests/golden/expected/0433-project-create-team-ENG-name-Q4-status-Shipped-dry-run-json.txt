@@ -1,0 +1,6 @@
+exit: 1
+--- stdout
+{"available":["Backlog","Planned","In Progress","Paused","Completed","Canceled"],"code":"NOT_FOUND","error":"no project status named \"Shipped\"; the workspace has Backlog, Planned, In Progress, Paused, Completed, Canceled","kind":"status","name":"Shipped","usage":false}
+
+--- stderr
+linearctl: no project status named "Shipped"; the workspace has Backlog, Planned, In Progress, Paused, Completed, Canceled
