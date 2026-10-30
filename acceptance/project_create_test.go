@@ -95,3 +95,15 @@ func TestProjectCreate(t *testing.T) {
 		t.Error("a refused create reached Linear")
 	}
 }
+
+// A ProjectPayload with success: false and no project is a failure, not a
+// project created.
+func TestProjectCreateUnsuccessful(t *testing.T) {
+	t.Parallel()
+	api := newFake(t).on("ProjectCreateResolve", projectCreateResolve()).
+		on("ProjectCreate", map[string]any{"projectCreate": map[string]any{"success": false, "project": nil}})
+	r := runWith(t, opts{api: api, key: testKey}, "project", "create", "--team", "ENG", "--name", "Q4", "--id", newProjectID, "--yes", "--json")
+	if d := decode(t, r.out); r.code != exitFailed || d["code"] != "FAILED" {
+		t.Errorf("exit %d, %q", r.code, r.out)
+	}
+}

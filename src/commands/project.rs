@@ -1,6 +1,6 @@
 use crate::cli::{Args, Cmd, Ctx, Flag};
 use crate::client::Client;
-use crate::fail::{Fail, R, ambiguous, missing, usage};
+use crate::fail::{Fail, R, ambiguous, failed, missing, usage};
 use crate::json::quote_go;
 use crate::queries;
 use crate::run::{Run, dry_run};
@@ -370,6 +370,10 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
         return run.output(json!({"changed": true, "dryRun": true, "id": id, "input": input}), &text);
     }
     let mut out = cl.query(run, queries::PROJECT_CREATE, json!({"input": input}))?;
+    // Linear may answer without an error yet without a project: nothing was made.
+    if out["projectCreate"]["success"] != json!(true) || !out["projectCreate"]["project"].is_object() {
+        return Err(failed(format!("Linear did not create project {name} (success: false)")));
+    }
     let p = flatten(out["projectCreate"]["project"].take());
     let text = format!("created project {} {}", printable(&str_at(&p, "name")), str_at(&p, "url"));
     run.output(json!({"changed": true, "dryRun": false, "id": id, "project": p}), &text)
