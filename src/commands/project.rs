@@ -337,7 +337,14 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
         }
     }
     if !status.is_empty() {
-        let all = super::issue::nodes(&r["projectStatuses"]);
+        // Every status, so a name on a later page is found and a name two share is seen.
+        let mut all = super::issue::nodes(&r["projectStatuses"]);
+        let mut info = r["projectStatuses"]["pageInfo"].clone();
+        while info["hasNextPage"] == json!(true) {
+            let mut page = cl.query(run, queries::PROJECT_STATUS_PAGE, json!({"after": info["endCursor"]}))?;
+            all.extend(super::issue::nodes(&page["projectStatuses"]));
+            info = page["projectStatuses"]["pageInfo"].take();
+        }
         let named: Vec<Value> = all.iter().filter(|s| eq_fold(&str_at(s, "name"), &status)).cloned().collect();
         let sid = match named.as_slice() {
             [one] => str_at(one, "id"),

@@ -96,6 +96,40 @@ func TestProjectCreate(t *testing.T) {
 	}
 }
 
+// --status is resolved among every project status, past the first page.
+func TestProjectCreateStatusPages(t *testing.T) {
+	t.Parallel()
+	status := func(id, name string) map[string]any { return map[string]any{"id": id, "name": name, "type": "started"} }
+	for _, c := range []struct {
+		status, code, want string
+	}{
+		{"Shipping", "", "s-ship"},   // only on page 2
+		{"Planned", "AMBIGUOUS", ""}, // on page 1 and page 3
+	} {
+		first := projectCreateResolve()
+		first["projectStatuses"] = conn("p2", status("s-plan", "Planned"))
+		var after []any
+		api := newFake(t).on("ProjectCreateResolve", first).
+			onFunc("ProjectStatusPage", func(v map[string]any) (int, any, map[string]string) {
+				after = append(after, v["after"])
+				page := conn("p3", status("s-ship", "Shipping"))
+				if v["after"] == "p3" {
+					page = conn("", status("s-plan2", "planned"))
+				}
+				return 200, map[string]any{"data": map[string]any{"projectStatuses": page}}, nil
+			})
+		r := runWith(t, opts{api: api, key: testKey}, "project", "create", "--team", "ENG", "--name", "Q4", "--status", c.status, "--dry-run", "--json")
+		d := decode(t, r.out)
+		in, _ := d["input"].(map[string]any)
+		if c.code != "" && (r.code != exitFailed || d["code"] != c.code) || c.code == "" && (r.code != 0 || in["statusId"] != c.want) {
+			t.Errorf("%s: exit %d, %q", c.status, r.code, r.out)
+		}
+		if jsonOf(after) != `["p2","p3"]` {
+			t.Errorf("%s: pages after %v", c.status, after)
+		}
+	}
+}
+
 // A ProjectPayload with success: false and no project is a failure, not a
 // project created.
 func TestProjectCreateUnsuccessful(t *testing.T) {

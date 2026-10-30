@@ -220,8 +220,10 @@ Example: `pbpaste | linearctl auth login --yes`
 - One request (`ProjectCreateResolve`) resolves the team keys, the lead's
   email and the status name, and looks for a project with the chosen id,
   archived ones included. `projectStatuses` takes no filter, so the status
-  name is matched here, ignoring case; a name nothing matches fails with
-  `available`, the workspace's status names.
+  name is matched here, ignoring case, among every status (past 250, the
+  rest are read a page at a request); a name nothing matches fails with
+  `available`, the workspace's status names. Linear answering
+  `success: false` with no project is a failure, not a project made.
 - `--yes` requires `--id`, as for `issue create`: a rerun returns the
   existing project with `changed: false`.
 - `--json-input` takes `ProjectCreateInput` as is (icon, color, labelIds,

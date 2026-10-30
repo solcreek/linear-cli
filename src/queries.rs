@@ -346,7 +346,16 @@ macro_rules! project_row {
 pub const PROJECT_CREATE_RESOLVE: &str = concat!(
     "query ProjectCreateResolve($teams: TeamFilter!, $id: ID!, $email: String!, $withUser: Boolean!, $me: Boolean!,\n  $withStatus: Boolean!) {\n  teams(filter: $teams, first: 250) { nodes { id key } }\n  existing: projects(filter: { id: { eq: $id } }, includeArchived: true) { nodes { ",
     project_row!(),
-    " } }\n  users(filter: { email: { eqIgnoreCase: $email } }) @include(if: $withUser) { nodes { id name email } }\n  viewer @include(if: $me) { id }\n  projectStatuses(first: 250) @include(if: $withStatus) { nodes { id name type } }\n}"
+    " } }\n  users(filter: { email: { eqIgnoreCase: $email } }) @include(if: $withUser) { nodes { id name email } }\n  viewer @include(if: $me) { id }\n  projectStatuses(first: 250) @include(if: $withStatus) { nodes { id name type } ",
+    page_info!(),
+    " }\n}"
+);
+
+/// project create: the workspace's project statuses after the first 250.
+pub const PROJECT_STATUS_PAGE: &str = concat!(
+    "query ProjectStatusPage($after: String) {\n  projectStatuses(first: 250, after: $after) { nodes { id name type } ",
+    page_info!(),
+    " }\n}"
 );
 
 pub const PROJECT_CREATE: &str = concat!(
@@ -505,6 +514,7 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("ProjectUpdate", PROJECT_UPDATE),
         ("ProjectCreateResolve", PROJECT_CREATE_RESOLVE),
         ("ProjectCreate", PROJECT_CREATE),
+        ("ProjectStatusPage", PROJECT_STATUS_PAGE),
     ]
 }
 
