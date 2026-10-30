@@ -12,9 +12,10 @@ before guessing a flag. Always pass `--json`.
   `auth logout`, `comment create`, `comment delete`, `comment update`,
   `config set`, `cycle archive`, `cycle create`, `cycle update`,
   `file download`, `issue archive`, `issue create`, `issue unarchive`,
-  `issue update`, `project update`, `relation create`, `relation delete`. Run
-  each with `--dry-run` first, then `--yes`.
-- `issue create`, `comment create` and `cycle create` need `--id UUID` with
+  `issue update`, `project create`, `project update`, `relation create`,
+  `relation delete`. Run each with `--dry-run` first, then `--yes`.
+- `issue create`, `comment create`, `cycle create` and `project create` need
+  `--id UUID` with
   `--yes`. Take the `id` that `--dry-run` prints and pass it to `--yes`;
   retrying with the same id returns the existing item with `"changed": false`,
   never a duplicate.

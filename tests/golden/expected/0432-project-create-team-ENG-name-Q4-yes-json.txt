@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+{"code":"USAGE","error":"--yes needs --id UUID so a rerun cannot create a second project; run --dry-run for one","usage":true}
+
+--- stderr
+linearctl: --yes needs --id UUID so a rerun cannot create a second project; run --dry-run for one
+Run 'linearctl --help' for usage.

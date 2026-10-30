@@ -49,7 +49,7 @@ LINEARCTL_HOME moves config and credentials under one directory.",
             c.subs.extend(cycle::commands());
         }
         if c.name() == "project" {
-            c.short = "List, show and update projects".into();
+            c.short = "List, show, create and update projects".into();
             c.subs.extend(project::commands());
         }
         subs.push(c);

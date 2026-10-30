@@ -277,6 +277,21 @@ fn build() -> World {
         ("completed", "Completed"),
         ("canceled", "Canceled"),
     ];
+    // The workspace's project statuses, one of each type, as projectStatuses
+    // lists them.
+    let mut statuses: HashMap<&str, usize> = HashMap::new();
+    for (kind, name) in status_names {
+        let status = add(
+            &mut w,
+            HashMap::from([
+                ("id".into(), s(&demo_id("status", kind))),
+                ("name".into(), s(name)),
+                ("type".into(), s(kind)),
+            ]),
+        );
+        statuses.insert(kind, status);
+        w.root.entry("projectStatuses".into()).or_default().push(V::N(status));
+    }
     let mut projects: HashMap<String, usize> = HashMap::new();
     // A milestone by "project/milestone": names repeat across projects.
     let mut milestones: HashMap<String, usize> = HashMap::new();
@@ -284,16 +299,7 @@ fn build() -> World {
         let name = p["name"].as_str().unwrap_or("").to_string();
         let full = demo_id("project", &name);
         let slug_id = full[24..].to_string();
-        let kind = p["status"].as_str().unwrap_or("").to_string();
-        let status_name = status_names.iter().find(|(k, _)| *k == kind).map_or("", |(_, n)| n);
-        let status = add(
-            &mut w,
-            HashMap::from([
-                ("id".into(), s(&demo_id("status", &kind))),
-                ("name".into(), s(status_name)),
-                ("type".into(), s(&kind)),
-            ]),
-        );
+        let status = statuses.get(p["status"].as_str().unwrap_or("")).map_or(NULL, |s| V::N(*s));
         let lead = users.get(&sprint(&p["lead"])).map_or(NULL, |u| V::N(*u));
         let id = add(
             &mut w,
@@ -307,7 +313,7 @@ fn build() -> World {
                 ("startDate".into(), NULL),
                 ("targetDate".into(), at(&p["targetDate"])),
                 ("progress".into(), V::S(num(0.0))),
-                ("status".into(), V::N(status)),
+                ("status".into(), status),
                 ("lead".into(), lead),
                 ("teams".into(), V::L(vec![team_v.clone()])),
                 ("projectMilestones".into(), V::L(vec![])),

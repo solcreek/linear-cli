@@ -724,7 +724,7 @@ fn issue_fields(c: Cmd) -> Cmd {
 }
 
 /// A priority as Linear numbers it: 0-4 or its name.
-fn priority(flag: &str, p: &str) -> R<i64> {
+pub fn priority(flag: &str, p: &str) -> R<i64> {
     let named = match p.to_lowercase().as_str() {
         "none" => Some(0),
         "urgent" => Some(1),
@@ -774,21 +774,26 @@ pub struct Wanted {
     cycle_word: String,
 }
 
-fn read_wanted(ctx: &Ctx) -> R<Wanted> {
-    let mut w = Wanted::default();
+/// Linear's input object from --json-input, empty when it was not given.
+pub fn json_input(ctx: &Ctx) -> R<Map<String, Value>> {
     let path = ctx.str("json-input");
-    if !path.is_empty() {
-        let data = read_input("--json-input", &path)?;
-        let v = crate::json::parse(&data).map_err(|e| usage(format!("--json-input is not a JSON object: {e}")))?;
-        match v {
-            Value::Object(m) => w.input = m,
-            Value::Null => {}
-            other => {
-                let e = crate::json::type_error(&other, "", "map[string]interface {}");
-                return Err(usage(format!("--json-input is not a JSON object: {e}")));
-            }
+    if path.is_empty() {
+        return Ok(Map::new());
+    }
+    let data = read_input("--json-input", &path)?;
+    let v = crate::json::parse(&data).map_err(|e| usage(format!("--json-input is not a JSON object: {e}")))?;
+    match v {
+        Value::Object(m) => Ok(m),
+        Value::Null => Ok(Map::new()),
+        other => {
+            let e = crate::json::type_error(&other, "", "map[string]interface {}");
+            Err(usage(format!("--json-input is not a JSON object: {e}")))
         }
     }
+}
+
+fn read_wanted(ctx: &Ctx) -> R<Wanted> {
+    let mut w = Wanted { input: json_input(ctx)?, ..Default::default() };
     if ctx.changed("title") {
         let t = ctx.str("title");
         plain("--title", &t)?;
@@ -1141,7 +1146,7 @@ pub fn nodes(v: &Value) -> Vec<Value> {
 
 /// The single match for name, or an error naming what was looked for:
 /// kind as its JSON has it, word as its message does.
-fn one(kind: &str, word: &str, name: &str, nodes: &[Value], hint: &str) -> R<String> {
+pub fn one(kind: &str, word: &str, name: &str, nodes: &[Value], hint: &str) -> R<String> {
     match nodes.len() {
         0 => Err(missing(format!("no {word} named {}; see {hint}", quote_go(name))).with(sought(kind, name))),
         1 => Ok(str_at(&nodes[0], "id")),

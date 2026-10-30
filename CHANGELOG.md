@@ -9,6 +9,15 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+### Added
+
+- `project create` maps onto Linear's `projectCreate`: `--name`, `--team`
+  (repeatable), `--description`, `--content`, `--lead`, `--status`,
+  `--priority`, `--start-date`, `--target-date`, and `--json-input` for the
+  rest of `ProjectCreateInput`. Like `issue create`, `--yes` needs `--id`, so
+  a rerun returns the existing project with `changed: false`.
+- Demo mode answers `projectStatuses`.
+
 ## [0.13.1] - 2026-10-27
 
 ### Fixed

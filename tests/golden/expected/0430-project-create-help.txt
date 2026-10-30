@@ -1,0 +1,50 @@
+exit: 0
+--- stdout
+Create a project in one or more teams (--team, repeatable; the first leads).
+Names (team keys, the lead's email, the status) are resolved to ids first;
+--dry-run prints the exact input it would send. --json-input takes Linear's
+ProjectCreateInput as is (icon, color, labelIds, templateId, …); flags win.
+
+--yes requires --id, a UUID you choose, so a rerun can never create a second
+project: if one with that id exists, it is returned with changed: false.
+--dry-run without --id generates one and prints it as id; pass it to --yes.
+Changes things: pass --dry-run to preview, --yes to apply.
+
+Usage:
+  linearctl project create [flags]
+
+Examples:
+  linearctl project create --team ENG --name "Q4 launch" --target-date <DATE> --dry-run --json
+  linearctl project create --team ENG --team DES --name "Q4 launch" --lead me --id 0b6c… --yes
+  linearctl project create --json-input project.json --id 0b6c… --yes
+
+Flags:
+      --content TEXT            its overview, Markdown TEXT
+      --content-file PATH       read the overview from PATH (- for stdin)
+      --description TEXT        its one-line summary, TEXT
+      --description-file PATH   read the summary from PATH (- for stdin)
+      --dry-run                 show what would change; change nothing
+  -h, --help                    help for create
+      --id UUID                 the new project's UUID; required with --yes
+      --json-input PATH         read Linear's input object from PATH (- for stdin); flags win
+      --lead WHO                the project lead, WHO: me or an email
+      --name TEXT               the project's name, TEXT
+      --priority PRIORITY       PRIORITY: 0-4 or none, urgent, high, medium, low
+      --start-date DATE         the planned start, DATE (<DATE>)
+      --status NAME             project status NAME (Linear's default when not given)
+      --target-date DATE        the planned completion, DATE
+      --team KEY                in team KEY (repeatable; else LINEARCTL_TEAM, then default-team)
+      --yes                     apply the change
+
+Global Flags:
+      --demo        use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1
+      --json        print one JSON document on stdout
+      --meta        add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1
+      --timeout N   give up on a network request after N seconds (default 30)
+
+Exit codes: 0 ok, 1 failed, 2 usage, 3 partial, 4 busy, 5 auth (no API key, or
+Linear rejected it), 6 rate-limited (retry after retryAt), 7 conflict (it changed since
+you read it; read it again)
+Run 'linearctl describe' for every command as JSON.
+
+--- stderr

@@ -2936,6 +2936,162 @@ exit: 0
           "args": [],
           "commands": [],
           "examples": [
+            "linearctl project create --team ENG --name \"Q4 launch\" --target-date <DATE> --dry-run --json",
+            "linearctl project create --team ENG --team DES --name \"Q4 launch\" --lead me --id 0b6c… --yes",
+            "linearctl project create --json-input project.json --id 0b6c… --yes"
+          ],
+          "flags": [
+            {
+              "default": null,
+              "description": "its overview, Markdown TEXT",
+              "name": "content",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "read the overview from PATH (- for stdin)",
+              "name": "content-file",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "its one-line summary, TEXT",
+              "name": "description",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "read the summary from PATH (- for stdin)",
+              "name": "description-file",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "show what would change; change nothing",
+              "name": "dry-run",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "help for create",
+              "name": "help",
+              "short": "h",
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "the new project's UUID; required with --yes",
+              "name": "id",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "read Linear's input object from PATH (- for stdin); flags win",
+              "name": "json-input",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "the project lead, WHO: me or an email",
+              "name": "lead",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "the project's name, TEXT",
+              "name": "name",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "PRIORITY: 0-4 or none, urgent, high, medium, low",
+              "name": "priority",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "the planned start, DATE (<DATE>)",
+              "name": "start-date",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "project status NAME (Linear's default when not given)",
+              "name": "status",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "the planned completion, DATE",
+              "name": "target-date",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": "[]",
+              "description": "in team KEY (repeatable; else LINEARCTL_TEAM, then default-team)",
+              "name": "team",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "description": "apply the change",
+              "name": "yes",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "use a built-in fictional workspace: no key, no network; or LINEARCTL_DEMO=1",
+              "name": "demo",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "print one JSON document on stdout",
+              "name": "json",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "add meta (requests sent, rate limit left) to --json; or LINEARCTL_META=1",
+              "name": "meta",
+              "short": null,
+              "type": "boolean"
+            },
+            {
+              "default": "30",
+              "description": "give up on a network request after N seconds",
+              "name": "timeout",
+              "short": null,
+              "type": "integer"
+            }
+          ],
+          "mutates": true,
+          "name": "create",
+          "summary": "Create a project in one or more teams",
+          "usage": "linearctl project create [flags]"
+        },
+        {
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "examples": [
             "linearctl project list --team ENG --status started --json"
           ],
           "flags": [
@@ -3239,7 +3395,7 @@ exit: 0
       ],
       "mutates": false,
       "name": "project",
-      "summary": "List, show and update projects",
+      "summary": "List, show, create and update projects",
       "usage": "linearctl project [flags]"
     },
     {

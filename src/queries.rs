@@ -333,6 +333,28 @@ pub const PROJECT_ISSUES: &str = concat!(
 
 pub const PROJECT_UPDATE: &str = "mutation ProjectUpdate($id: String!, $input: ProjectUpdateInput!) {\n  projectUpdate(id: $id, input: $input) { success }\n}";
 
+/// A project as project create returns it, and as a rerun finds it.
+macro_rules! project_row {
+    () => {
+        "id name slugId url description startDate targetDate priority status { id name type } lead { id name email } teams(first: 20) { nodes { id key } }"
+    };
+}
+
+/// project create's teams, lead and status, and whether a project with the
+/// chosen id exists (archived ones too: the id is taken either way).
+/// projectStatuses has no filter, so a status name is matched here.
+pub const PROJECT_CREATE_RESOLVE: &str = concat!(
+    "query ProjectCreateResolve($teams: TeamFilter!, $id: ID!, $email: String!, $withUser: Boolean!, $me: Boolean!,\n  $withStatus: Boolean!) {\n  teams(filter: $teams, first: 250) { nodes { id key } }\n  existing: projects(filter: { id: { eq: $id } }, includeArchived: true) { nodes { ",
+    project_row!(),
+    " } }\n  users(filter: { email: { eqIgnoreCase: $email } }) @include(if: $withUser) { nodes { id name email } }\n  viewer @include(if: $me) { id }\n  projectStatuses(first: 250) @include(if: $withStatus) { nodes { id name type } }\n}"
+);
+
+pub const PROJECT_CREATE: &str = concat!(
+    "mutation ProjectCreate($input: ProjectCreateInput!) {\n  projectCreate(input: $input) { success project { ",
+    project_row!(),
+    " } }\n}"
+);
+
 /// issue list's and watch's --project and --milestone, resolved to ids
 /// together before the issues are read.
 pub const PLACE_RESOLVE: &str = "query PlaceResolve($project: ProjectFilter!, $withProject: Boolean!,\n  $milestone: ProjectMilestoneFilter!, $withMilestone: Boolean!) {\n  projects(filter: $project, first: 50) @include(if: $withProject) { nodes { id name slugId url } }\n  projectMilestones(filter: $milestone, first: 50) @include(if: $withMilestone) { nodes { id name project { id name } } }\n}";
@@ -481,6 +503,8 @@ pub fn documents() -> Vec<(&'static str, &'static str)> {
         ("ProjectMilestones", PROJECT_MILESTONES),
         ("ProjectIssues", PROJECT_ISSUES),
         ("ProjectUpdate", PROJECT_UPDATE),
+        ("ProjectCreateResolve", PROJECT_CREATE_RESOLVE),
+        ("ProjectCreate", PROJECT_CREATE),
     ]
 }
 

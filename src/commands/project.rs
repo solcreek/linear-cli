@@ -39,9 +39,9 @@ fn with_truncated(mut fields: Vec<String>) -> Vec<String> {
     fields
 }
 
-/// show and update, added to the project command project list made.
+/// show, create and update, added to the project command project list made.
 pub fn commands() -> Vec<Cmd> {
-    vec![show_cmd(), update_cmd()]
+    vec![show_cmd(), create_cmd(), update_cmd()]
 }
 
 /// A project given as a linear.app project URL, its slugId (the hex at the
@@ -199,6 +199,180 @@ fn show(run: &mut Run, ctx: &Ctx) -> R {
         rows(run, is, &["identifier", "state.name", "assignee.name", "title"])?;
     }
     Ok(())
+}
+
+fn create_cmd() -> Cmd {
+    Cmd::new("create", "Create a project in one or more teams")
+        .long(
+            "Create a project in one or more teams (--team, repeatable; the first leads).\n\
+Names (team keys, the lead's email, the status) are resolved to ids first;\n\
+--dry-run prints the exact input it would send. --json-input takes Linear's\n\
+ProjectCreateInput as is (icon, color, labelIds, templateId, …); flags win.\n\n\
+--yes requires --id, a UUID you choose, so a rerun can never create a second\n\
+project: if one with that id exists, it is returned with changed: false.\n\
+--dry-run without --id generates one and prints it as id; pass it to --yes.\n\
+Changes things: pass --dry-run to preview, --yes to apply.",
+        )
+        .example(
+            "  linearctl project create --team ENG --name \"Q4 launch\" --target-date 2026-12-15 --dry-run --json\n  linearctl project create --team ENG --team DES --name \"Q4 launch\" --lead me --id 0b6c… --yes\n  linearctl project create --json-input project.json --id 0b6c… --yes",
+        )
+        .run(create)
+        .flag(Flag::strs("team", "in team `KEY` (repeatable; else LINEARCTL_TEAM, then default-team)"))
+        .flag(Flag::str("name", "the project's name, `TEXT`"))
+        .flag(Flag::str("description", "its one-line summary, `TEXT`"))
+        .flag(Flag::str("description-file", "read the summary from `PATH` (- for stdin)"))
+        .flag(Flag::str("content", "its overview, Markdown `TEXT`"))
+        .flag(Flag::str("content-file", "read the overview from `PATH` (- for stdin)"))
+        .flag(Flag::str("lead", "the project lead, `WHO`: me or an email"))
+        .flag(Flag::str("status", "project status `NAME` (Linear's default when not given)"))
+        .flag(Flag::str("priority", "`PRIORITY`: 0-4 or none, urgent, high, medium, low"))
+        .flag(Flag::str("start-date", "the planned start, `DATE` (2026-11-02)"))
+        .flag(Flag::str("target-date", "the planned completion, `DATE`"))
+        .flag(Flag::str("json-input", "read Linear's input object from `PATH` (- for stdin); flags win"))
+        .flag(Flag::str("id", "the new project's `UUID`; required with --yes"))
+        .mutating()
+}
+
+/// The teams a new project goes in: --team keys, else teamIds from
+/// --json-input, else the default team. Each is (by, value), by being key
+/// or id, in the order given: the first team leads.
+fn create_teams(ctx: &Ctx, input: &Map<String, Value>) -> R<Vec<(&'static str, String)>> {
+    let from_input = input.get("teamIds").filter(|_| !ctx.changed("team"));
+    if let Some(ids) = from_input {
+        let ids: Vec<String> = match ids.as_array() {
+            Some(a) => a.iter().map(|v| v.as_str().unwrap_or("").to_string()).collect(),
+            None => vec![],
+        };
+        if ids.is_empty() || !ids.iter().all(|i| is_uuid(i)) {
+            return Err(usage(format!(
+                "teamIds in --json-input must be a list of team UUIDs; got {ids}",
+                ids = input["teamIds"]
+            )));
+        }
+        return Ok(ids.into_iter().map(|i| ("id", i.to_lowercase())).collect());
+    }
+    let keys = teams_flag(ctx)?;
+    if keys.is_empty() {
+        return Err(usage(
+            "pass --team KEY, or teamIds in --json-input (or set LINEARCTL_TEAM, or default-team with 'linearctl config set')",
+        ));
+    }
+    Ok(keys.into_iter().map(|k| ("key", k)).collect())
+}
+
+fn create(run: &mut Run, ctx: &Ctx) -> R {
+    let dry = dry_run(ctx)?;
+    let id = super::issue::chosen_id(ctx, dry, "create a second project")?;
+    let mut input = super::issue::json_input(ctx)?;
+    if ctx.changed("name") {
+        let name = ctx.str("name");
+        plain("--name", &name)?;
+        input.insert("name".into(), json!(name));
+    }
+    for f in ["description", "content"] {
+        if let Some(v) = text(ctx, f)? {
+            input.insert(f.into(), json!(v));
+        }
+    }
+    let p = ctx.str("priority");
+    if !p.is_empty() {
+        input.insert("priority".into(), json!(super::issue::priority("--priority", &p)?));
+    }
+    for (flag, field) in [("start-date", "startDate"), ("target-date", "targetDate")] {
+        let d = ctx.str(flag);
+        if !ctx.changed(flag) {
+            continue;
+        }
+        if d.len() != 10 || crate::time::parse_date(&d).is_none() {
+            return Err(usage(format!("--{flag} must be a date (2026-11-30); got {}", quote_go(&d))));
+        }
+        input.insert(field.into(), json!(d));
+    }
+    let lead = ctx.str("lead");
+    if !lead.is_empty() && lead != "me" && !is_email(&lead) {
+        return Err(usage(format!("--lead must be me or an email; got {}", quote_go(&lead))));
+    }
+    let status = ctx.str("status");
+    if !status.is_empty() {
+        plain("--status", &status)?;
+    }
+    if input.get("name").and_then(Value::as_str).unwrap_or("").is_empty() {
+        return Err(usage("pass --name (or name in --json-input)"));
+    }
+    let teams = create_teams(ctx, &input)?;
+    let filter: Vec<Value> = teams
+        .iter()
+        .map(|(by, v)| if *by == "key" { json!({"key": {"eqIgnoreCase": v}}) } else { json!({"id": {"eq": v}}) })
+        .collect();
+    let email = if is_email(&lead) { lead.clone() } else { String::new() };
+    let vars = json!({"teams": {"or": filter}, "id": id, "email": email, "withUser": !email.is_empty(),
+        "me": lead == "me", "withStatus": !status.is_empty()});
+    let cl = run.client()?;
+    let r = cl.query(run, queries::PROJECT_CREATE_RESOLVE, vars)?;
+    if let Some(existing) = super::issue::nodes(&r["existing"]).first() {
+        let p = flatten(existing.clone());
+        let text = format!("exists {} {}", printable(&str_at(&p, "name")), str_at(&p, "url"));
+        return run.output(json!({"changed": false, "dryRun": dry, "id": id, "project": p}), &text);
+    }
+    let found = super::issue::nodes(&r["teams"]);
+    let mut ids = vec![];
+    let mut keys = vec![];
+    for (by, v) in &teams {
+        let Some(t) = found.iter().find(|t| eq_fold(&str_at(t, by), v)) else {
+            return Err(missing(format!("no team with {by} {v}; see 'linearctl team list'")).with(sought("team", v)));
+        };
+        if !ids.contains(&str_at(t, "id")) {
+            ids.push(str_at(t, "id"));
+            keys.push(str_at(t, "key"));
+        }
+    }
+    input.insert("teamIds".into(), json!(ids));
+    match lead.as_str() {
+        "" => {}
+        "me" => _ = input.insert("leadId".into(), json!(str_at(&r["viewer"], "id"))),
+        e => {
+            let users = super::issue::nodes(&r["users"]);
+            let lid = super::issue::one("user", "user with email", e, &users, "'linearctl user list'")?;
+            input.insert("leadId".into(), json!(lid));
+        }
+    }
+    if !status.is_empty() {
+        let all = super::issue::nodes(&r["projectStatuses"]);
+        let named: Vec<Value> = all.iter().filter(|s| eq_fold(&str_at(s, "name"), &status)).cloned().collect();
+        let sid = match named.as_slice() {
+            [one] => str_at(one, "id"),
+            [] => {
+                let names: Vec<String> = all.iter().map(|s| str_at(s, "name")).collect();
+                return Err(missing(format!(
+                    "no project status named {}; the workspace has {}",
+                    quote_go(&status),
+                    names.join(", ")
+                ))
+                .with(sought("status", &status))
+                .with(json!({"available": names})));
+            }
+            _ => {
+                return Err(ambiguous(format!(
+                    "{} project statuses are named {}; pass statusId in --json-input",
+                    named.len(),
+                    quote_go(&status)
+                ))
+                .with(sought("status", &status))
+                .with(json!({"candidates": candidates(&named)})));
+            }
+        };
+        input.insert("statusId".into(), json!(sid));
+    }
+    input.insert("id".into(), json!(id));
+    let name = printable(input["name"].as_str().unwrap_or(""));
+    if dry {
+        let text = format!("would create project {name} in {}\nid: {id} (pass --id {id} --yes)", keys.join(", "));
+        return run.output(json!({"changed": true, "dryRun": true, "id": id, "input": input}), &text);
+    }
+    let mut out = cl.query(run, queries::PROJECT_CREATE, json!({"input": input}))?;
+    let p = flatten(out["projectCreate"]["project"].take());
+    let text = format!("created project {} {}", printable(&str_at(&p, "name")), str_at(&p, "url"));
+    run.output(json!({"changed": true, "dryRun": false, "id": id, "project": p}), &text)
 }
 
 fn update_cmd() -> Cmd {

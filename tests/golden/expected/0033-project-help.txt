@@ -1,12 +1,13 @@
 exit: 0
 --- stdout
-List, show and update projects
+List, show, create and update projects
 
 Usage:
   linearctl project [flags]
   linearctl project [command]
 
 Available Commands:
+  create      Create a project in one or more teams
   list        List projects
   show        Show a project: its overview, milestones and issues
   update      Change a project's name, description or overview
