@@ -170,6 +170,16 @@ func linearErr(msg, code string) func(map[string]any) (int, any, map[string]stri
 	}
 }
 
+// takenErr is Linear's refusal of a create whose id is taken, as measured
+// on 2026-11-12: kind is Issue, Comment, …
+func takenErr(kind, id string) func(map[string]any) (int, any, map[string]string) {
+	return func(map[string]any) (int, any, map[string]string) {
+		return 400, map[string]any{"errors": []any{map[string]any{"message": "conflict on insert of " + kind,
+			"extensions": map[string]any{"type": "invalid input", "code": "INPUT_ERROR", "statusCode": 400, "userError": true,
+				"userPresentableMessage": "Entity " + kind + " with id " + id + " already exists."}}}, "data": nil}, nil
+	}
+}
+
 // conn is a connection page.
 func conn(next string, nodes ...any) map[string]any {
 	if nodes == nil {

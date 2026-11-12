@@ -1,6 +1,7 @@
 package acceptance
 
 import (
+	"strings"
 	"sync/atomic"
 	"testing"
 )
@@ -14,6 +15,8 @@ import (
 // answer with the entity there or not, and where the answer carries it.
 type createCase struct {
 	name     string
+	kind     string // Linear's name for it, in its refusal
+	id       string
 	resolve  string
 	mutation string
 	answer   func(existing ...any) map[string]any
@@ -24,25 +27,25 @@ type createCase struct {
 
 func createCases() []createCase {
 	return []createCase{
-		{"issue", "CreateResolve", "IssueCreate",
+		{"issue", "Issue", newIssueID, "CreateResolve", "IssueCreate",
 			func(existing ...any) map[string]any {
 				return resolveAnswer(map[string]any{"existing": conn("", existing...)})
 			},
 			issueNode("ENG-77", "New"), "issue",
 			[]string{"issue", "create", "--team", "ENG", "--title", "New", "--id", newIssueID}},
-		{"comment", "CommentResolve", "CommentCreate",
+		{"comment", "Comment", newIssueID, "CommentResolve", "CommentCreate",
 			func(existing ...any) map[string]any {
 				return map[string]any{"issue": map[string]any{"id": "id-ENG-5", "identifier": "ENG-5"}, "comments": conn("", existing...)}
 			},
 			commentNode(newIssueID, "Fixed"), "comment",
 			[]string{"comment", "create", "ENG-5", "--body", "Fixed", "--id", newIssueID}},
-		{"cycle", "CycleCreateResolve", "CycleCreate",
+		{"cycle", "Cycle", newCycleID, "CycleCreateResolve", "CycleCreate",
 			func(existing ...any) map[string]any {
 				return map[string]any{"teams": conn("", map[string]any{"id": "t-ENG", "key": "ENG"}), "existing": conn("", existing...)}
 			},
 			cycleRow(newCycleID, nil), "cycle",
 			[]string{"cycle", "create", "--team", "ENG", "--starts-at", "2026-11-02", "--ends-at", "2026-11-16", "--id", newCycleID}},
-		{"project", "ProjectCreateResolve", "ProjectCreate",
+		{"project", "Project", newProjectID, "ProjectCreateResolve", "ProjectCreate",
 			func(existing ...any) map[string]any { return projectCreateResolve(existing...) },
 			projectNode("q4"), "project",
 			[]string{"project", "create", "--team", "ENG", "--name", "q4", "--id", newProjectID}},
@@ -77,7 +80,7 @@ func TestCreateRefusedForAnIDThatLandedAnswersUnchanged(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 			// The guard and the first read after the refusal both lag.
-			api := laggingGuard(t, c, 2).onFunc(c.mutation, linearErr("Entity already exists", "INVALID_INPUT"))
+			api := laggingGuard(t, c, 2).onFunc(c.mutation, takenErr(c.kind, c.id))
 			r := runWith(t, opts{api: api, key: testKey}, append(c.args, "--yes", "--json")...)
 			d := decode(t, r.out)
 			if r.code != exitOK || d["changed"] != false || d["dryRun"] != false || d[c.key] == nil {
@@ -96,7 +99,9 @@ func TestCreateRefusedForAnIDThatLandedAnswersUnchanged(t *testing.T) {
 	}
 }
 
-func TestCreateRefusalStandsWhenNothingHoldsTheID(t *testing.T) {
+// A refusal that is not about the id is about the input: it is reported at
+// once, with no read after it.
+func TestCreateRefusedForItsInputIsReportedAtOnce(t *testing.T) {
 	t.Parallel()
 	for _, c := range createCases() {
 		t.Run(c.name, func(t *testing.T) {
@@ -105,6 +110,33 @@ func TestCreateRefusalStandsWhenNothingHoldsTheID(t *testing.T) {
 			r := runWith(t, opts{api: api, key: testKey}, append(c.args, "--yes", "--json")...)
 			d := decode(t, r.out)
 			if r.code != exitFailed || d["code"] != "LINEAR_ERROR" || d["error"] != "Linear: Title is too long" {
+				t.Fatalf("exit %d, %q", r.code, r.out)
+			}
+			if got := count(api, c.resolve); got != 1 {
+				t.Errorf("%s read %d times, want only the guard", c.resolve, got)
+			}
+		})
+	}
+}
+
+// The id is refused as taken, yet nothing ever shows under it: the refusal
+// stands. Either half of Linear's words is enough to read again.
+func TestCreateRefusalStandsWhenNothingHoldsTheID(t *testing.T) {
+	t.Parallel()
+	for i, c := range createCases() {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			refusal, want := takenErr(c.kind, c.id), "Linear: Entity "+c.kind+" with id "+c.id+" already exists."
+			switch i % 3 {
+			case 1: // reworded, the id still named
+				refusal, want = linearErr("id "+strings.ToUpper(c.id)+" is in use", "INVALID_INPUT"), "Linear: id "+strings.ToUpper(c.id)+" is in use"
+			case 2: // the id not named
+				refusal, want = linearErr("That entity already exists", "INVALID_INPUT"), "Linear: That entity already exists"
+			}
+			api := newFake(t).on(c.resolve, c.answer()).onFunc(c.mutation, refusal)
+			r := runWith(t, opts{api: api, key: testKey}, append(c.args, "--yes", "--json")...)
+			d := decode(t, r.out)
+			if r.code != exitFailed || d["code"] != "LINEAR_ERROR" || d["error"] != want {
 				t.Fatalf("exit %d, %q", r.code, r.out)
 			}
 			if got := count(api, c.mutation); got != 1 {
@@ -146,9 +178,9 @@ func TestCreateRefusalStandsWhenTheReadAfterItFails(t *testing.T) {
 			return 200, map[string]any{"data": c.answer()}, nil
 		}
 		return linearErr("boom", "INTERNAL_ERROR")(vars)
-	}).onFunc(c.mutation, linearErr("Entity already exists", "INVALID_INPUT"))
+	}).onFunc(c.mutation, takenErr(c.kind, c.id))
 	r := runWith(t, opts{api: api, key: testKey}, append(c.args, "--yes", "--json")...)
-	if d := decode(t, r.out); r.code != exitFailed || d["error"] != "Linear: Entity already exists" {
+	if d := decode(t, r.out); r.code != exitFailed || d["error"] != "Linear: Entity Comment with id "+c.id+" already exists." {
 		t.Fatalf("exit %d, %q", r.code, r.out)
 	}
 	if got := count(api, c.resolve); got != 2 {

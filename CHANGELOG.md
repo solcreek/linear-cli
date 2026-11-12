@@ -36,9 +36,9 @@ read (#12).
 - `issue create`, `comment create`, `cycle create` and `project create`
   failed a rerun whose earlier attempt had landed, when the read that looks
   for the chosen `--id` lagged: Linear refused the id as taken. After a
-  refusal they now read again (after 100, 200, 400 and 800 ms) and answer
-  `changed: false` with the entity once it shows. A refusal for any other
-  reason is reported as before, about 1.5 s later.
+  refusal of the id ("Entity Issue with id … already exists.") they now read
+  again (after 100, 200, 400 and 800 ms) and answer `changed: false` with the
+  entity once it shows. Any other refusal is reported at once, as before.
 - `project update` answered with the project as it was read before the write:
   after a rename, `url` still carried the old name. It now answers from the
   mutation, adds `project` (`id`, `name`, `slugId`, `url`, `updatedAt`), and

@@ -1233,15 +1233,27 @@ pub fn chosen_id(ctx: &Ctx, dry: bool, needs: &str) -> R<String> {
 /// a refused create may already have made.
 const LANDED_WAITS: [u64; 4] = [100, 200, 400, 800];
 
+/// Whether Linear refused a create because its id is taken. Its words are
+/// "Entity Issue with id <id> already exists." (measured 2026-11-12, the
+/// same for a comment); either half is taken as saying so, in case the other
+/// is reworded. Any other refusal is about the input, and reading again
+/// would only delay it.
+fn id_taken(refused: &Fail, id: &str) -> bool {
+    let Fail::Linear { msg, .. } = refused.base() else { return false };
+    let msg = msg.to_lowercase();
+    msg.contains("already exists") || (!id.is_empty() && msg.contains(&id.to_lowercase()))
+}
+
 /// After Linear refused a create: what holds the chosen id, if anything does.
 ///
 /// The guard that looks for the id before creating is a read, and Linear can
 /// answer a read from before a write it has confirmed. So when an earlier
 /// attempt landed and its answer was lost, the rerun's guard may see nothing,
 /// and Linear then refuses the id as taken: a failure for a create that
-/// succeeded. This reads again (doc with vars, the entity under field),
-/// waiting a little longer each time, and gives the entity once it shows.
-/// When it never does, or a read fails, the refusal stands.
+/// succeeded. This reads again (doc with vars, whose id is the chosen one;
+/// the entity under field), waiting a little longer each time, and gives the
+/// entity once it shows. When it never does, or a read fails, the refusal
+/// stands, as does one that is not about the id.
 pub fn landed(
     run: &mut Run,
     cl: &crate::client::Client,
@@ -1250,7 +1262,7 @@ pub fn landed(
     vars: &Value,
     field: &str,
 ) -> R<Value> {
-    if !matches!(refused.base(), Fail::Linear { .. }) {
+    if !id_taken(&refused, vars["id"].as_str().unwrap_or("")) {
         return Err(refused);
     }
     for wait in LANDED_WAITS {
