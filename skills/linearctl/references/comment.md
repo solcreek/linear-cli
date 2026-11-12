@@ -55,7 +55,7 @@ Flags:
 ```
 List an issue's comments, oldest first.
 
-Fields: id, body, createdAt, url, user, parent
+Fields: id, body, createdAt, updatedAt, url, user, parent
 
 Usage:
   linearctl comment list ISSUE [flags]

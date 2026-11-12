@@ -7,7 +7,9 @@ use crate::run::{Run, dry_run};
 use crate::util::*;
 use serde_json::{Value, json};
 
-const FIELDS: &[&str] = &["id", "body", "createdAt", "url", "user", "parent"];
+/// updatedAt is what comment update's --if-updated-at takes, and what a
+/// later read is compared with.
+const FIELDS: &[&str] = &["id", "body", "createdAt", "updatedAt", "url", "user", "parent"];
 
 pub fn command() -> Cmd {
     Cmd::group(
@@ -179,7 +181,7 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
         &since,
         &str_at(comment, "updatedAt"),
         &format!("comment {id}"),
-        "'linearctl comment list ISSUE', for its issue,",
+        "'linearctl comment list ISSUE --fields id,updatedAt', for its issue,",
     )?;
     // Unlike the other updates, text the read already shows is not sent:
     // Linear sets editedAt for any commentUpdate, also one with the body the

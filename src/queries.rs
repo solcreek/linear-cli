@@ -60,7 +60,7 @@ macro_rules! page_info {
 
 macro_rules! comment_row {
     () => {
-        "id body createdAt url user { name email } parent { id }"
+        "id body createdAt updatedAt url user { name email } parent { id }"
     };
 }
 
@@ -132,7 +132,7 @@ pub const ISSUE_SHOW: &str = concat!(
     issue_side!(),
     " }\n    ",
     show_connections!(""),
-    "\n    comments(first: $comments) @include(if: $withComments) { nodes { id body createdAt url user { name email } parent { id } } }\n  }\n}"
+    "\n    comments(first: $comments) @include(if: $withComments) { nodes { id body createdAt updatedAt url user { name email } parent { id } } }\n  }\n}"
 );
 
 /// The pages of issue show's collections after the first, each read only
@@ -214,14 +214,12 @@ pub const COMMENT_CREATE: &str = concat!(
     " } }\n}"
 );
 
-/// A comment as it is now, with the updatedAt --if-updated-at compares.
-pub const COMMENT: &str =
-    concat!("query Comment($id: String!) { comment(id: $id) { ", comment_row!(), " updatedAt } }");
+pub const COMMENT: &str = concat!("query Comment($id: String!) { comment(id: $id) { ", comment_row!(), " } }");
 
 pub const COMMENT_UPDATE: &str = concat!(
     "mutation CommentUpdate($id: String!, $input: CommentUpdateInput!) {\n  commentUpdate(id: $id, input: $input) { success comment { ",
     comment_row!(),
-    " updatedAt } }\n}"
+    " } }\n}"
 );
 
 pub const COMMENT_DELETE: &str = "mutation CommentDelete($id: String!) { commentDelete(id: $id) { success } }";

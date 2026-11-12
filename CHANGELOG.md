@@ -29,8 +29,9 @@ read (#12).
   project's `updatedAt`; exit 7 when it no longer holds).
 - `cycle update` follows the same rule, and takes `--if-updated-at`. Its
   answer's `cycle` now carries `updatedAt`.
-- `comment update` takes `--if-updated-at` too, and its answer's `comment`
-  now carries `updatedAt`. It still sends nothing for the text the comment
+- `comment update` takes `--if-updated-at` too. Every comment now carries
+  `updatedAt`: in `comment list` (and its `--fields`), `issue show`, and the
+  answers of `comment create` and `comment update`. It still sends nothing for the text the comment
   already has: Linear marks a comment as edited for any text sent.
 
 ### Fixed

@@ -40,6 +40,7 @@ exit: 0
         "createdAt": "<TIME>",
         "id": "30062c2c-4fcf-5a07-aa98-07b7abd4c8ca",
         "parent": null,
+        "updatedAt": "<TIME>",
         "url": "https://linear.app/northwind/issue/ENG-142/checkout-fails-when-a-coupon-code-has-trailing-whitespace#comment-30062c2c",
         "user": {
           "email": "aiko@northwind.example",
@@ -53,6 +54,7 @@ exit: 0
         "parent": {
           "id": "30062c2c-4fcf-5a07-aa98-07b7abd4c8ca"
         },
+        "updatedAt": "<TIME>",
         "url": "https://linear.app/northwind/issue/ENG-142/checkout-fails-when-a-coupon-code-has-trailing-whitespace#comment-bd3300e7",
         "user": {
           "email": "maya@northwind.example",
@@ -64,6 +66,7 @@ exit: 0
         "createdAt": "<TIME>",
         "id": "6b230833-6291-51b2-bd45-73d93f1b6d4c",
         "parent": null,
+        "updatedAt": "<TIME>",
         "url": "https://linear.app/northwind/issue/ENG-142/checkout-fails-when-a-coupon-code-has-trailing-whitespace#comment-6b230833",
         "user": {
           "email": "daniel@northwind.example",
@@ -75,6 +78,7 @@ exit: 0
         "createdAt": "<TIME>",
         "id": "1177a7a3-a08d-5e33-853c-a5bfe5e85a60",
         "parent": null,
+        "updatedAt": "<TIME>",
         "url": "https://linear.app/northwind/issue/ENG-142/checkout-fails-when-a-coupon-code-has-trailing-whitespace#comment-1177a7a3",
         "user": {
           "email": "maya@northwind.example",

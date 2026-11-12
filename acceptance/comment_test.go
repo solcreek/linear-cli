@@ -47,6 +47,31 @@ func commentFake(t *testing.T, existing ...any) *fake {
 		on("CommentCreate", map[string]any{"commentCreate": map[string]any{"success": true, "comment": commentNode(newIssueID, "Fixed")}})
 }
 
+// comment list is where a caller reads the updatedAt that comment update's
+// --if-updated-at takes, and where the conflict's hint sends it.
+func TestCommentListCarriesUpdatedAt(t *testing.T) {
+	t.Parallel()
+	api := newFake(t).on("CommentList", map[string]any{"issue": map[string]any{"comments": conn("", commentNode("a", "first"))}})
+	r := runWith(t, opts{api: api, key: testKey}, "comment", "list", "ENG-5", "--json")
+	if items, _ := decode(t, r.out)["items"].([]any); r.code != 0 || len(items) != 1 || str(items[0].(map[string]any), "updatedAt") != "2026-10-03T08:00:00.000Z" {
+		t.Errorf("exit %d, %q", r.code, r.out)
+	}
+	if !strings.Contains(api.last("CommentList").Query, "updatedAt") {
+		t.Error("CommentList does not ask for updatedAt")
+	}
+	r = runWith(t, opts{api: api, key: testKey}, "comment", "list", "ENG-5", "--fields", "id,updatedAt", "--json")
+	if got := jsonOf(decode(t, r.out)["items"]); r.code != 0 || got != `[{"id":"a","updatedAt":"2026-10-03T08:00:00.000Z"}]` {
+		t.Errorf("--fields id,updatedAt: exit %d, %s", r.code, got)
+	}
+	// The hint of a conflict names the command that reads it.
+	id := "5f1e2a3b-4c5d-4e6f-8a9b-0c1d2e3f4a5b"
+	api = newFake(t).on("Comment", map[string]any{"comment": commentNode(id, "old")})
+	r = runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "new", "--if-updated-at", "2026-10-01T00:00:00Z", "--yes", "--json")
+	if d := decode(t, r.out); r.code != exitConflict || !strings.Contains(str(d, "hint"), "comment list ISSUE --fields id,updatedAt") {
+		t.Errorf("conflict hint: exit %d, %q", r.code, r.out)
+	}
+}
+
 func TestCommentCreate(t *testing.T) {
 	t.Parallel()
 	api := commentFake(t)
