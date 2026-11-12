@@ -182,6 +182,12 @@ Example: `pbpaste | linearctl auth login --yes`
   in `id`, so the agent's flow is dry-run → copy `id` → `--yes --id`. If an issue
   with that id already exists, the result is that issue with `changed: false`.
   The same rule applies to `comment create`.
+- The check for that id is a read, and Linear can answer a read from before a
+  write it confirmed. So when Linear refuses a create because its id is taken,
+  the id is read again (100, 200, 400, 800 ms later): if it shows, an earlier
+  attempt landed and the result is that entity with `changed: false`; if not,
+  the refusal is reported. The create itself is never sent twice, and a
+  refusal about anything else is reported at once.
 - `issue update`: fetches first, to resolve names and to report `changed`
   (whether the issue as read differs from what was asked). Every field named is
   sent, also one the read already shows: Linear can answer a read from before a
@@ -199,7 +205,8 @@ Example: `pbpaste | linearctl auth login --yes`
   would mark an untouched comment as edited. Every update answers with the
   entity as its mutation returned it, `updatedAt` included, never as it was
   read before.
-- Measured against Linear on 2026-11-12, behind the rules above: an
+- Measured against Linear on 2026-11-12, behind the rules above, and checked
+  again by `make live` (`linear_behaves_as_the_write_commands_assume`): an
   `issueUpdate` with the values the issue has leaves `updatedAt` as it was; a
   create with a taken id is refused ("Entity Issue with id … already
   exists."); `issueRelationCreate` for two issues and a type already related
