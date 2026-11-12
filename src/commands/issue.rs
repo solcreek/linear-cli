@@ -1387,8 +1387,9 @@ fn update_cmd() -> Cmd {
 already seems to have: Linear can answer a read from before its last change, so\n\
 the read cannot say that nothing is left to do. changed says whether the issue\n\
 as read differs from what you asked for.\n\
---label replaces all labels; --add-label and --remove-label adjust them, as far\n\
-as the issue as read lacks or has them.\n\
+--label replaces all labels; --add-label and --remove-label adjust them.\n\
+--remove-label removes a label only if the issue as read has it: Linear refuses\n\
+to remove one that is not there.\n\
 State names resolve within the issue's own team.\n\
 --if-updated-at TIME refuses (exit 7, conflict) if the issue changed since you\n\
 read it. It also proves the read current, so only fields that differ are sent,\n\
@@ -1446,17 +1447,26 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     )
     .map_err(|e| with_available(run, &cl, e, &team_id))?;
     let current: Vec<String> = nodes(&is["labels"]).iter().map(|l| str_at(l, "id")).collect();
+    let mut added_all_held = false;
     if !add.is_empty() || !remove.is_empty() {
         let labels = nodes(&res["issueLabels"]);
         let ids = |names: &[String]| label_ids(names, &labels, &team_id);
         let add_ids = ids(&add).map_err(|e| with_available(run, &cl, e, &team_id))?;
         let remove_ids = ids(&remove).map_err(|e| with_available(run, &cl, e, &team_id))?;
-        // These two are differences from the read by nature: a lagging read
-        // can still drop one. --label, which names the whole set, cannot be.
+        // Linear takes a label the issue already has in addedLabelIds and
+        // changes nothing, so like any field, every label to add is sent
+        // unless the read is known to be current (see below). It refuses one
+        // the issue lacks in removedLabelIds ("Label not on issue", measured
+        // 2026-11-12), and the whole update with it, so labels to remove are
+        // sent only as far as the read has them: a lagging read can still
+        // drop one. --label, which names the whole set, has neither limit.
         let added: Vec<&String> = add_ids.iter().filter(|id| !current.contains(id)).collect();
         let removed: Vec<&String> = remove_ids.iter().filter(|id| current.contains(id)).collect();
-        if !added.is_empty() {
+        if current_read && !added.is_empty() {
             w.input.insert("addedLabelIds".into(), json!(added));
+        } else if !current_read && !add_ids.is_empty() {
+            w.input.insert("addedLabelIds".into(), json!(add_ids));
+            added_all_held = added.is_empty();
         }
         if !removed.is_empty() {
             w.input.insert("removedLabelIds".into(), json!(removed));
@@ -1470,6 +1480,9 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     // an older updatedAt and is refused above): then what holds is dropped
     // and a rerun sends nothing.
     let mut holds: Vec<&str> = vec![];
+    if added_all_held {
+        holds.push("addedLabelIds");
+    }
     let id = |v: &Value| if v.is_object() { json!(str_at(v, "id")) } else { Value::Null };
     let description = match &is["description"] {
         Value::String(s) => json!(s),

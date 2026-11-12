@@ -189,13 +189,15 @@ Example: `pbpaste | linearctl auth login --yes`
   otherwise be dropped and reported as unchanged (#12). With `--if-updated-at`
   the read is known to be current (a lagging one carries an older `updatedAt`
   and is refused, exit 7), so only fields that differ are sent; nothing differs
-  → `changed: false`, no request. `--add-label` and `--remove-label` are
-  differences from the read either way; `--label` names the whole set.
+  → `changed: false`, no request. `--add-label` is sent like any field
+  (Linear takes a label that is already there and changes nothing);
+  `--remove-label` only as far as the read has the label, since Linear refuses
+  to remove one the issue lacks, and the whole update with it.
   `comment update`, `cycle update` and `project update` follow the same rule
   and take the same flag. Every update answers with the entity as its mutation
   returned it, `updatedAt` included, never as it was read before.
 - Still decided by a read alone, so a lagging one can misreport them:
-  `--add-label` / `--remove-label`, `relation delete`, `comment delete`, and
+  `--remove-label`, `relation delete`, `comment delete`, and
   the archive commands. Each is a rerun-safe no-op when the read is current.
 - `--json-input` takes Linear's `IssueCreateInput` / `IssueUpdateInput` as is
   (A11); flags given alongside override its fields.

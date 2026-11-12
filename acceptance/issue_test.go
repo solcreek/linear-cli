@@ -641,10 +641,14 @@ func TestIssueUpdateSendsEveryFieldNamed(t *testing.T) {
 		{[]string{"--title", "New title"}, `{"title":"New title"}`, true},
 		{[]string{"--assignee", "none"}, `{"assigneeId":null}`, true},
 		{[]string{"--label", "p1"}, `{"labelIds":["l-p1"]}`, true},
-		// --add-label and --remove-label are differences from the read by nature.
-		{[]string{"--add-label", "bug", "--remove-label", "p1"}, "", false},
+		// A label to add is sent like any field: Linear takes one that is
+		// already there. One to remove is sent only if the read has it, since
+		// Linear refuses to remove a label the issue lacks.
+		{[]string{"--add-label", "bug", "--remove-label", "p1"}, `{"addedLabelIds":["l-bug"]}`, false},
+		{[]string{"--remove-label", "p1"}, "", false},
 		{[]string{"--add-label", "p1", "--remove-label", "bug"}, `{"addedLabelIds":["l-p1"],"removedLabelIds":["l-bug"]}`, true},
-		{[]string{"--add-label", "bug", "--title", "Old title"}, `{"title":"Old title"}`, false},
+		{[]string{"--add-label", "bug", "--add-label", "p1"}, `{"addedLabelIds":["l-bug","l-p1"]}`, true},
+		{[]string{"--add-label", "bug", "--title", "Old title"}, `{"addedLabelIds":["l-bug"],"title":"Old title"}`, false},
 	}
 	for _, c := range cases {
 		api := updateFake(t)

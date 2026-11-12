@@ -22,7 +22,9 @@ read (#12).
   whether the issue as read differs; `input` is what was sent, and `issue` is
   in every answer that sent something. With `--if-updated-at` the read is
   known to be current, and only fields that differ are sent, as before.
-  `--add-label` and `--remove-label` still adjust the labels as read.
+  `--add-label` is sent the same way; `--remove-label` still removes only
+  labels the issue as read has, since Linear refuses to remove one that is
+  not there.
 - `project update` follows the same rule, and takes `--if-updated-at` (the
   project's `updatedAt`; exit 7 when it no longer holds).
 - `cycle update` follows the same rule, and takes `--if-updated-at`. Its
