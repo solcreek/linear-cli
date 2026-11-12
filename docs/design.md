@@ -182,6 +182,16 @@ Example: `pbpaste | linearctl auth login --yes`
   in `id`, so the agent's flow is dry-run → copy `id` → `--yes --id`. If an issue
   with that id already exists, the result is that issue with `changed: false`.
   The same rule applies to `comment create`.
+- The check for that id is a read, and Linear can answer a read from before a
+  write it confirmed. So when Linear refuses a create, the id is read again
+  (100, 200, 400, 800 ms later): if it shows, an earlier attempt landed and the
+  result is that entity with `changed: false`; if not, the refusal is reported.
+  The create itself is never sent twice.
+- `relation create --id UUID` gives the relation an id of the caller's choosing
+  (`IssueRelationCreateInput.id`). It is optional, unlike the other creates: a
+  relation's own ends (issue, type, related issue) already tell a rerun that it
+  exists. The id covers the rerun whose read lags, where only Linear can refuse
+  the second create.
 - `issue update`: fetches first, to resolve names and to report `changed`
   (whether the issue as read differs from what was asked). Every field named is
   sent, also one the read already shows: Linear can answer a read from before a

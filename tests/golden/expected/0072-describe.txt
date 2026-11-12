@@ -3443,6 +3443,13 @@ exit: 0
             },
             {
               "default": null,
+              "description": "the new relation's UUID; a rerun with it cannot create a second",
+              "name": "id",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
               "description": "apply the change",
               "name": "yes",
               "short": null,

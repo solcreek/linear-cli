@@ -29,7 +29,8 @@ before guessing a flag. Always pass `--json`.
   `--id UUID` with
   `--yes`. Take the `id` that `--dry-run` prints and pass it to `--yes`;
   retrying with the same id returns the existing item with `"changed": false`,
-  never a duplicate.
+  never a duplicate. `relation create` takes `--id` too, optionally: pass it
+  whenever a create may be retried.
 - A rerun of any mutating command that has nothing to do succeeds with
   `"changed": false`.
 - Linear can answer a read from before a write it just confirmed. So

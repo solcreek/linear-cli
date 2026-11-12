@@ -1239,16 +1239,16 @@ const LANDED_WAITS: [u64; 4] = [100, 200, 400, 800];
 /// answer a read from before a write it has confirmed. So when an earlier
 /// attempt landed and its answer was lost, the rerun's guard may see nothing,
 /// and Linear then refuses the id as taken: a failure for a create that
-/// succeeded. This reads again (doc with vars, the entity under field),
-/// waiting a little longer each time, and gives the entity once it shows.
-/// When it never does, or a read fails, the refusal stands.
+/// succeeded. This reads again (doc with vars; find picks the entity out of
+/// the answer), waiting a little longer each time, and gives the entity once
+/// it shows. When it never does, or a read fails, the refusal stands.
 pub fn landed(
     run: &mut Run,
     cl: &crate::client::Client,
     refused: Fail,
     doc: &str,
     vars: &Value,
-    field: &str,
+    find: impl Fn(&Value) -> Option<Value>,
 ) -> R<Value> {
     if !matches!(refused.base(), Fail::Linear { .. }) {
         return Err(refused);
@@ -1256,11 +1256,17 @@ pub fn landed(
     for wait in LANDED_WAITS {
         std::thread::sleep(std::time::Duration::from_millis(wait));
         let Ok(r) = cl.query(run, doc, vars.clone()) else { break };
-        if let Some(found) = nodes(&r[field]).into_iter().next() {
+        if let Some(found) = find(&r) {
             return Ok(found);
         }
     }
     Err(refused)
+}
+
+/// landed's find for a guard that answers the entity as the first of a
+/// connection named field.
+pub fn first_of(field: &'static str) -> impl Fn(&Value) -> Option<Value> {
+    move |r| nodes(&r[field]).into_iter().next()
 }
 
 fn create(run: &mut Run, ctx: &Ctx) -> R {
@@ -1319,7 +1325,7 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     let mut out = match cl.query(run, queries::ISSUE_CREATE, json!({"input": w.input})) {
         Ok(out) => out,
         Err(e) => {
-            let existing = landed(run, &cl, e, queries::CREATE_RESOLVE, &vars, "existing")?;
+            let existing = landed(run, &cl, e, queries::CREATE_RESOLVE, &vars, first_of("existing"))?;
             return exists(run, existing);
         }
     };

@@ -330,7 +330,8 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     let mut out = match cl.query(run, queries::CYCLE_CREATE, json!({"input": input})) {
         Ok(out) => out,
         Err(e) => {
-            let existing = super::issue::landed(run, &cl, e, queries::CYCLE_CREATE_RESOLVE, &vars, "existing")?;
+            let find = super::issue::first_of("existing");
+            let existing = super::issue::landed(run, &cl, e, queries::CYCLE_CREATE_RESOLVE, &vars, find)?;
             return exists(run, existing);
         }
     };

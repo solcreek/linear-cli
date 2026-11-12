@@ -6,6 +6,10 @@
 
 ```
 Relate two issues. A relation that already exists is changed: false.
+--id is a UUID you choose for the relation, so a rerun can never relate the two
+twice: Linear refuses an id that is taken, and the result is then the existing
+relation with changed: false. --dry-run without --id generates one and prints
+it as id; pass it to --yes.
 TYPE is one of:
   blocks      ISSUE blocks OTHER
   blocked-by  OTHER blocks ISSUE
@@ -24,6 +28,7 @@ Examples:
 Flags:
       --dry-run   show what would change; change nothing
   -h, --help      help for create
+      --id UUID   the new relation's UUID; a rerun with it cannot create a second
       --yes       apply the change
 ```
 

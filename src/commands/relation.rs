@@ -1,4 +1,4 @@
-use crate::cli::{Args, Cmd, Ctx};
+use crate::cli::{Args, Cmd, Ctx, Flag};
 use crate::fail::{self, Fail, R, missing, usage};
 use crate::json::quote_go;
 use crate::queries;
@@ -24,7 +24,11 @@ pub fn command() -> Cmd {
 fn relation_cmd(create: bool) -> Cmd {
     let verb = if create { "create" } else { "delete" };
     let long = if create {
-        "Relate two issues. A relation that already exists is changed: false.\n"
+        "Relate two issues. A relation that already exists is changed: false.\n\
+--id is a UUID you choose for the relation, so a rerun can never relate the two\n\
+twice: Linear refuses an id that is taken, and the result is then the existing\n\
+relation with changed: false. --dry-run without --id generates one and prints\n\
+it as id; pass it to --yes.\n"
     } else {
         "Remove a relation between two issues. One that is not there is changed: false.\n\
 Without TYPE, removes every relation between the two, in either direction,\n\
@@ -46,8 +50,26 @@ and lists each in relations.\n"
             })
         })
         .mutating();
+    if create {
+        c = c.flag(Flag::str("id", "the new relation's `UUID`; a rerun with it cannot create a second"));
+    }
     c.run = Some(if create { |run, ctx| relation(run, ctx, true) } else { |run, ctx| relation(run, ctx, false) });
     c
+}
+
+/// relation create's --id: the id Linear is to give the new relation, ""
+/// when --yes has none. A dry run makes one up, as the other creates do.
+/// It is optional: the relation's own ends already tell a rerun it exists,
+/// and the id only decides the case where that read lags (see landed).
+fn chosen_id(ctx: &Ctx, dry: bool) -> R<String> {
+    let id = ctx.str("id");
+    if id.is_empty() {
+        return Ok(if dry { new_id() } else { String::new() });
+    }
+    if !is_uuid(&id) {
+        return Err(usage(format!("--id must be a UUID; got {}", quote_go(&id))));
+    }
+    Ok(id.to_lowercase())
 }
 
 /// ISSUE [TYPE] OTHER, checked before anything is sent. TYPE is "" when
@@ -100,8 +122,10 @@ fn relation(run: &mut Run, ctx: &Ctx, create: bool) -> R {
     let verb = if create { "create" } else { "delete" };
     let dry = dry_run(ctx)?;
     let (from, kind, to) = relation_args(&ctx.args)?;
+    let chosen = if create { chosen_id(ctx, dry)? } else { String::new() };
     let cl = run.client()?;
-    let r = cl.query(run, queries::RELATION_RESOLVE, json!({"a": issue_filter(&from), "b": issue_filter(&to)}))?;
+    let vars = json!({"a": issue_filter(&from), "b": issue_filter(&to)});
+    let r = cl.query(run, queries::RELATION_RESOLVE, vars.clone())?;
     let a_nodes = super::issue::nodes(&r["a"]);
     let b_nodes = super::issue::nodes(&r["b"]);
     let Some(a) = a_nodes.first() else {
@@ -134,13 +158,35 @@ fn relation(run: &mut Run, ctx: &Ctx, create: bool) -> R {
         let prefix = if create { "exists: " } else { "no relation: " };
         return run.output(doc, &format!("{prefix}{text}"));
     }
+    if create && !chosen.is_empty() {
+        doc["id"] = json!(chosen);
+    }
+    if dry && create {
+        return run.output(doc, &format!("would create: {text}\nid: {chosen} (pass --id {chosen} --yes)"));
+    }
     if dry {
         return run.output(doc, &format!("would {verb}: {text}"));
     }
     if create {
-        let input = json!({"issueId": str_at(&ends.issue, "id"), "relatedIssueId": str_at(&ends.related, "id"), "type": ends.kind});
-        let out = cl.query(run, queries::RELATION_CREATE, json!({"input": input}))?;
-        doc["relation"]["id"] = json!(str_at(&out["issueRelationCreate"]["issueRelation"], "id"));
+        let mut input = json!({"issueId": str_at(&ends.issue, "id"), "relatedIssueId": str_at(&ends.related, "id"), "type": ends.kind});
+        if !chosen.is_empty() {
+            input["id"] = json!(chosen);
+        }
+        match cl.query(run, queries::RELATION_CREATE, json!({"input": input})) {
+            Ok(out) => doc["relation"]["id"] = json!(str_at(&out["issueRelationCreate"]["issueRelation"], "id")),
+            // Refused: an earlier attempt may have landed while the read above
+            // lagged. Once the relation shows, it exists, as that read would
+            // have said.
+            Err(e) => {
+                let find = |r: &Value| {
+                    let a = super::issue::nodes(&r["a"]).into_iter().next()?;
+                    Some(json!(existing(&a, &ends))).filter(|id| id != "")
+                };
+                doc["relation"]["id"] = super::issue::landed(run, &cl, e, queries::RELATION_RESOLVE, &vars, find)?;
+                doc["changed"] = json!(false);
+                return run.output(doc, &format!("exists: {text}"));
+            }
+        }
     } else {
         cl.query(run, queries::RELATION_DELETE, json!({"id": id}))?;
     }

@@ -13,6 +13,15 @@ Linear can answer a query from before a mutation it has already confirmed.
 These fixes stop linearctl from deciding or reporting a write from such a
 read (#12).
 
+### Added
+
+- `relation create --id UUID` sends an id of your choosing for the relation.
+  Without one, a rerun after a lost answer could relate the two issues twice
+  when its read lagged, and nothing in the request let Linear refuse it. With
+  one Linear refuses the second create, and the result is the existing
+  relation with `changed: false`. `--dry-run` without `--id` generates one and
+  prints it as `id`. The flag is optional.
+
 ### Changed
 
 - `issue update` sends every field you name, also one the issue as read
