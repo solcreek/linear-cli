@@ -582,7 +582,9 @@ func updateFake(t *testing.T) *fake {
 		on("IssueUpdate", map[string]any{"issueUpdate": map[string]any{"success": true, "issue": issueNode("ENG-5", "New title")}})
 }
 
-func TestIssueUpdateSendsOnlyWhatDiffers(t *testing.T) {
+// With --if-updated-at the read is known to be current, so what the issue
+// already has is not sent, and a rerun sends nothing.
+func TestIssueUpdateIfUpdatedAtSendsOnlyWhatDiffers(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		args []string
@@ -603,7 +605,8 @@ func TestIssueUpdateSendsOnlyWhatDiffers(t *testing.T) {
 	}
 	for _, c := range cases {
 		api := updateFake(t)
-		r := runWith(t, opts{api: api, key: testKey}, append([]string{"issue", "update", "ENG-5", "--yes", "--json"}, c.args...)...)
+		r := runWith(t, opts{api: api, key: testKey}, append([]string{"issue", "update", "ENG-5", "--yes", "--json",
+			"--if-updated-at", "2026-10-02T08:00:00Z"}, c.args...)...)
 		d := decode(t, r.out)
 		if r.code != 0 || d["changed"] != (c.want != "") {
 			t.Errorf("%v: exit %d, %q", c.args, r.code, r.out)
@@ -613,6 +616,95 @@ func TestIssueUpdateSendsOnlyWhatDiffers(t *testing.T) {
 		if sent != (c.want != "") || (sent && jsonOf(api.last("IssueUpdate").Vars["input"]) != c.want) {
 			t.Errorf("%v: sent %v %v, want %s", c.args, sent, api.calls()[len(api.calls())-1].Vars["input"], c.want)
 		}
+		if c.want == "" && (d["issue"] != nil || jsonOf(d["input"]) != "{}") {
+			t.Errorf("%v: nothing was sent, yet %q", c.args, r.out)
+		}
+	}
+}
+
+// Linear can answer a read from before a write it confirmed, so without
+// --if-updated-at the read cannot say that a field already holds: a revert
+// sent right after the write it reverts would be dropped. Every field named
+// is sent; changed says whether the issue as read differs (#12).
+func TestIssueUpdateSendsEveryFieldNamed(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		args    []string
+		want    string // the input sent, as JSON; "" for none
+		changed bool
+	}{
+		{[]string{"--state", "In Progress", "--assignee", "ada@example.com", "--priority", "medium", "--title", "Old title"},
+			`{"assigneeId":"u-ada","priority":3,"stateId":"st-doing","title":"Old title"}`, false},
+		{[]string{"--label", "bug"}, `{"labelIds":["l-bug"]}`, false},
+		{[]string{"--parent", "none"}, `{"parentId":null}`, false},
+		{[]string{"--title", "Old title", "--priority", "1"}, `{"priority":1,"title":"Old title"}`, true},
+		{[]string{"--title", "New title"}, `{"title":"New title"}`, true},
+		{[]string{"--assignee", "none"}, `{"assigneeId":null}`, true},
+		{[]string{"--label", "p1"}, `{"labelIds":["l-p1"]}`, true},
+		// --add-label and --remove-label are differences from the read by nature.
+		{[]string{"--add-label", "bug", "--remove-label", "p1"}, "", false},
+		{[]string{"--add-label", "p1", "--remove-label", "bug"}, `{"addedLabelIds":["l-p1"],"removedLabelIds":["l-bug"]}`, true},
+		{[]string{"--add-label", "bug", "--title", "Old title"}, `{"title":"Old title"}`, false},
+	}
+	for _, c := range cases {
+		api := updateFake(t)
+		r := runWith(t, opts{api: api, key: testKey}, append([]string{"issue", "update", "ENG-5", "--yes", "--json"}, c.args...)...)
+		d := decode(t, r.out)
+		if r.code != 0 || d["changed"] != c.changed || d["dryRun"] != false {
+			t.Errorf("%v: exit %d, %q", c.args, r.code, r.out)
+			continue
+		}
+		sent := slices.Contains(api.ops(), "IssueUpdate")
+		if sent != (c.want != "") || (sent && jsonOf(api.last("IssueUpdate").Vars["input"]) != c.want) {
+			t.Errorf("%v: sent %v %v, want %s", c.args, sent, api.calls()[len(api.calls())-1].Vars["input"], c.want)
+		}
+		// The answer carries what was sent, and the issue as the write left it.
+		if sent && (jsonOf(d["input"]) != c.want || d["issue"] == nil) {
+			t.Errorf("%v: answered %q", c.args, r.out)
+		}
+		wantText := "unchanged ENG-5\n"
+		if c.changed {
+			wantText = "updated ENG-5\n"
+		}
+		if r := runWith(t, opts{api: updateFake(t), key: testKey}, append([]string{"issue", "update", "ENG-5", "--yes"}, c.args...)...); r.out != wantText {
+			t.Errorf("%v: text %q, want %q", c.args, r.out, wantText)
+		}
+	}
+}
+
+// The case #12 reports: set a field, then set it back at once. The read
+// behind the second run still shows the issue as it was before the first.
+func TestIssueUpdateRevertIsSentThoughTheReadLags(t *testing.T) {
+	t.Parallel()
+	title := "B" // what Linear holds
+	api := newFake(t).onFunc("UpdateResolve", func(map[string]any) (int, any, map[string]string) {
+		is := currentIssue()
+		is["title"] = "B" // every read lags: it never sees A
+		return 200, map[string]any{"data": resolveAnswer(map[string]any{"issue": is})}, nil
+	}).onFunc("IssueUpdate", func(vars map[string]any) (int, any, map[string]string) {
+		title, _ = vars["input"].(map[string]any)["title"].(string)
+		return 200, map[string]any{"data": map[string]any{"issueUpdate": map[string]any{"success": true, "issue": issueNode("ENG-5", title)}}}, nil
+	})
+	for _, want := range []string{"A", "B"} {
+		r := runWith(t, opts{api: api, key: testKey}, "issue", "update", "ENG-5", "--title", want, "--yes", "--json")
+		if d := decode(t, r.out); r.code != 0 || title != want || str(d, "issue.title") != want {
+			t.Fatalf("--title %s: exit %d, Linear holds %q, answered %q", want, r.code, title, r.out)
+		}
+	}
+}
+
+// A dry run prints what --yes would send, and says when the read already has it.
+func TestIssueUpdateDryRunOfWhatTheReadAlreadyHas(t *testing.T) {
+	t.Parallel()
+	api := updateFake(t)
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "update", "ENG-5", "--title", "Old title", "--dry-run", "--json")
+	if d := decode(t, r.out); r.code != 0 || d["changed"] != false || d["dryRun"] != true || jsonOf(d["input"]) != `{"title":"Old title"}` ||
+		slices.Contains(api.ops(), "IssueUpdate") {
+		t.Errorf("exit %d, %q", r.code, r.out)
+	}
+	r = runWith(t, opts{api: api, key: testKey}, "issue", "update", "ENG-5", "--title", "Old title", "--dry-run")
+	if r.code != 0 || r.out != "unchanged ENG-5, as read; would send it all the same\n" {
+		t.Errorf("text: exit %d, %q", r.code, r.out)
 	}
 }
 

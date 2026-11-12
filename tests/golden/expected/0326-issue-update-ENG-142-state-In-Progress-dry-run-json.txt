@@ -1,5 +1,5 @@
 exit: 0
 --- stdout
-{"changed":false,"dryRun":true,"identifier":"ENG-142","input":{}}
+{"changed":false,"dryRun":true,"identifier":"ENG-142","input":{"stateId":"4c7db0ed-4c47-5173-9c6d-4eea911f1ab2"}}
 
 --- stderr

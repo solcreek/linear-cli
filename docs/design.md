@@ -182,8 +182,15 @@ Example: `pbpaste | linearctl auth login --yes`
   in `id`, so the agent's flow is dry-run → copy `id` → `--yes --id`. If an issue
   with that id already exists, the result is that issue with `changed: false`.
   The same rule applies to `comment create`.
-- `issue update`: fetches first and sends only fields that differ; nothing differs
-  → `changed: false`, no request.
+- `issue update`: fetches first, to resolve names and to report `changed`
+  (whether the issue as read differs from what was asked). Every field named is
+  sent, also one the read already shows: Linear can answer a read from before a
+  write it confirmed, so a revert sent right after the write it reverts would
+  otherwise be dropped and reported as unchanged (#12). With `--if-updated-at`
+  the read is known to be current (a lagging one carries an older `updatedAt`
+  and is refused, exit 7), so only fields that differ are sent; nothing differs
+  → `changed: false`, no request. `--add-label` and `--remove-label` are
+  differences from the read either way; `--label` names the whole set.
 - `--json-input` takes Linear's `IssueCreateInput` / `IssueUpdateInput` as is
   (A11); flags given alongside override its fields.
 - `--dry-run` resolves every name to an id and prints the exact mutation input it

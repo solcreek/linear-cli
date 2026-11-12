@@ -1,5 +1,5 @@
 exit: 0
 --- stdout
-{"changed":false,"dryRun":true,"identifier":"ENG-142","input":{}}
+{"changed":false,"dryRun":true,"identifier":"ENG-142","input":{"labelIds":["83ce6140-aabf-565d-b4c6-1e862431f51d","e2a62ed0-f858-5c4d-9629-75da7d57bc08"]}}
 
 --- stderr

@@ -13,6 +13,17 @@ Linear can answer a query from before a mutation it has already confirmed.
 These fixes stop linearctl from deciding or reporting a write from such a
 read (#12).
 
+### Changed
+
+- `issue update` sends every field you name, also one the issue as read
+  already has. It used to drop those, so a revert sent right after the write
+  it reverts (set the assignee, then set it back) was dropped when the read
+  lagged, and reported `changed: false` with exit 0. `changed` still says
+  whether the issue as read differs; `input` is what was sent, and `issue` is
+  in every answer that sent something. With `--if-updated-at` the read is
+  known to be current, and only fields that differ are sent, as before.
+  `--add-label` and `--remove-label` still adjust the labels as read.
+
 ### Fixed
 
 - `issue create`, `comment create`, `cycle create` and `project create`

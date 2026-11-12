@@ -1332,11 +1332,16 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
 fn update_cmd() -> Cmd {
     let c = Cmd::new("update ISSUE", "Change an issue's fields")
         .long(
-            "Change an issue's fields. Only fields that differ from the issue as it is are\n\
-sent; when none differ, nothing is sent and the result is changed: false.\n\
---label replaces all labels; --add-label and --remove-label adjust them.\n\
+            "Change an issue's fields. Every field you name is sent, also one the issue\n\
+already seems to have: Linear can answer a read from before its last change, so\n\
+the read cannot say that nothing is left to do. changed says whether the issue\n\
+as read differs from what you asked for.\n\
+--label replaces all labels; --add-label and --remove-label adjust them, as far\n\
+as the issue as read lacks or has them.\n\
 State names resolve within the issue's own team.\n\
---if-updated-at TIME refuses (exit 7, conflict) if the issue changed since you\nread it.\n\
+--if-updated-at TIME refuses (exit 7, conflict) if the issue changed since you\n\
+read it. It also proves the read current, so only fields that differ are sent,\n\
+and when none differ nothing is.\n\
 Changes things: pass --dry-run to preview, --yes to apply.",
         )
         .example(
@@ -1407,6 +1412,8 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
         let ids = |names: &[String]| label_ids(names, &labels, &team_id);
         let add_ids = ids(&add).map_err(|e| with_available(run, &cl, e, &team_id))?;
         let remove_ids = ids(&remove).map_err(|e| with_available(run, &cl, e, &team_id))?;
+        // These two are differences from the read by nature: a lagging read
+        // can still drop one. --label, which names the whole set, cannot be.
         let added: Vec<&String> = add_ids.iter().filter(|id| !current.contains(id)).collect();
         let removed: Vec<&String> = remove_ids.iter().filter(|id| current.contains(id)).collect();
         if !added.is_empty() {
@@ -1416,7 +1423,15 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
             w.input.insert("removedLabelIds".into(), json!(removed));
         }
     }
-    // Drop what already holds, so a rerun sends nothing.
+    // What the issue as read already has. Linear can answer a read from
+    // before a write it confirmed, so the read alone cannot say a field
+    // holds: a revert sent right after the write it reverts would be dropped
+    // and reported as unchanged. Every field named is therefore sent. A
+    // matching --if-updated-at proves the read current (a lagging one carries
+    // an older updatedAt and is refused above): then what holds is dropped
+    // and a rerun sends nothing.
+    let current_read = !since.is_empty();
+    let mut holds: Vec<&str> = vec![];
     let id = |v: &Value| if v.is_object() { json!(str_at(v, "id")) } else { Value::Null };
     let description = match &is["description"] {
         Value::String(s) => json!(s),
@@ -1439,7 +1454,7 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     ];
     for (k, v) in now {
         if w.input.get(k).is_some_and(|got| marshal(got) == marshal(&v)) {
-            w.input.shift_remove(k);
+            holds.push(k);
         }
     }
     if !w.labels.is_empty()
@@ -1450,13 +1465,22 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
         a.sort();
         b.sort();
         if a == b {
-            w.input.shift_remove("labelIds");
+            holds.push("labelIds");
         }
     }
-    let changed = !w.input.is_empty();
+    let changed = w.input.keys().any(|k| !holds.contains(&k.as_str()));
+    if current_read {
+        for k in holds {
+            w.input.shift_remove(k);
+        }
+    }
+    let send = !w.input.is_empty();
     let mut doc = json!({"changed": changed, "dryRun": dry, "identifier": identifier, "input": w.input});
-    if !changed {
+    if !send {
         return run.output(doc, &format!("unchanged {identifier}"));
+    }
+    if dry && !changed {
+        return run.output(doc, &format!("unchanged {identifier}, as read; would send it all the same"));
     }
     if dry {
         let mut keys: Vec<&String> = w.input.keys().collect();
@@ -1467,7 +1491,8 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     let mut out = cl.query(run, queries::ISSUE_UPDATE, json!({"id": str_at(is, "id"), "input": w.input}))?;
     complete_labels(run, &cl, &mut out)?;
     doc["issue"] = flatten(out["issueUpdate"]["issue"].take());
-    run.output(doc, &format!("updated {identifier}"))
+    let verb = if changed { "updated" } else { "unchanged" };
+    run.output(doc, &format!("{verb} {identifier}"))
 }
 
 fn archive_cmd(archive: bool) -> Cmd {
