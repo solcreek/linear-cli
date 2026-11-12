@@ -32,6 +32,8 @@ read (#12).
   in every answer that sent something. With `--if-updated-at` the read is
   known to be current, and only fields that differ are sent, as before.
   `--add-label` and `--remove-label` still adjust the labels as read.
+- `project update` follows the same rule, and takes `--if-updated-at` (the
+  project's `updatedAt`; exit 7 when it no longer holds).
 
 ### Fixed
 

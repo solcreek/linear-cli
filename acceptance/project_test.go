@@ -9,7 +9,8 @@ import (
 func projectNode(name string) map[string]any {
 	return map[string]any{"id": "p-" + name, "name": name, "slugId": "0527ca4c9128", "description": "Ship it",
 		"content": "# Overview\nold", "url": "https://linear.app/acme/project/" + name + "-0527ca4c9128",
-		"status": map[string]any{"name": "In Progress"}, "issues": nodes(issueNode("ENG-1", "One"))}
+		"updatedAt": "2026-10-02T08:00:00.000Z",
+		"status":    map[string]any{"name": "In Progress"}, "issues": nodes(issueNode("ENG-1", "One"))}
 }
 
 // projectFind is ProjectFind's answer: every project found as a match, the
@@ -81,10 +82,18 @@ func TestProjectUpdate(t *testing.T) {
 		on("ProjectUpdate", map[string]any{"projectUpdate": map[string]any{"success": true, "project": map[string]any{
 			"id": "p-q4", "name": "Q4 launch", "slugId": "0527ca4c9128", "url": "https://linear.app/acme/project/q4-launch-0527ca4c9128",
 			"updatedAt": "2026-11-12T16:37:12.030Z"}}})
+	// Every field named is sent: the read may lag a write Linear confirmed (#12).
 	r := runWith(t, opts{api: api, key: testKey, stdin: "# Overview\nnew"}, "project", "update", "q4",
 		"--content-file", "-", "--description", "Ship it", "--dry-run", "--json")
-	if d := decode(t, r.out); r.code != 0 || jsonOf(d["input"]) != `{"content":"# Overview\nnew"}` || slices.Contains(api.ops(), "ProjectUpdate") {
+	if d := decode(t, r.out); r.code != 0 || d["changed"] != true || jsonOf(d["input"]) != `{"content":"# Overview\nnew","description":"Ship it"}` ||
+		slices.Contains(api.ops(), "ProjectUpdate") {
 		t.Errorf("dry run: exit %d, %q", r.code, r.out)
+	}
+	// --if-updated-at proves the read current: only what differs is sent.
+	r = runWith(t, opts{api: api, key: testKey, stdin: "# Overview\nnew"}, "project", "update", "q4",
+		"--content-file", "-", "--description", "Ship it", "--if-updated-at", "2026-10-02T08:00:00Z", "--dry-run", "--json")
+	if d := decode(t, r.out); r.code != 0 || jsonOf(d["input"]) != `{"content":"# Overview\nnew"}` || slices.Contains(api.ops(), "ProjectUpdate") {
+		t.Errorf("dry run --if-updated-at: exit %d, %q", r.code, r.out)
 	}
 	if v := api.last("ProjectFind").Vars; v["withIssues"] != false {
 		t.Errorf("update fetched issues: %v", v)
@@ -100,12 +109,34 @@ func TestProjectUpdate(t *testing.T) {
 		str(d, "project.url") != d["url"] || d["id"] != "p-q4" {
 		t.Errorf("yes answered with the project as it was: %q", r.out)
 	}
-	n := len(api.calls())
+	// What the read already shows is sent all the same, and reported unchanged.
 	r = runWith(t, opts{api: api, key: testKey}, "project", "update", "q4", "--description", "Ship it", "--yes", "--json")
-	if d := decode(t, r.out); r.code != 0 || d["changed"] != false || len(api.calls()) != n+1 {
+	if d := decode(t, r.out); r.code != 0 || d["changed"] != false || jsonOf(api.last("ProjectUpdate").Vars["input"]) != `{"description":"Ship it"}` ||
+		d["project"] == nil {
 		t.Errorf("same: exit %d, %q", r.code, r.out)
 	}
-	for _, args := range [][]string{{}, {"--name", ""}, {"--content", "a", "--content-file", "-"}} {
+	if r := runWith(t, opts{api: api, key: testKey}, "project", "update", "q4", "--description", "Ship it", "--yes"); r.out != "unchanged Q4 launch\n" {
+		t.Errorf("same, text: %q", r.out)
+	}
+	if r := runWith(t, opts{api: api, key: testKey}, "project", "update", "q4", "--description", "Ship it", "--dry-run"); r.out != "unchanged q4, as read; would send it all the same\n" {
+		t.Errorf("same, dry run text: %q", r.out)
+	}
+	// With --if-updated-at nothing is left to send.
+	n := len(api.calls())
+	r = runWith(t, opts{api: api, key: testKey}, "project", "update", "q4", "--description", "Ship it",
+		"--if-updated-at", "2026-10-02T08:00:00Z", "--yes", "--json")
+	if d := decode(t, r.out); r.code != 0 || d["changed"] != false || len(api.calls()) != n+1 || jsonOf(d["input"]) != "{}" {
+		t.Errorf("same --if-updated-at: exit %d, %q", r.code, r.out)
+	}
+	// A project that changed since, or a read that lags, is refused before anything is sent.
+	n = len(api.calls())
+	r = runWith(t, opts{api: api, key: testKey}, "project", "update", "q4", "--name", "Other",
+		"--if-updated-at", "2026-10-01T00:00:00Z", "--yes", "--json")
+	if d := decode(t, r.out); r.code != exitConflict || d["code"] != "CONFLICT" || len(api.calls()) != n+1 ||
+		!strings.Contains(str(d, "error"), "project q4 changed at 2026-10-02T08:00:00.000Z") {
+		t.Errorf("conflict: exit %d, %q", r.code, r.out)
+	}
+	for _, args := range [][]string{{}, {"--name", ""}, {"--content", "a", "--content-file", "-"}, {"--name", "x", "--if-updated-at", "yesterday"}} {
 		if r := runWith(t, opts{api: api, key: testKey}, append([]string{"project", "update", "q4", "--dry-run"}, args...)...); r.code != exitUsage {
 			t.Errorf("%v: exit %d", args, r.code)
 		}

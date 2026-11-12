@@ -400,8 +400,12 @@ fn update_cmd() -> Cmd {
     Cmd::new("update PROJECT", "Change a project's name, description or overview")
         .long(
             "Change a project's name, description (its one-line summary) or content (the\n\
-overview document; the new text replaces all of it). Only fields that differ are\n\
-sent; when none do, nothing is sent and the result is changed: false.\n\
+overview document; the new text replaces all of it). Every field you name is\n\
+sent, also one the project already seems to have: Linear can answer a read from\n\
+before its last change. changed says whether the project as read differs.\n\
+--if-updated-at TIME refuses (exit 7, conflict) if the project changed since you\n\
+read it. It also proves the read current, so only fields that differ are sent,\n\
+and when none differ nothing is.\n\
 PROJECT is a URL, slugId, UUID or exact name, as for project show.\n\
 A change answers with project as the write left it: its url after a rename, and\n\
 the updatedAt a later read must reach.\n\
@@ -417,6 +421,7 @@ Changes things: pass --dry-run to preview, --yes to apply.",
         .flag(Flag::str("description-file", "read the summary from `PATH` (- for stdin)"))
         .flag(Flag::str("content", "the new overview, Markdown `TEXT`; replaces all of it"))
         .flag(Flag::str("content-file", "read the overview from `PATH` (- for stdin)"))
+        .flag(super::issue::if_updated_at_flag())
         .mutating()
 }
 
@@ -437,14 +442,30 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     if input.is_empty() {
         return Err(usage("pass --name, --description, or --content / --content-file"));
     }
+    let since = super::issue::if_updated_at(ctx, "project")?;
     let cl = run.client()?;
     let p = find_project(run, &cl, &ctx.args[0], filter, 0)?;
-    input.retain(|k, v| str_at(&p, k) != v.as_str().unwrap_or(""));
-    let changed = !input.is_empty();
-    let mut doc = json!({"changed": changed, "dryRun": dry, "id": p["id"], "url": p["url"], "input": input});
     let name = printable(&str_at(&p, "name"));
-    if !changed {
+    // As issue update: the read may lag a write Linear confirmed, so what it
+    // already shows is still sent, unless --if-updated-at proves it current.
+    let current_read = super::issue::read_is_current(
+        &since,
+        &str_at(&p, "updatedAt"),
+        &format!("project {name}"),
+        &format!("'linearctl project show {}'", str_at(&p, "slugId")),
+    )?;
+    let differs = |k: &String, v: &Value| str_at(&p, k) != v.as_str().unwrap_or("");
+    let changed = input.iter().any(|(k, v)| differs(k, v));
+    if current_read {
+        input.retain(|k, v| differs(k, v));
+    }
+    let send = !input.is_empty();
+    let mut doc = json!({"changed": changed, "dryRun": dry, "id": p["id"], "url": p["url"], "input": input});
+    if !send {
         return run.output(doc, &format!("unchanged {name}"));
+    }
+    if dry && !changed {
+        return run.output(doc, &format!("unchanged {name}, as read; would send it all the same"));
     }
     if dry {
         return run.output(doc, &format!("would update {name}"));
@@ -459,7 +480,8 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     doc["url"] = updated["url"].clone();
     let name = printable(&str_at(&updated, "name"));
     doc["project"] = updated;
-    run.output(doc, &format!("updated {name}"))
+    let verb = if changed { "updated" } else { "unchanged" };
+    run.output(doc, &format!("{verb} {name}"))
 }
 
 #[cfg(test)]

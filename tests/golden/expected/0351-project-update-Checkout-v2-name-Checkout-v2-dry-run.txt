@@ -1,5 +1,5 @@
 exit: 0
 --- stdout
-unchanged Checkout v2
+unchanged Checkout v2, as read; would send it all the same
 
 --- stderr

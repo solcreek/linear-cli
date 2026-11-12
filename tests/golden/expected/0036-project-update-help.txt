@@ -1,8 +1,12 @@
 exit: 0
 --- stdout
 Change a project's name, description (its one-line summary) or content (the
-overview document; the new text replaces all of it). Only fields that differ are
-sent; when none do, nothing is sent and the result is changed: false.
+overview document; the new text replaces all of it). Every field you name is
+sent, also one the project already seems to have: Linear can answer a read from
+before its last change. changed says whether the project as read differs.
+--if-updated-at TIME refuses (exit 7, conflict) if the project changed since you
+read it. It also proves the read current, so only fields that differ are sent,
+and when none differ nothing is.
 PROJECT is a URL, slugId, UUID or exact name, as for project show.
 A change answers with project as the write left it: its url after a rename, and
 the updatedAt a later read must reach.
@@ -22,6 +26,7 @@ Flags:
       --description-file PATH   read the summary from PATH (- for stdin)
       --dry-run                 show what would change; change nothing
   -h, --help                    help for update
+      --if-updated-at TIME      change it only if its updatedAt is still TIME (else exit 7)
       --name TEXT               the new name, TEXT
       --yes                     apply the change
 
