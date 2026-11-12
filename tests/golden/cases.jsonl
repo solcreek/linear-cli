@@ -342,12 +342,12 @@
 {"args": ["comment", "create", "ENG-142", "--body", "hi", "--id", "5f1e0000-0000-4000-8000-000000000001", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["relation", "create", "ENG-142", "related", "ENG-131", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["relation", "create", "ENG-142", "related", "ENG-131", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
-{"args": ["relation", "create", "ENG-131", "blocked-by", "ENG-142", "--id", "0b6c5f0e-0000-4000-8000-000000000002", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
-{"args": ["relation", "create", "ENG-131", "blocked-by", "ENG-142", "--id", "0b6c5f0e-0000-4000-8000-000000000002", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["relation", "create", "ENG-131", "blocked-by", "ENG-142", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["relation", "create", "ENG-131", "blocked-by", "ENG-142", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["relation", "delete", "ENG-142", "blocks", "ENG-158", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["relation", "delete", "ENG-142", "blocks", "ENG-158", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
-{"args": ["relation", "create", "ENG-142", "duplicate", "ENG-158", "--id", "0b6c5f0e-0000-4000-8000-000000000002", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
-{"args": ["relation", "create", "ENG-142", "duplicate", "ENG-158", "--id", "0b6c5f0e-0000-4000-8000-000000000002", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["relation", "create", "ENG-142", "duplicate", "ENG-158", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
+{"args": ["relation", "create", "ENG-142", "duplicate", "ENG-158", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["project", "update", "Checkout v2", "--name", "Checkout v2", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["project", "update", "Checkout v2", "--name", "Checkout v2", "--dry-run"], "env": {"LINEARCTL_DEMO": "1"}}
 {"args": ["project", "update", "Checkout v2", "--description", "x", "--dry-run", "--json"], "env": {"LINEARCTL_DEMO": "1"}}

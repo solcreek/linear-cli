@@ -1,4 +1,4 @@
-use super::issue::{chosen_id, first_of, landed, nodes};
+use super::issue::{chosen_id, landed, nodes};
 use crate::cli::{Args, Cmd, Ctx, Flag};
 use crate::fail::{self, Fail, R, usage};
 use crate::json::quote_go;
@@ -120,7 +120,7 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     let out = match cl.query(run, queries::COMMENT_CREATE, json!({"input": input})) {
         Ok(out) => out,
         Err(e) => {
-            let c = landed(run, &cl, e, queries::COMMENT_RESOLVE, &vars, first_of("comments"))?;
+            let c = landed(run, &cl, e, queries::COMMENT_RESOLVE, &vars, "comments")?;
             return exists(run, c);
         }
     };
