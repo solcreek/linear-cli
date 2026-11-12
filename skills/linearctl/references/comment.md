@@ -74,7 +74,11 @@ Flags:
 ## linearctl comment update
 
 ```
-Replace a comment's Markdown text. The same text again is changed: false.
+Replace a comment's Markdown text. The text is sent also when the comment
+already seems to have it: Linear can answer a read from before its last change.
+changed says whether the comment as read differs.
+--if-updated-at TIME refuses (exit 7, conflict) if the comment changed since you
+read it. It also proves the read current, so the same text again sends nothing.
 Changes things: pass --dry-run to preview, --yes to apply.
 
 Usage:
@@ -85,9 +89,10 @@ Examples:
   linearctl comment update 5f1e… --body "Fixed in #43" --yes
 
 Flags:
-      --body TEXT        the new text, Markdown TEXT
-      --body-file PATH   read the new text from PATH (- for stdin)
-      --dry-run          show what would change; change nothing
-  -h, --help             help for update
-      --yes              apply the change
+      --body TEXT            the new text, Markdown TEXT
+      --body-file PATH       read the new text from PATH (- for stdin)
+      --dry-run              show what would change; change nothing
+  -h, --help                 help for update
+      --if-updated-at TIME   change it only if its updatedAt is still TIME (else exit 7)
+      --yes                  apply the change
 ```

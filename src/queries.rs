@@ -214,12 +214,14 @@ pub const COMMENT_CREATE: &str = concat!(
     " } }\n}"
 );
 
-pub const COMMENT: &str = concat!("query Comment($id: String!) { comment(id: $id) { ", comment_row!(), " } }");
+/// A comment as it is now, with the updatedAt --if-updated-at compares.
+pub const COMMENT: &str =
+    concat!("query Comment($id: String!) { comment(id: $id) { ", comment_row!(), " updatedAt } }");
 
 pub const COMMENT_UPDATE: &str = concat!(
     "mutation CommentUpdate($id: String!, $input: CommentUpdateInput!) {\n  commentUpdate(id: $id, input: $input) { success comment { ",
     comment_row!(),
-    " } }\n}"
+    " updatedAt } }\n}"
 );
 
 pub const COMMENT_DELETE: &str = "mutation CommentDelete($id: String!) { commentDelete(id: $id) { success } }";

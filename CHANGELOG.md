@@ -36,6 +36,9 @@ read (#12).
   project's `updatedAt`; exit 7 when it no longer holds).
 - `cycle update` follows the same rule, and takes `--if-updated-at`. Its
   answer's `cycle` now carries `updatedAt`.
+- `comment update` follows the same rule, and takes `--if-updated-at`. Its
+  answer's `comment` now carries `updatedAt`. Sending the same text again may
+  mark the comment as edited in Linear; pass `--if-updated-at` to send nothing.
 
 ### Fixed
 
