@@ -308,11 +308,14 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     let vars = json!({"teams": {"or": filter}, "id": id, "email": email, "withUser": !email.is_empty(),
         "me": lead == "me", "withStatus": !status.is_empty()});
     let cl = run.client()?;
-    let r = cl.query(run, queries::PROJECT_CREATE_RESOLVE, vars)?;
-    if let Some(existing) = super::issue::nodes(&r["existing"]).first() {
-        let p = flatten(existing.clone());
+    let r = cl.query(run, queries::PROJECT_CREATE_RESOLVE, vars.clone())?;
+    let exists = |run: &mut Run, existing: Value| -> R {
+        let p = flatten(existing);
         let text = format!("exists {} {}", printable(&str_at(&p, "name")), str_at(&p, "url"));
-        return run.output(json!({"changed": false, "dryRun": dry, "id": id, "project": p}), &text);
+        run.output(json!({"changed": false, "dryRun": dry, "id": id, "project": p}), &text)
+    };
+    if let Some(existing) = super::issue::nodes(&r["existing"]).into_iter().next() {
+        return exists(run, existing);
     }
     let found = super::issue::nodes(&r["teams"]);
     let mut ids = vec![];
@@ -376,7 +379,13 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
         let text = format!("would create project {name} in {}\nid: {id} (pass --id {id} --yes)", keys.join(", "));
         return run.output(json!({"changed": true, "dryRun": true, "id": id, "input": input}), &text);
     }
-    let mut out = cl.query(run, queries::PROJECT_CREATE, json!({"input": input}))?;
+    let mut out = match cl.query(run, queries::PROJECT_CREATE, json!({"input": input})) {
+        Ok(out) => out,
+        Err(e) => {
+            let existing = super::issue::landed(run, &cl, e, queries::PROJECT_CREATE_RESOLVE, &vars, "existing")?;
+            return exists(run, existing);
+        }
+    };
     // Linear may answer without an error yet without a project: nothing was made.
     if out["projectCreate"]["success"] != json!(true) || !out["projectCreate"]["project"].is_object() {
         return Err(failed(format!("Linear did not create project {name} (success: false)")));

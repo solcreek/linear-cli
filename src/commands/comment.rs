@@ -1,11 +1,11 @@
-use super::issue::{chosen_id, nodes};
+use super::issue::{chosen_id, landed, nodes};
 use crate::cli::{Args, Cmd, Ctx, Flag};
 use crate::fail::{self, Fail, R, usage};
 use crate::json::quote_go;
 use crate::queries;
 use crate::run::{Run, dry_run};
 use crate::util::*;
-use serde_json::json;
+use serde_json::{Value, json};
 
 const FIELDS: &[&str] = &["id", "body", "createdAt", "url", "user", "parent"];
 
@@ -97,13 +97,17 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
         )));
     }
     let cl = run.client()?;
+    let vars = json!({"issue": r, "id": id});
     let res = cl
-        .query(run, queries::COMMENT_RESOLVE, json!({"issue": r, "id": id}))
+        .query(run, queries::COMMENT_RESOLVE, vars.clone())
         .map_err(|e| e.not_found(&format!("issue {r}"), fail::FIND_ISSUE))?;
-    if let Some(c) = nodes(&res["comments"]).first() {
-        let it = flatten(c.clone());
+    let exists = |run: &mut Run, c: Value| -> R {
+        let it = flatten(c);
         let text = format!("exists {}", str_at(&it, "url"));
-        return run.output(json!({"changed": false, "dryRun": dry, "id": id, "comment": it}), &text);
+        run.output(json!({"changed": false, "dryRun": dry, "id": id, "comment": it}), &text)
+    };
+    if let Some(c) = nodes(&res["comments"]).into_iter().next() {
+        return exists(run, c);
     }
     let mut input = json!({"id": id, "issueId": str_at(&res["issue"], "id"), "body": body});
     if !parent.is_empty() {
@@ -113,7 +117,13 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
         let text = format!("would comment on {}\nid: {id} (pass --id {id} --yes)", str_at(&res["issue"], "identifier"));
         return run.output(json!({"changed": true, "dryRun": true, "id": id, "input": input}), &text);
     }
-    let out = cl.query(run, queries::COMMENT_CREATE, json!({"input": input}))?;
+    let out = match cl.query(run, queries::COMMENT_CREATE, json!({"input": input})) {
+        Ok(out) => out,
+        Err(e) => {
+            let c = landed(run, &cl, e, queries::COMMENT_RESOLVE, &vars, "comments")?;
+            return exists(run, c);
+        }
+    };
     let it = flatten(out["commentCreate"]["comment"].clone());
     let text = format!("commented {}", str_at(&it, "url"));
     run.output(json!({"changed": true, "dryRun": false, "id": id, "comment": it}), &text)

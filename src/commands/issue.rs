@@ -1229,6 +1229,40 @@ pub fn chosen_id(ctx: &Ctx, dry: bool, needs: &str) -> R<String> {
     Ok(id.to_lowercase())
 }
 
+/// How long to wait, in milliseconds, before each read that looks for what
+/// a refused create may already have made.
+const LANDED_WAITS: [u64; 4] = [100, 200, 400, 800];
+
+/// After Linear refused a create: what holds the chosen id, if anything does.
+///
+/// The guard that looks for the id before creating is a read, and Linear can
+/// answer a read from before a write it has confirmed. So when an earlier
+/// attempt landed and its answer was lost, the rerun's guard may see nothing,
+/// and Linear then refuses the id as taken: a failure for a create that
+/// succeeded. This reads again (doc with vars, the entity under field),
+/// waiting a little longer each time, and gives the entity once it shows.
+/// When it never does, or a read fails, the refusal stands.
+pub fn landed(
+    run: &mut Run,
+    cl: &crate::client::Client,
+    refused: Fail,
+    doc: &str,
+    vars: &Value,
+    field: &str,
+) -> R<Value> {
+    if !matches!(refused.base(), Fail::Linear { .. }) {
+        return Err(refused);
+    }
+    for wait in LANDED_WAITS {
+        std::thread::sleep(std::time::Duration::from_millis(wait));
+        let Ok(r) = cl.query(run, doc, vars.clone()) else { break };
+        if let Some(found) = nodes(&r[field]).into_iter().next() {
+            return Ok(found);
+        }
+    }
+    Err(refused)
+}
+
 fn create(run: &mut Run, ctx: &Ctx) -> R {
     let dry = dry_run(ctx)?;
     let id = chosen_id(ctx, dry, "create a second issue")?;
@@ -1257,12 +1291,16 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     vars.insert("team".into(), team_filter);
     vars.insert("id".into(), json!(id));
     vars.insert("withID".into(), json!(true));
-    let mut r = cl.query(run, queries::CREATE_RESOLVE, Value::Object(vars))?;
-    complete_labels(run, &cl, &mut r["existing"])?;
-    if let Some(existing) = nodes(&r["existing"]).first() {
-        let it = flatten(existing.clone());
+    let vars = Value::Object(vars);
+    let r = cl.query(run, queries::CREATE_RESOLVE, vars.clone())?;
+    let exists = |run: &mut Run, mut existing: Value| -> R {
+        complete_labels(run, &cl, &mut existing)?;
+        let it = flatten(existing);
         let text = format!("exists {} {}", str_at(&it, "identifier"), str_at(&it, "url"));
-        return run.output(json!({"changed": false, "dryRun": dry, "id": id, "issue": it}), &text);
+        run.output(json!({"changed": false, "dryRun": dry, "id": id, "issue": it}), &text)
+    };
+    if let Some(existing) = nodes(&r["existing"]).into_iter().next() {
+        return exists(run, existing);
     }
     let teams = nodes(&r["teams"]);
     let Some(t) = teams.first() else {
@@ -1278,7 +1316,13 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
         let text = format!("would create in {}: {title}\nid: {id} (pass --id {id} --yes)", str_at(t, "key"));
         return run.output(json!({"changed": true, "dryRun": true, "id": id, "input": w.input}), &text);
     }
-    let mut out = cl.query(run, queries::ISSUE_CREATE, json!({"input": w.input}))?;
+    let mut out = match cl.query(run, queries::ISSUE_CREATE, json!({"input": w.input})) {
+        Ok(out) => out,
+        Err(e) => {
+            let existing = landed(run, &cl, e, queries::CREATE_RESOLVE, &vars, "existing")?;
+            return exists(run, existing);
+        }
+    };
     complete_labels(run, &cl, &mut out)?;
     let it = flatten(out["issueCreate"]["issue"].take());
     let text = format!("created {} {}", str_at(&it, "identifier"), str_at(&it, "url"));

@@ -307,11 +307,15 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
         return Err(usage("--ends-at must be after --starts-at"));
     }
     let cl = run.client()?;
-    let r = cl.query(run, queries::CYCLE_CREATE_RESOLVE, json!({"team": team, "id": id}))?;
-    if let Some(existing) = super::issue::nodes(&r["existing"]).first() {
-        let c = flatten(existing.clone());
+    let vars = json!({"team": team, "id": id});
+    let r = cl.query(run, queries::CYCLE_CREATE_RESOLVE, vars.clone())?;
+    let exists = |run: &mut Run, existing: Value| -> R {
+        let c = flatten(existing);
         let text = format!("exists cycle {} in {}", str_at(&c, "number"), str_at(&c, "team.key"));
-        return run.output(json!({"changed": false, "dryRun": dry, "id": id, "cycle": c}), &text);
+        run.output(json!({"changed": false, "dryRun": dry, "id": id, "cycle": c}), &text)
+    };
+    if let Some(existing) = super::issue::nodes(&r["existing"]).into_iter().next() {
+        return exists(run, existing);
     }
     let teams = super::issue::nodes(&r["teams"]);
     let Some(t) = teams.first() else {
@@ -323,7 +327,13 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
         let text = format!("would create a cycle in {}\nid: {id} (pass --id {id} --yes)", str_at(t, "key"));
         return run.output(json!({"changed": true, "dryRun": true, "id": id, "input": input}), &text);
     }
-    let mut out = cl.query(run, queries::CYCLE_CREATE, json!({"input": input}))?;
+    let mut out = match cl.query(run, queries::CYCLE_CREATE, json!({"input": input})) {
+        Ok(out) => out,
+        Err(e) => {
+            let existing = super::issue::landed(run, &cl, e, queries::CYCLE_CREATE_RESOLVE, &vars, "existing")?;
+            return exists(run, existing);
+        }
+    };
     let c = flatten(out["cycleCreate"]["cycle"].take());
     let text = format!("created cycle {} in {}", str_at(&c, "number"), str_at(&c, "team.key"));
     run.output(json!({"changed": true, "dryRun": false, "id": id, "cycle": c}), &text)
