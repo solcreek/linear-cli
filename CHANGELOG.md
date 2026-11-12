@@ -9,6 +9,17 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+Linear can answer a query from before a mutation it has already confirmed.
+These fixes stop linearctl from deciding or reporting a write from such a
+read (#12).
+
+### Fixed
+
+- `project update` answered with the project as it was read before the write:
+  after a rename, `url` still carried the old name. It now answers from the
+  mutation, adds `project` (`id`, `name`, `slugId`, `url`, `updatedAt`), and
+  fails when Linear reports `success: false`.
+
 ## [0.14.0] - 2026-10-30
 
 ### Added

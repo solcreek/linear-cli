@@ -393,6 +393,8 @@ fn update_cmd() -> Cmd {
 overview document; the new text replaces all of it). Only fields that differ are\n\
 sent; when none do, nothing is sent and the result is changed: false.\n\
 PROJECT is a URL, slugId, UUID or exact name, as for project show.\n\
+A change answers with project as the write left it: its url after a rename, and\n\
+the updatedAt a later read must reach.\n\
 Changes things: pass --dry-run to preview, --yes to apply.",
         )
         .example(
@@ -429,7 +431,7 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     let p = find_project(run, &cl, &ctx.args[0], filter, 0)?;
     input.retain(|k, v| str_at(&p, k) != v.as_str().unwrap_or(""));
     let changed = !input.is_empty();
-    let doc = json!({"changed": changed, "dryRun": dry, "id": p["id"], "url": p["url"], "input": input});
+    let mut doc = json!({"changed": changed, "dryRun": dry, "id": p["id"], "url": p["url"], "input": input});
     let name = printable(&str_at(&p, "name"));
     if !changed {
         return run.output(doc, &format!("unchanged {name}"));
@@ -437,7 +439,16 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     if dry {
         return run.output(doc, &format!("would update {name}"));
     }
-    cl.query(run, queries::PROJECT_UPDATE, json!({"id": p["id"], "input": input}))?;
+    let mut out = cl.query(run, queries::PROJECT_UPDATE, json!({"id": p["id"], "input": doc["input"]}))?;
+    // Answer with the project as the write left it: a rename moves its url,
+    // and its updatedAt is what a caller waits for a later read to reach.
+    if out["projectUpdate"]["success"] != json!(true) || !out["projectUpdate"]["project"].is_object() {
+        return Err(failed(format!("Linear did not update project {name} (success: false)")));
+    }
+    let updated = flatten(out["projectUpdate"]["project"].take());
+    doc["url"] = updated["url"].clone();
+    let name = printable(&str_at(&updated, "name"));
+    doc["project"] = updated;
     run.output(doc, &format!("updated {name}"))
 }
 

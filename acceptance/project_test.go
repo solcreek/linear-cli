@@ -78,7 +78,9 @@ func TestProjectShowNotFoundAndAmbiguous(t *testing.T) {
 func TestProjectUpdate(t *testing.T) {
 	t.Parallel()
 	api := newFake(t).on("ProjectFind", projectFind(projectNode("q4"))).
-		on("ProjectUpdate", map[string]any{"projectUpdate": map[string]any{"success": true}})
+		on("ProjectUpdate", map[string]any{"projectUpdate": map[string]any{"success": true, "project": map[string]any{
+			"id": "p-q4", "name": "Q4 launch", "slugId": "0527ca4c9128", "url": "https://linear.app/acme/project/q4-launch-0527ca4c9128",
+			"updatedAt": "2026-11-12T16:37:12.030Z"}}})
 	r := runWith(t, opts{api: api, key: testKey, stdin: "# Overview\nnew"}, "project", "update", "q4",
 		"--content-file", "-", "--description", "Ship it", "--dry-run", "--json")
 	if d := decode(t, r.out); r.code != 0 || jsonOf(d["input"]) != `{"content":"# Overview\nnew"}` || slices.Contains(api.ops(), "ProjectUpdate") {
@@ -91,6 +93,13 @@ func TestProjectUpdate(t *testing.T) {
 	if c := api.last("ProjectUpdate"); r.code != 0 || c.Vars["id"] != "p-q4" || jsonOf(c.Vars["input"]) != `{"name":"Q4 launch"}` {
 		t.Errorf("yes: exit %d, %q", r.code, r.out)
 	}
+	// The answer is the project as the write left it, not as it was read before:
+	// a rename moves the url, and updatedAt is what a later read must reach (#12).
+	if d := decode(t, r.out); d["url"] != "https://linear.app/acme/project/q4-launch-0527ca4c9128" ||
+		str(d, "project.name") != "Q4 launch" || str(d, "project.updatedAt") != "2026-11-12T16:37:12.030Z" ||
+		str(d, "project.url") != d["url"] || d["id"] != "p-q4" {
+		t.Errorf("yes answered with the project as it was: %q", r.out)
+	}
 	n := len(api.calls())
 	r = runWith(t, opts{api: api, key: testKey}, "project", "update", "q4", "--description", "Ship it", "--yes", "--json")
 	if d := decode(t, r.out); r.code != 0 || d["changed"] != false || len(api.calls()) != n+1 {
@@ -100,6 +109,17 @@ func TestProjectUpdate(t *testing.T) {
 		if r := runWith(t, opts{api: api, key: testKey}, append([]string{"project", "update", "q4", "--dry-run"}, args...)...); r.code != exitUsage {
 			t.Errorf("%v: exit %d", args, r.code)
 		}
+	}
+}
+
+// Linear can answer without an error and without a project: nothing changed.
+func TestProjectUpdateFailsWhenLinearUpdatesNothing(t *testing.T) {
+	t.Parallel()
+	api := newFake(t).on("ProjectFind", projectFind(projectNode("q4"))).
+		on("ProjectUpdate", map[string]any{"projectUpdate": map[string]any{"success": false, "project": nil}})
+	r := runWith(t, opts{api: api, key: testKey}, "project", "update", "q4", "--name", "Q4 launch", "--yes", "--json")
+	if d := decode(t, r.out); r.code != exitFailed || d["code"] != "FAILED" {
+		t.Errorf("exit %d, %q", r.code, r.out)
 	}
 }
 

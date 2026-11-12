@@ -101,6 +101,8 @@ Change a project's name, description (its one-line summary) or content (the
 overview document; the new text replaces all of it). Only fields that differ are
 sent; when none do, nothing is sent and the result is changed: false.
 PROJECT is a URL, slugId, UUID or exact name, as for project show.
+A change answers with project as the write left it: its url after a rename, and
+the updatedAt a later read must reach.
 Changes things: pass --dry-run to preview, --yes to apply.
 
 Usage:
