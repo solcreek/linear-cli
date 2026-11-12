@@ -34,10 +34,12 @@ before guessing a flag. Always pass `--json`.
 - A rerun of any mutating command that has nothing to do succeeds with
   `"changed": false`.
 - Linear can answer a read from before a write it just confirmed. So
-  `issue update` sends every field you name, and `changed` only compares with
-  the issue as read. To send nothing when nothing differs, pass
-  `--if-updated-at` with the `updatedAt` of the last answer you got: a read
-  that lags is refused with exit 7; rerun it.
+  `issue update`, `comment update`, `cycle update` and `project update` send
+  every field you name, and `changed` only compares with what was read. To
+  send nothing when nothing differs, pass `--if-updated-at` with the
+  `updatedAt` of the last answer you got: a read that lags is refused with
+  exit 7; rerun it. To wait for a write to show in reads, compare their
+  `updatedAt` with the one the write answered.
 - Branch on a failure's `code`, not its words: exit 1 alone is `NOT_FOUND`
   (look it up with a list command), `AMBIGUOUS` (name it more precisely),
   `LINEAR_ERROR`, `NETWORK` (rerunning is safe) or `FAILED`; `describe` lists
@@ -47,8 +49,8 @@ before guessing a flag. Always pass `--json`.
 - Exit codes: 0 ok, 1 failed (read `error`; "not found: …" names what), 2 usage
   (fix the invocation; do not retry as is), 3 partial (`api query`: data plus
   `problems`), 4 busy (retry), 5 auth (set `LINEAR_API_KEY` or run
-  `auth login`), 6 rate-limited (wait until `retryAt`), 7 conflict (the issue
-  changed since you read it; read it and decide again).
+  `auth login`), 6 rate-limited (wait until `retryAt`), 7 conflict (what you
+  update changed since you read it, or the read lags; read it and decide again).
 - Lists: `{items, total: null, shown, truncated, nextCursor}`. `total` is
   always null (Linear does not count); continue with `--cursor nextCursor`.
   Keep output small with `--fields` and `--limit`.
