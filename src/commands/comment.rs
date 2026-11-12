@@ -1,13 +1,15 @@
-use super::issue::{chosen_id, nodes};
+use super::issue::{chosen_id, landed, nodes};
 use crate::cli::{Args, Cmd, Ctx, Flag};
 use crate::fail::{self, Fail, R, usage};
 use crate::json::quote_go;
 use crate::queries;
 use crate::run::{Run, dry_run};
 use crate::util::*;
-use serde_json::json;
+use serde_json::{Value, json};
 
-const FIELDS: &[&str] = &["id", "body", "createdAt", "url", "user", "parent"];
+/// updatedAt is what comment update's --if-updated-at takes, and what a
+/// later read is compared with.
+const FIELDS: &[&str] = &["id", "body", "createdAt", "updatedAt", "url", "user", "parent"];
 
 pub fn command() -> Cmd {
     Cmd::group(
@@ -97,13 +99,17 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
         )));
     }
     let cl = run.client()?;
+    let vars = json!({"issue": r, "id": id});
     let res = cl
-        .query(run, queries::COMMENT_RESOLVE, json!({"issue": r, "id": id}))
+        .query(run, queries::COMMENT_RESOLVE, vars.clone())
         .map_err(|e| e.not_found(&format!("issue {r}"), fail::FIND_ISSUE))?;
-    if let Some(c) = nodes(&res["comments"]).first() {
-        let it = flatten(c.clone());
+    let exists = |run: &mut Run, c: Value| -> R {
+        let it = flatten(c);
         let text = format!("exists {}", str_at(&it, "url"));
-        return run.output(json!({"changed": false, "dryRun": dry, "id": id, "comment": it}), &text);
+        run.output(json!({"changed": false, "dryRun": dry, "id": id, "comment": it}), &text)
+    };
+    if let Some(c) = nodes(&res["comments"]).into_iter().next() {
+        return exists(run, c);
     }
     let mut input = json!({"id": id, "issueId": str_at(&res["issue"], "id"), "body": body});
     if !parent.is_empty() {
@@ -113,7 +119,13 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
         let text = format!("would comment on {}\nid: {id} (pass --id {id} --yes)", str_at(&res["issue"], "identifier"));
         return run.output(json!({"changed": true, "dryRun": true, "id": id, "input": input}), &text);
     }
-    let out = cl.query(run, queries::COMMENT_CREATE, json!({"input": input}))?;
+    let out = match cl.query(run, queries::COMMENT_CREATE, json!({"input": input})) {
+        Ok(out) => out,
+        Err(e) => {
+            let c = landed(run, &cl, e, queries::COMMENT_RESOLVE, &vars, "comments")?;
+            return exists(run, c);
+        }
+    };
     let it = flatten(out["commentCreate"]["comment"].clone());
     let text = format!("commented {}", str_at(&it, "url"));
     run.output(json!({"changed": true, "dryRun": false, "id": id, "comment": it}), &text)
@@ -134,7 +146,11 @@ fn comment_id(s: &str) -> R<String> {
 fn update_cmd() -> Cmd {
     Cmd::new("update COMMENT", "Replace a comment's text")
         .long(
-            "Replace a comment's Markdown text. The same text again is changed: false.\n\
+            "Replace a comment's Markdown text. The same text again is changed: false and\n\
+sends nothing: Linear marks a comment as edited for any text sent, also the\n\
+text it has.\n\
+--if-updated-at TIME refuses (exit 7, conflict) if the comment changed since you\n\
+read it, or if the read is from before its last change.\n\
 Changes things: pass --dry-run to preview, --yes to apply.",
         )
         .example(
@@ -144,6 +160,7 @@ Changes things: pass --dry-run to preview, --yes to apply.",
         .run(update)
         .flag(Flag::str("body", "the new text, Markdown `TEXT`"))
         .flag(Flag::str("body-file", "read the new text from `PATH` (- for stdin)"))
+        .flag(super::issue::if_updated_at_flag())
         .mutating()
 }
 
@@ -151,12 +168,26 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     let dry = dry_run(ctx)?;
     let id = comment_id(&ctx.args[0])?;
     let body = body(ctx)?;
+    let since = super::issue::if_updated_at(ctx, "comment")?;
     let cl = run.client()?;
     let res = cl.query(run, queries::COMMENT, json!({"id": id})).map_err(|e| {
         e.not_found(&format!("comment {id}"), "'linearctl comment list ISSUE' lists an issue's comment ids")
     })?;
     let comment = &res["comment"];
     let url = str_at(comment, "url");
+    // --if-updated-at refuses a comment that changed since, and a read that
+    // lags (it carries an older updatedAt).
+    super::issue::read_is_current(
+        &since,
+        &str_at(comment, "updatedAt"),
+        &format!("comment {id}"),
+        "'linearctl comment list ISSUE --fields id,updatedAt', for its issue,",
+    )?;
+    // Unlike the other updates, text the read already shows is not sent:
+    // Linear sets editedAt for any commentUpdate, also one with the body the
+    // comment has (measured 2026-11-12), so a rerun would mark an untouched
+    // comment as edited. The cost is that a lagging read can drop a revert
+    // sent right after the write it reverts; --if-updated-at catches that.
     let changed = str_at(comment, "body") != body;
     let mut doc = json!({"changed": changed, "dryRun": dry, "id": id});
     if !changed {

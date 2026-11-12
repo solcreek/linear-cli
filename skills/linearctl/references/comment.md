@@ -55,7 +55,7 @@ Flags:
 ```
 List an issue's comments, oldest first.
 
-Fields: id, body, createdAt, url, user, parent
+Fields: id, body, createdAt, updatedAt, url, user, parent
 
 Usage:
   linearctl comment list ISSUE [flags]
@@ -74,7 +74,11 @@ Flags:
 ## linearctl comment update
 
 ```
-Replace a comment's Markdown text. The same text again is changed: false.
+Replace a comment's Markdown text. The same text again is changed: false and
+sends nothing: Linear marks a comment as edited for any text sent, also the
+text it has.
+--if-updated-at TIME refuses (exit 7, conflict) if the comment changed since you
+read it, or if the read is from before its last change.
 Changes things: pass --dry-run to preview, --yes to apply.
 
 Usage:
@@ -85,9 +89,10 @@ Examples:
   linearctl comment update 5f1e… --body "Fixed in #43" --yes
 
 Flags:
-      --body TEXT        the new text, Markdown TEXT
-      --body-file PATH   read the new text from PATH (- for stdin)
-      --dry-run          show what would change; change nothing
-  -h, --help             help for update
-      --yes              apply the change
+      --body TEXT            the new text, Markdown TEXT
+      --body-file PATH       read the new text from PATH (- for stdin)
+      --dry-run              show what would change; change nothing
+  -h, --help                 help for update
+      --if-updated-at TIME   change it only if its updatedAt is still TIME (else exit 7)
+      --yes                  apply the change
 ```

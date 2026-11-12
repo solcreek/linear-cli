@@ -63,7 +63,7 @@ HTML comment marker.
 | 4 | busy | the config or credentials lock is held; nothing changed |
 | 5 | auth | no API key, or Linear rejected it. Fix: `linearctl auth login --yes` |
 | 6 | rate-limited | Linear's request or complexity budget is spent; JSON has `retryAt` (RFC 3339) |
-| 7 | conflict | `--if-updated-at` no longer holds; read the issue again |
+| 7 | conflict | `--if-updated-at` no longer holds; read it again |
 
 Under `--json` a failure is `{"error": …, "usage": bool, "code": …}` on stdout.
 `code` is a stable name for the kind of failure (`describe` lists every one
@@ -182,8 +182,39 @@ Example: `pbpaste | linearctl auth login --yes`
   in `id`, so the agent's flow is dry-run → copy `id` → `--yes --id`. If an issue
   with that id already exists, the result is that issue with `changed: false`.
   The same rule applies to `comment create`.
-- `issue update`: fetches first and sends only fields that differ; nothing differs
-  → `changed: false`, no request.
+- The check for that id is a read, and Linear can answer a read from before a
+  write it confirmed. So when Linear refuses a create because its id is taken,
+  the id is read again (100, 200, 400, 800 ms later): if it shows, an earlier
+  attempt landed and the result is that entity with `changed: false`; if not,
+  the refusal is reported. The create itself is never sent twice, and a
+  refusal about anything else is reported at once.
+- `issue update`: fetches first, to resolve names and to report `changed`
+  (whether the issue as read differs from what was asked). Every field named is
+  sent, also one the read already shows: Linear can answer a read from before a
+  write it confirmed, so a revert sent right after the write it reverts would
+  otherwise be dropped and reported as unchanged (#12). With `--if-updated-at`
+  the read is known to be current (a lagging one carries an older `updatedAt`
+  and is refused, exit 7), so only fields that differ are sent; nothing differs
+  → `changed: false`, no request. `--add-label` is sent like any field
+  (Linear takes a label that is already there and changes nothing);
+  `--remove-label` only as far as the read has the label, since Linear refuses
+  to remove one the issue lacks, and the whole update with it.
+  `cycle update` and `project update` follow the same rule and take the same
+  flag. `comment update` takes the flag but still sends nothing for the text
+  the read shows: Linear sets `editedAt` for any `commentUpdate`, so a rerun
+  would mark an untouched comment as edited. Every update answers with the
+  entity as its mutation returned it, `updatedAt` included, never as it was
+  read before.
+- Measured against Linear on 2026-11-12, behind the rules above, and checked
+  again by `make live` (`linear_behaves_as_the_write_commands_assume`): an
+  `issueUpdate` with the values the issue has leaves `updatedAt` as it was; a
+  create with a taken id is refused ("Entity Issue with id … already
+  exists."); `issueRelationCreate` for two issues and a type already related
+  makes nothing and answers with the existing relation, so `relation create`
+  needs no id of its own.
+- Still decided by a read alone, so a lagging one can misreport them:
+  `--remove-label`, `comment update`, `relation delete`, `comment delete`, and
+  the archive commands. Each is a rerun-safe no-op when the read is current.
 - `--json-input` takes Linear's `IssueCreateInput` / `IssueUpdateInput` as is
   (A11); flags given alongside override its fields.
 - `--dry-run` resolves every name to an id and prints the exact mutation input it

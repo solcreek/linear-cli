@@ -7,7 +7,7 @@ import (
 )
 
 func commentNode(id, body string) map[string]any {
-	return map[string]any{"id": id, "body": body, "createdAt": "2026-10-03T00:00:00.000Z",
+	return map[string]any{"id": id, "body": body, "createdAt": "2026-10-03T00:00:00.000Z", "updatedAt": "2026-10-03T08:00:00.000Z",
 		"url": "https://linear.app/acme/issue/ENG-5#comment-" + id, "user": map[string]any{"name": "Bo"}, "parent": nil}
 }
 
@@ -45,6 +45,31 @@ func commentFake(t *testing.T, existing ...any) *fake {
 	return newFake(t).
 		on("CommentResolve", map[string]any{"issue": map[string]any{"id": "id-ENG-5", "identifier": "ENG-5"}, "comments": conn("", existing...)}).
 		on("CommentCreate", map[string]any{"commentCreate": map[string]any{"success": true, "comment": commentNode(newIssueID, "Fixed")}})
+}
+
+// comment list is where a caller reads the updatedAt that comment update's
+// --if-updated-at takes, and where the conflict's hint sends it.
+func TestCommentListCarriesUpdatedAt(t *testing.T) {
+	t.Parallel()
+	api := newFake(t).on("CommentList", map[string]any{"issue": map[string]any{"comments": conn("", commentNode("a", "first"))}})
+	r := runWith(t, opts{api: api, key: testKey}, "comment", "list", "ENG-5", "--json")
+	if items, _ := decode(t, r.out)["items"].([]any); r.code != 0 || len(items) != 1 || str(items[0].(map[string]any), "updatedAt") != "2026-10-03T08:00:00.000Z" {
+		t.Errorf("exit %d, %q", r.code, r.out)
+	}
+	if !strings.Contains(api.last("CommentList").Query, "updatedAt") {
+		t.Error("CommentList does not ask for updatedAt")
+	}
+	r = runWith(t, opts{api: api, key: testKey}, "comment", "list", "ENG-5", "--fields", "id,updatedAt", "--json")
+	if got := jsonOf(decode(t, r.out)["items"]); r.code != 0 || got != `[{"id":"a","updatedAt":"2026-10-03T08:00:00.000Z"}]` {
+		t.Errorf("--fields id,updatedAt: exit %d, %s", r.code, got)
+	}
+	// The hint of a conflict names the command that reads it.
+	id := "5f1e2a3b-4c5d-4e6f-8a9b-0c1d2e3f4a5b"
+	api = newFake(t).on("Comment", map[string]any{"comment": commentNode(id, "old")})
+	r = runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "new", "--if-updated-at", "2026-10-01T00:00:00Z", "--yes", "--json")
+	if d := decode(t, r.out); r.code != exitConflict || !strings.Contains(str(d, "hint"), "comment list ISSUE --fields id,updatedAt") {
+		t.Errorf("conflict hint: exit %d, %q", r.code, r.out)
+	}
 }
 
 func TestCommentCreate(t *testing.T) {
@@ -121,12 +146,34 @@ func TestCommentUpdate(t *testing.T) {
 	if c := api.last("CommentUpdate"); r.code != 0 || c.Vars["id"] != id || c.Vars["input"].(map[string]any)["body"] != "new" {
 		t.Errorf("yes: exit %d, %q", r.code, r.out)
 	}
-	n := len(api.calls())
-	r = runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "old", "--yes", "--json")
-	if d := decode(t, r.out); r.code != 0 || d["changed"] != false || api.ops()[n] != "Comment" || len(api.calls()) != n+1 {
-		t.Errorf("same text: exit %d, %q", r.code, r.out)
+	if d := decode(t, r.out); str(d, "comment.updatedAt") == "" {
+		t.Errorf("yes: no updatedAt to wait for in %q", r.out)
 	}
-	for _, args := range [][]string{{"c1", "--body", "x"}, {id}, {id, "--body", " "}} {
+	// The same text again sends nothing, with --if-updated-at or without:
+	// Linear marks a comment as edited for any text sent, also the one it has.
+	for _, extra := range [][]string{nil, {"--if-updated-at", "2026-10-03T08:00:00Z"}} {
+		n := len(api.calls())
+		r = runWith(t, opts{api: api, key: testKey}, append([]string{"comment", "update", id, "--body", "old", "--yes", "--json"}, extra...)...)
+		if d := decode(t, r.out); r.code != 0 || d["changed"] != false || api.ops()[n] != "Comment" || len(api.calls()) != n+1 || d["comment"] == nil {
+			t.Errorf("same text %v: exit %d, %q", extra, r.code, r.out)
+		}
+	}
+	url := "https://linear.app/acme/issue/ENG-5#comment-" + id
+	if r := runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "old", "--dry-run"); r.out != "unchanged "+url+"\n" {
+		t.Errorf("same text, dry run text: %q", r.out)
+	}
+	r = runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "new", "--if-updated-at", "2026-10-03T08:00:00Z", "--yes", "--json")
+	if d := decode(t, r.out); r.code != 0 || d["changed"] != true {
+		t.Errorf("new text --if-updated-at: exit %d, %q", r.code, r.out)
+	}
+	// A comment that changed since, or a read that lags, is refused before anything is sent.
+	n := len(api.calls())
+	r = runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "new", "--if-updated-at", "2026-10-01T00:00:00Z", "--yes", "--json")
+	if d := decode(t, r.out); r.code != exitConflict || d["code"] != "CONFLICT" || len(api.calls()) != n+1 ||
+		!strings.Contains(str(d, "error"), "comment "+id+" changed at 2026-10-03T08:00:00.000Z") {
+		t.Errorf("conflict: exit %d, %q", r.code, r.out)
+	}
+	for _, args := range [][]string{{"c1", "--body", "x"}, {id}, {id, "--body", " "}, {id, "--body", "x", "--if-updated-at", "yesterday"}} {
 		if r := runWith(t, opts{api: api, key: testKey}, append([]string{"comment", "update", "--dry-run"}, args...)...); r.code != exitUsage {
 			t.Errorf("%v: exit %d", args, r.code)
 		}

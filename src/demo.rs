@@ -443,6 +443,8 @@ fn build() -> World {
                     ("id".into(), s(&cid)),
                     ("body".into(), V::S(c["body"].clone())),
                     ("createdAt".into(), at(&c["createdAt"])),
+                    // No demo comment was edited: it is as it was created.
+                    ("updatedAt".into(), at(&c["createdAt"])),
                     ("url".into(), s(&format!("{url}#comment-{}", &cid[..8]))),
                     ("user".into(), users.get(&sprint(&c["user"])).map_or(NULL, |u| V::N(*u))),
                     ("issue".into(), V::N(id)),

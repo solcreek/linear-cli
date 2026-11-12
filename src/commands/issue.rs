@@ -1229,6 +1229,52 @@ pub fn chosen_id(ctx: &Ctx, dry: bool, needs: &str) -> R<String> {
     Ok(id.to_lowercase())
 }
 
+/// How long to wait, in milliseconds, before each read that looks for what
+/// a refused create may already have made.
+const LANDED_WAITS: [u64; 4] = [100, 200, 400, 800];
+
+/// Whether Linear refused a create because its id is taken. Its words are
+/// "Entity Issue with id <id> already exists." (measured 2026-11-12, the
+/// same for a comment); either half is taken as saying so, in case the other
+/// is reworded. Any other refusal is about the input, and reading again
+/// would only delay it.
+fn id_taken(refused: &Fail, id: &str) -> bool {
+    let Fail::Linear { msg, .. } = refused.base() else { return false };
+    let msg = msg.to_lowercase();
+    msg.contains("already exists") || (!id.is_empty() && msg.contains(&id.to_lowercase()))
+}
+
+/// After Linear refused a create: what holds the chosen id, if anything does.
+///
+/// The guard that looks for the id before creating is a read, and Linear can
+/// answer a read from before a write it has confirmed. So when an earlier
+/// attempt landed and its answer was lost, the rerun's guard may see nothing,
+/// and Linear then refuses the id as taken: a failure for a create that
+/// succeeded. This reads again (doc with vars, whose id is the chosen one;
+/// the entity under field), waiting a little longer each time, and gives the
+/// entity once it shows. When it never does, or a read fails, the refusal
+/// stands, as does one that is not about the id.
+pub fn landed(
+    run: &mut Run,
+    cl: &crate::client::Client,
+    refused: Fail,
+    doc: &str,
+    vars: &Value,
+    field: &str,
+) -> R<Value> {
+    if !id_taken(&refused, vars["id"].as_str().unwrap_or("")) {
+        return Err(refused);
+    }
+    for wait in LANDED_WAITS {
+        std::thread::sleep(std::time::Duration::from_millis(wait));
+        let Ok(r) = cl.query(run, doc, vars.clone()) else { break };
+        if let Some(found) = nodes(&r[field]).into_iter().next() {
+            return Ok(found);
+        }
+    }
+    Err(refused)
+}
+
 fn create(run: &mut Run, ctx: &Ctx) -> R {
     let dry = dry_run(ctx)?;
     let id = chosen_id(ctx, dry, "create a second issue")?;
@@ -1257,12 +1303,16 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     vars.insert("team".into(), team_filter);
     vars.insert("id".into(), json!(id));
     vars.insert("withID".into(), json!(true));
-    let mut r = cl.query(run, queries::CREATE_RESOLVE, Value::Object(vars))?;
-    complete_labels(run, &cl, &mut r["existing"])?;
-    if let Some(existing) = nodes(&r["existing"]).first() {
-        let it = flatten(existing.clone());
+    let vars = Value::Object(vars);
+    let r = cl.query(run, queries::CREATE_RESOLVE, vars.clone())?;
+    let exists = |run: &mut Run, mut existing: Value| -> R {
+        complete_labels(run, &cl, &mut existing)?;
+        let it = flatten(existing);
         let text = format!("exists {} {}", str_at(&it, "identifier"), str_at(&it, "url"));
-        return run.output(json!({"changed": false, "dryRun": dry, "id": id, "issue": it}), &text);
+        run.output(json!({"changed": false, "dryRun": dry, "id": id, "issue": it}), &text)
+    };
+    if let Some(existing) = nodes(&r["existing"]).into_iter().next() {
+        return exists(run, existing);
     }
     let teams = nodes(&r["teams"]);
     let Some(t) = teams.first() else {
@@ -1278,21 +1328,72 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
         let text = format!("would create in {}: {title}\nid: {id} (pass --id {id} --yes)", str_at(t, "key"));
         return run.output(json!({"changed": true, "dryRun": true, "id": id, "input": w.input}), &text);
     }
-    let mut out = cl.query(run, queries::ISSUE_CREATE, json!({"input": w.input}))?;
+    let mut out = match cl.query(run, queries::ISSUE_CREATE, json!({"input": w.input})) {
+        Ok(out) => out,
+        Err(e) => {
+            let existing = landed(run, &cl, e, queries::CREATE_RESOLVE, &vars, "existing")?;
+            return exists(run, existing);
+        }
+    };
     complete_labels(run, &cl, &mut out)?;
     let it = flatten(out["issueCreate"]["issue"].take());
     let text = format!("created {} {}", str_at(&it, "identifier"), str_at(&it, "url"));
     run.output(json!({"changed": true, "dryRun": false, "id": id, "issue": it}), &text)
 }
 
+/// The --if-updated-at flag of an update command.
+pub fn if_updated_at_flag() -> Flag {
+    Flag::str("if-updated-at", "change it only if its updatedAt is still `TIME` (else exit 7)")
+}
+
+/// --if-updated-at as given, "" when it is not: checked before anything is
+/// sent. noun is what the command updates ("issue").
+pub fn if_updated_at(ctx: &Ctx, noun: &str) -> R<String> {
+    let since = ctx.str("if-updated-at");
+    if !since.is_empty() && time::parse_rfc3339(&since).is_none() {
+        return Err(usage(format!(
+            "--if-updated-at must be the {noun}'s updatedAt, an RFC 3339 time; got {}",
+            quote_go(&since)
+        )));
+    }
+    Ok(since)
+}
+
+/// Whether the read behind an update is known to be current: since is
+/// --if-updated-at, updated_at what the read shows. Linear can answer a read
+/// from before a write it confirmed, so a read proves nothing about what
+/// holds now unless the caller names the updatedAt of the last write it
+/// knows of and the read carries it. Without the flag, false. With one that
+/// differs, a conflict (exit 7): the thing changed since, or the read lags.
+/// what names the thing; reread is the command that reads it.
+pub fn read_is_current(since: &str, updated_at: &str, what: &str, reread: &str) -> R<bool> {
+    if since.is_empty() {
+        return Ok(false);
+    }
+    let now = time::parse_rfc3339(updated_at);
+    if now.is_some() && now == time::parse_rfc3339(since) {
+        return Ok(true);
+    }
+    Err(Fail::Conflict(format!(
+        "{what} changed at {updated_at}, not {since} as --if-updated-at expects; read it again"
+    ))
+    .hint(format!("{reread} reads it; decide again from what it shows")))
+}
+
 fn update_cmd() -> Cmd {
     let c = Cmd::new("update ISSUE", "Change an issue's fields")
         .long(
-            "Change an issue's fields. Only fields that differ from the issue as it is are\n\
-sent; when none differ, nothing is sent and the result is changed: false.\n\
+            "Change an issue's fields. Every field you name is sent, also one the issue\n\
+already seems to have: Linear can answer a read from before its last change, so\n\
+the read cannot say that nothing is left to do. changed says whether the issue\n\
+as read differs from what you asked for.\n\
 --label replaces all labels; --add-label and --remove-label adjust them.\n\
+--remove-label removes a label only if the issue as read has it: Linear refuses\n\
+to remove one that is not there.\n\
 State names resolve within the issue's own team.\n\
---if-updated-at TIME refuses (exit 7, conflict) if the issue changed since you\nread it.\n\
+--if-updated-at TIME refuses (exit 7, conflict) if the issue changed since you\n\
+read it. It also proves the read current, so only fields that differ are sent,\n\
+and when none differ nothing is.\n\
 Changes things: pass --dry-run to preview, --yes to apply.",
         )
         .example(
@@ -1303,7 +1404,7 @@ Changes things: pass --dry-run to preview, --yes to apply.",
     issue_fields(c)
         .flag(Flag::strs("label", "set the labels to `NAME`s, replacing the rest (repeatable)"))
         .flag(Flag::strs("add-label", "add label `NAME` (repeatable)"))
-        .flag(Flag::str("if-updated-at", "change it only if its updatedAt is still `TIME` (else exit 7)"))
+        .flag(if_updated_at_flag())
         .flag(Flag::strs("remove-label", "remove label `NAME` (repeatable)"))
         .mutating()
 }
@@ -1317,13 +1418,7 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     if ctx.changed("label") && (!add.is_empty() || !remove.is_empty()) {
         return Err(usage("pass --label, or --add-label/--remove-label, not both"));
     }
-    let since = ctx.str("if-updated-at");
-    if !since.is_empty() && time::parse_rfc3339(&since).is_none() {
-        return Err(usage(format!(
-            "--if-updated-at must be the issue's updatedAt, an RFC 3339 time; got {}",
-            quote_go(&since)
-        )));
-    }
+    let since = if_updated_at(ctx, "issue")?;
     let cl = run.client()?;
     let mut extra = add.clone();
     extra.extend(remove.iter().cloned());
@@ -1334,18 +1429,12 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
         .map_err(|e| e.not_found(&format!("issue {r}"), fail::FIND_ISSUE))?;
     let is = &res["issue"];
     let identifier = str_at(is, "identifier");
-    let updated_at = str_at(is, "updatedAt");
-    if !since.is_empty() && !updated_at.is_empty() {
-        let then = time::parse_rfc3339(&since);
-        if let Some(now) = time::parse_rfc3339(&updated_at)
-            && Some(now) != then
-        {
-            return Err(Fail::Conflict(format!(
-                "{identifier} changed at {updated_at}, not {since} as --if-updated-at expects; read it again"
-            ))
-            .hint(format!("'linearctl issue show {identifier}' reads it; decide again from what it shows")));
-        }
-    }
+    let current_read = read_is_current(
+        &since,
+        &str_at(is, "updatedAt"),
+        &identifier,
+        &format!("'linearctl issue show {identifier}'"),
+    )?;
     let team_id = str_at(is, "team.id");
     let current_project = if is["project"].is_object() { str_at(is, "project.id") } else { String::new() };
     w.apply(
@@ -1358,21 +1447,42 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     )
     .map_err(|e| with_available(run, &cl, e, &team_id))?;
     let current: Vec<String> = nodes(&is["labels"]).iter().map(|l| str_at(l, "id")).collect();
+    let mut added_all_held = false;
     if !add.is_empty() || !remove.is_empty() {
         let labels = nodes(&res["issueLabels"]);
         let ids = |names: &[String]| label_ids(names, &labels, &team_id);
         let add_ids = ids(&add).map_err(|e| with_available(run, &cl, e, &team_id))?;
         let remove_ids = ids(&remove).map_err(|e| with_available(run, &cl, e, &team_id))?;
+        // Linear takes a label the issue already has in addedLabelIds and
+        // changes nothing, so like any field, every label to add is sent
+        // unless the read is known to be current (see below). It refuses one
+        // the issue lacks in removedLabelIds ("Label not on issue", measured
+        // 2026-11-12), and the whole update with it, so labels to remove are
+        // sent only as far as the read has them: a lagging read can still
+        // drop one. --label, which names the whole set, has neither limit.
         let added: Vec<&String> = add_ids.iter().filter(|id| !current.contains(id)).collect();
         let removed: Vec<&String> = remove_ids.iter().filter(|id| current.contains(id)).collect();
-        if !added.is_empty() {
+        if current_read && !added.is_empty() {
             w.input.insert("addedLabelIds".into(), json!(added));
+        } else if !current_read && !add_ids.is_empty() {
+            w.input.insert("addedLabelIds".into(), json!(add_ids));
+            added_all_held = added.is_empty();
         }
         if !removed.is_empty() {
             w.input.insert("removedLabelIds".into(), json!(removed));
         }
     }
-    // Drop what already holds, so a rerun sends nothing.
+    // What the issue as read already has. Linear can answer a read from
+    // before a write it confirmed, so the read alone cannot say a field
+    // holds: a revert sent right after the write it reverts would be dropped
+    // and reported as unchanged. Every field named is therefore sent. A
+    // matching --if-updated-at proves the read current (a lagging one carries
+    // an older updatedAt and is refused above): then what holds is dropped
+    // and a rerun sends nothing.
+    let mut holds: Vec<&str> = vec![];
+    if added_all_held {
+        holds.push("addedLabelIds");
+    }
     let id = |v: &Value| if v.is_object() { json!(str_at(v, "id")) } else { Value::Null };
     let description = match &is["description"] {
         Value::String(s) => json!(s),
@@ -1395,7 +1505,7 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     ];
     for (k, v) in now {
         if w.input.get(k).is_some_and(|got| marshal(got) == marshal(&v)) {
-            w.input.shift_remove(k);
+            holds.push(k);
         }
     }
     if !w.labels.is_empty()
@@ -1406,13 +1516,22 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
         a.sort();
         b.sort();
         if a == b {
-            w.input.shift_remove("labelIds");
+            holds.push("labelIds");
         }
     }
-    let changed = !w.input.is_empty();
+    let changed = w.input.keys().any(|k| !holds.contains(&k.as_str()));
+    if current_read {
+        for k in holds {
+            w.input.shift_remove(k);
+        }
+    }
+    let send = !w.input.is_empty();
     let mut doc = json!({"changed": changed, "dryRun": dry, "identifier": identifier, "input": w.input});
-    if !changed {
+    if !send {
         return run.output(doc, &format!("unchanged {identifier}"));
+    }
+    if dry && !changed {
+        return run.output(doc, &format!("unchanged {identifier}, as read; would send it all the same"));
     }
     if dry {
         let mut keys: Vec<&String> = w.input.keys().collect();
@@ -1423,7 +1542,8 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     let mut out = cl.query(run, queries::ISSUE_UPDATE, json!({"id": str_at(is, "id"), "input": w.input}))?;
     complete_labels(run, &cl, &mut out)?;
     doc["issue"] = flatten(out["issueUpdate"]["issue"].take());
-    run.output(doc, &format!("updated {identifier}"))
+    let verb = if changed { "updated" } else { "unchanged" };
+    run.output(doc, &format!("{verb} {identifier}"))
 }
 
 fn archive_cmd(archive: bool) -> Cmd {

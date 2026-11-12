@@ -9,6 +9,44 @@ names are only ever added, never renamed or removed.
 
 ## [Unreleased]
 
+Linear can answer a query from before a mutation it has already confirmed.
+These fixes stop linearctl from deciding or reporting a write from such a
+read (#12).
+
+### Changed
+
+- `issue update` sends every field you name, also one the issue as read
+  already has. It used to drop those, so a revert sent right after the write
+  it reverts (set the assignee, then set it back) was dropped when the read
+  lagged, and reported `changed: false` with exit 0. `changed` still says
+  whether the issue as read differs; `input` is what was sent, and `issue` is
+  in every answer that sent something. With `--if-updated-at` the read is
+  known to be current, and only fields that differ are sent, as before.
+  `--add-label` is sent the same way; `--remove-label` still removes only
+  labels the issue as read has, since Linear refuses to remove one that is
+  not there.
+- `project update` follows the same rule, and takes `--if-updated-at` (the
+  project's `updatedAt`; exit 7 when it no longer holds).
+- `cycle update` follows the same rule, and takes `--if-updated-at`. Its
+  answer's `cycle` now carries `updatedAt`.
+- `comment update` takes `--if-updated-at` too. Every comment now carries
+  `updatedAt`: in `comment list` (and its `--fields`), `issue show`, and the
+  answers of `comment create` and `comment update`. It still sends nothing for the text the comment
+  already has: Linear marks a comment as edited for any text sent.
+
+### Fixed
+
+- `issue create`, `comment create`, `cycle create` and `project create`
+  failed a rerun whose earlier attempt had landed, when the read that looks
+  for the chosen `--id` lagged: Linear refused the id as taken. After a
+  refusal of the id ("Entity Issue with id … already exists.") they now read
+  again (after 100, 200, 400 and 800 ms) and answer `changed: false` with the
+  entity once it shows. Any other refusal is reported at once, as before.
+- `project update` answered with the project as it was read before the write:
+  after a rename, `url` still carried the old name. It now answers from the
+  mutation, adds `project` (`id`, `name`, `slugId`, `url`, `updatedAt`), and
+  fails when Linear reports `success: false`.
+
 ## [0.14.0] - 2026-10-30
 
 ### Added

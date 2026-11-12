@@ -41,10 +41,19 @@ func TestUpdateStateTypeIsUnchangedWhenAlreadyThere(t *testing.T) {
 	t.Parallel()
 	is := currentIssue() // In Progress, st-doing
 	is["team"].(map[string]any)["typed"] = nodes(map[string]any{"id": "st-doing", "name": "In Progress", "position": 1.0})
-	api := newFake(t).on("UpdateResolve", resolveAnswer(map[string]any{"issue": is}))
+	api := newFake(t).on("UpdateResolve", resolveAnswer(map[string]any{"issue": is})).
+		on("IssueUpdate", map[string]any{"issueUpdate": map[string]any{"success": true, "issue": issueNode("ENG-5", "Old title")}})
+	// The read may lag, so the state is sent all the same (#12).
 	r := runWith(t, opts{api: api, key: testKey}, "issue", "update", "ENG-5", "--state-type", "started", "--yes", "--json")
-	if r.code != 0 || decode(t, r.out)["changed"] != false {
+	if r.code != 0 || decode(t, r.out)["changed"] != false || jsonOf(api.last("IssueUpdate").Vars["input"]) != `{"stateId":"st-doing"}` {
 		t.Errorf("exit %d, %q", r.code, r.out)
+	}
+	// --if-updated-at proves the read current: nothing is left to send.
+	n := len(api.calls())
+	r = runWith(t, opts{api: api, key: testKey}, "issue", "update", "ENG-5", "--state-type", "started",
+		"--if-updated-at", "2026-10-02T08:00:00Z", "--yes", "--json")
+	if r.code != 0 || decode(t, r.out)["changed"] != false || len(api.calls()) != n+1 {
+		t.Errorf("--if-updated-at: exit %d, %q, calls %v", r.code, r.out, api.ops())
 	}
 }
 

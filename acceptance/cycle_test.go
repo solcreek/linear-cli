@@ -179,6 +179,7 @@ const newCycleID = "0b6c1e2a-3f4d-4a5b-8c6d-7e8f9a0b1c2d"
 func cycleRow(id string, archived any) map[string]any {
 	c := cycleNode(24, "ENG")
 	c["id"], c["name"], c["archivedAt"] = id, "Sprint", archived
+	c["updatedAt"] = "2026-10-02T08:00:00.000Z"
 	for _, k := range []string{"issues", "uncompletedIssuesUponClose"} {
 		delete(c, k)
 	}
@@ -235,26 +236,57 @@ func TestCycleUpdateAndArchive(t *testing.T) {
 			on("CycleUpdate", map[string]any{"cycleUpdate": map[string]any{"success": true, "cycle": cycleRow("cy", nil)}}).
 			on("CycleArchive", map[string]any{"cycleArchive": map[string]any{"success": true}})
 	}
+	// With --if-updated-at the read is known to be current: only what differs
+	// is sent. Without it everything named is, since the read may lag (#12).
 	for _, c := range []struct {
-		args []string
-		want string
+		args    []string
+		want    string // sent with --if-updated-at; "" for nothing
+		all     string // sent without it
+		changed bool
 	}{
-		{[]string{"--name", "Sprint", "--starts-at", "2026-10-19", "--ends-at", "2026-11-02T08:00:00+08:00"}, ""}, // all as they are
-		{[]string{"--name", "Checkout", "--ends-at", "2026-11-05"}, `{"endsAt":"2026-11-05T00:00:00Z","name":"Checkout"}`},
-		{[]string{"--description", "Ship checkout v2"}, ""},
-		{[]string{"--description", "Ship it"}, `{"description":"Ship it"}`},
-		{[]string{"--completed-at", "2026-10-30T10:00:00Z"}, `{"completedAt":"2026-10-30T10:00:00Z"}`},
+		{[]string{"--name", "Sprint", "--starts-at", "2026-10-19", "--ends-at", "2026-11-02T08:00:00+08:00"}, "", // all as they are
+			`{"endsAt":"2026-11-02T00:00:00Z","name":"Sprint","startsAt":"2026-10-19T00:00:00Z"}`, false},
+		{[]string{"--name", "Checkout", "--ends-at", "2026-11-05"}, `{"endsAt":"2026-11-05T00:00:00Z","name":"Checkout"}`,
+			`{"endsAt":"2026-11-05T00:00:00Z","name":"Checkout"}`, true},
+		{[]string{"--description", "Ship checkout v2"}, "", `{"description":"Ship checkout v2"}`, false},
+		{[]string{"--description", "Ship it"}, `{"description":"Ship it"}`, `{"description":"Ship it"}`, true},
+		{[]string{"--completed-at", "2026-10-30T10:00:00Z"}, `{"completedAt":"2026-10-30T10:00:00Z"}`, `{"completedAt":"2026-10-30T10:00:00Z"}`, true},
+		{[]string{"--name", "Sprint", "--description", "Ship it"}, `{"description":"Ship it"}`, `{"description":"Ship it","name":"Sprint"}`, true},
 	} {
 		api := find(cycleRow("cy", nil))
-		r := runWith(t, opts{api: api, key: testKey}, append([]string{"cycle", "update", "current", "--team", "ENG", "--yes", "--json"}, c.args...)...)
+		r := runWith(t, opts{api: api, key: testKey}, append([]string{"cycle", "update", "current", "--team", "ENG", "--yes", "--json",
+			"--if-updated-at", "2026-10-02T08:00:00Z"}, c.args...)...)
 		d := decode(t, r.out)
-		if r.code != 0 || d["changed"] != (c.want != "") {
-			t.Errorf("%v: exit %d, %q", c.args, r.code, r.out)
+		if r.code != 0 || d["changed"] != c.changed {
+			t.Errorf("%v --if-updated-at: exit %d, %q", c.args, r.code, r.out)
 			continue
 		}
 		if sent := slices.Contains(api.ops(), "CycleUpdate"); sent != (c.want != "") || (sent && jsonOf(api.last("CycleUpdate").Vars["input"]) != c.want) {
-			t.Errorf("%v: sent %v %v", c.args, sent, d["input"])
+			t.Errorf("%v --if-updated-at: sent %v %v", c.args, sent, d["input"])
 		}
+		api = find(cycleRow("cy", nil))
+		r = runWith(t, opts{api: api, key: testKey}, append([]string{"cycle", "update", "current", "--team", "ENG", "--yes", "--json"}, c.args...)...)
+		d = decode(t, r.out)
+		if r.code != 0 || d["changed"] != c.changed || d["cycle"] == nil || jsonOf(api.last("CycleUpdate").Vars["input"]) != c.all {
+			t.Errorf("%v: exit %d, %q, sent %v", c.args, r.code, r.out, api.last("CycleUpdate").Vars["input"])
+		}
+	}
+	same := []string{"cycle", "update", "current", "--team", "ENG", "--name", "Sprint"}
+	if r := runWith(t, opts{api: find(cycleRow("cy", nil)), key: testKey}, append(same, "--yes")...); r.out != "unchanged cycle 24 in ENG\n" {
+		t.Errorf("same, text: %q", r.out)
+	}
+	if r := runWith(t, opts{api: find(cycleRow("cy", nil)), key: testKey}, append(same, "--dry-run")...); r.out != "unchanged cycle 24 in ENG, as read; would send it all the same\n" {
+		t.Errorf("same, dry run text: %q", r.out)
+	}
+	// A cycle that changed since, or a read that lags, is refused; so is a time that is none.
+	conflict := find(cycleRow("cy", nil))
+	r0 := runWith(t, opts{api: conflict, key: testKey}, append(same, "--if-updated-at", "2026-10-01T00:00:00Z", "--yes", "--json")...)
+	if d := decode(t, r0.out); r0.code != exitConflict || d["code"] != "CONFLICT" || slices.Contains(conflict.ops(), "CycleUpdate") ||
+		!strings.Contains(str(d, "error"), "cycle 24 in ENG changed at 2026-10-02T08:00:00.000Z") {
+		t.Errorf("conflict: exit %d, %q", r0.code, r0.out)
+	}
+	if r := runWith(t, opts{api: conflict, key: testKey}, append(same, "--if-updated-at", "yesterday", "--dry-run")...); r.code != exitUsage {
+		t.Errorf("--if-updated-at yesterday: exit %d", r.code)
 	}
 	api := find(cycleRow("cy", nil))
 	if r := runWith(t, opts{api: api, key: testKey}, "cycle", "update", "current", "--dry-run"); r.code != exitUsage {

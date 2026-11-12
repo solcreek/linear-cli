@@ -60,7 +60,7 @@ macro_rules! page_info {
 
 macro_rules! comment_row {
     () => {
-        "id body createdAt url user { name email } parent { id }"
+        "id body createdAt updatedAt url user { name email } parent { id }"
     };
 }
 
@@ -132,7 +132,7 @@ pub const ISSUE_SHOW: &str = concat!(
     issue_side!(),
     " }\n    ",
     show_connections!(""),
-    "\n    comments(first: $comments) @include(if: $withComments) { nodes { id body createdAt url user { name email } parent { id } } }\n  }\n}"
+    "\n    comments(first: $comments) @include(if: $withComments) { nodes { id body createdAt updatedAt url user { name email } parent { id } } }\n  }\n}"
 );
 
 /// The pages of issue show's collections after the first, each read only
@@ -331,7 +331,8 @@ pub const PROJECT_ISSUES: &str = concat!(
     " } }\n}"
 );
 
-pub const PROJECT_UPDATE: &str = "mutation ProjectUpdate($id: String!, $input: ProjectUpdateInput!) {\n  projectUpdate(id: $id, input: $input) { success }\n}";
+/// The project as the write left it: a read taken before or after may lag.
+pub const PROJECT_UPDATE: &str = "mutation ProjectUpdate($id: String!, $input: ProjectUpdateInput!) {\n  projectUpdate(id: $id, input: $input) { success project { id name slugId url updatedAt } }\n}";
 
 /// A project as project create returns it, and as a rerun finds it.
 macro_rules! project_row {
@@ -402,7 +403,7 @@ pub const CYCLES: &str = concat!(
 pub const CYCLE_FIND: &str = concat!(
     "query CycleFind($filter: CycleFilter!) {\n  cycles(filter: $filter, first: 2, includeArchived: true) { nodes { ",
     cycle_row!(),
-    " archivedAt } }\n}"
+    " archivedAt updatedAt } }\n}"
 );
 
 /// cycle create's team, and whether a cycle with the chosen id exists.
@@ -421,7 +422,7 @@ pub const CYCLE_CREATE: &str = concat!(
 pub const CYCLE_UPDATE: &str = concat!(
     "mutation CycleUpdate($id: String!, $input: CycleUpdateInput!) {\n  cycleUpdate(id: $id, input: $input) { success cycle { ",
     cycle_row!(),
-    " } }\n}"
+    " updatedAt } }\n}"
 );
 
 pub const CYCLE_ARCHIVE: &str = "mutation CycleArchive($id: String!) { cycleArchive(id: $id) { success } }";

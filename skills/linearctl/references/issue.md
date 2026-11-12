@@ -196,12 +196,17 @@ Flags:
 ## linearctl issue update
 
 ```
-Change an issue's fields. Only fields that differ from the issue as it is are
-sent; when none differ, nothing is sent and the result is changed: false.
+Change an issue's fields. Every field you name is sent, also one the issue
+already seems to have: Linear can answer a read from before its last change, so
+the read cannot say that nothing is left to do. changed says whether the issue
+as read differs from what you asked for.
 --label replaces all labels; --add-label and --remove-label adjust them.
+--remove-label removes a label only if the issue as read has it: Linear refuses
+to remove one that is not there.
 State names resolve within the issue's own team.
 --if-updated-at TIME refuses (exit 7, conflict) if the issue changed since you
-read it.
+read it. It also proves the read current, so only fields that differ are sent,
+and when none differ nothing is.
 Changes things: pass --dry-run to preview, --yes to apply.
 
 Usage:

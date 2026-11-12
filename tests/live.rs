@@ -1,7 +1,7 @@
 //! The live tests talk to api.linear.app with a real key and change a real
 //! workspace, so they run only when asked: LINEARCTL_LIVE_TEAM names a team
 //! whose issues may be created and archived (a sandbox), and LINEAR_API_KEY a
-//! key for it. Each run leaves three archived issues behind, titled
+//! key for it. Each run leaves five archived issues behind, titled
 //! "linearctl live test …"; linearctl has no delete.
 //!
 //!     LINEARCTL_LIVE_TEAM=SANDBOX LINEAR_API_KEY=… make live
@@ -317,4 +317,130 @@ fn watch_sees_changes_as_they_happen() {
     eprintln!("live: archive seen after {:?}", start.elapsed());
     assert_eq!(gone["reason"], "archived", "remove {gone}");
     assert_eq!(w.stop(), Some(130), "watch exits 130 on Ctrl-C");
+}
+
+/// Sends a GraphQL document straight to Linear and returns its whole answer,
+/// errors included: what a mutation does when linearctl's own checks are
+/// not in the way.
+fn raw(query: &str, variables: Value) -> Value {
+    let key = std::env::var("LINEAR_API_KEY").unwrap();
+    let body = serde_json::json!({"query": query, "variables": variables}).to_string();
+    let mut res = ureq::post("https://api.linear.app/graphql")
+        .config()
+        .http_status_as_error(false)
+        .timeout_global(Some(Duration::from_secs(30)))
+        .build()
+        .header("Authorization", &key)
+        .header("Content-Type", "application/json")
+        .send(body.as_bytes())
+        .unwrap();
+    serde_json::from_str(&res.body_mut().read_to_string().unwrap()).unwrap()
+}
+
+/// What Linear says of a refused mutation, in the words linearctl reports.
+fn refusal(answer: &Value) -> String {
+    at(&answer["errors"][0], "extensions.userPresentableMessage").to_string()
+}
+
+/// What the write commands assume of Linear (#12), each measured here:
+/// a create with a taken id is refused in words that say so; an update with
+/// the values an issue already has leaves its updatedAt; a label the issue
+/// has can be added again, one it lacks cannot be removed; two issues
+/// already related are not related twice; and a comment sent the text it
+/// has is marked as edited. Leaves two archived issues.
+#[test]
+fn linear_behaves_as_the_write_commands_assume() {
+    let Some(team) = live_team() else { return };
+    let stamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let create = |what: &str| {
+        let (id, title) = (new_id(), format!("linearctl live test {stamp} {what}"));
+        let v = live(&["issue", "create", "--team", &team, "--title", &title, "--id", &id, "--yes"]);
+        assert_eq!(v["changed"], true, "{v}");
+        (id, title, v)
+    };
+    let (a_id, a_title, a) = create("writes a");
+    let a_ident = at(&a, "issue.identifier").to_string();
+    let mut keep_a = Archive(a_ident.clone(), false);
+    let (b_id, _, b) = create("writes b");
+    let b_ident = at(&b, "issue.identifier").to_string();
+    let mut keep_b = Archive(b_ident.clone(), false);
+    eprintln!("live: {a_ident} and {b_ident}");
+
+    // A rerun with the same id finds the issue; Linear refuses the id itself.
+    let again = live(&["issue", "create", "--team", &team, "--title", &a_title, "--id", &a_id, "--yes"]);
+    assert_eq!(again["changed"], false, "{again}");
+    assert_eq!(at(&again, "issue.identifier"), a_ident);
+    let team_id = at(&a, "issue.team.id").to_string();
+    let taken = raw(
+        "mutation($i: IssueCreateInput!) { issueCreate(input: $i) { success } }",
+        serde_json::json!({"i": {"id": a_id, "teamId": team_id, "title": a_title}}),
+    );
+    let words = refusal(&taken);
+    eprintln!("live: a taken issue id is refused: {words}");
+    assert!(words.contains("already exists") && words.contains(&a_id), "{taken}");
+
+    // The values it already has: sent, and updatedAt stays.
+    let before = at(&a, "issue.updatedAt").to_string();
+    std::thread::sleep(Duration::from_secs(2));
+    let same = live(&["issue", "update", &a_ident, "--title", &a_title, "--yes"]);
+    assert_eq!(same["input"]["title"], a_title.as_str(), "the title is sent: {same}");
+    assert_eq!(at(&same, "issue.updatedAt"), before, "an update that changes nothing leaves updatedAt: {same}");
+
+    // A label: added twice, removed once.
+    let labels = live(&["label", "list", "--team", &team, "--limit", "0"]);
+    let label = labels["items"].as_array().unwrap().iter().find(|l| l["isGroup"] != true).cloned();
+    if let Some(label) = label {
+        let (name, label_id) = (at(&label, "name").to_string(), at(&label, "id").to_string());
+        for _ in 0..2 {
+            let v = live(&["issue", "update", &a_ident, "--add-label", &name, "--yes"]);
+            let have: Vec<&str> = v["issue"]["labels"].as_array().unwrap().iter().map(|l| at(l, "name")).collect();
+            assert_eq!(have, [name.as_str()], "{v}");
+        }
+        live(&["issue", "update", &a_ident, "--remove-label", &name, "--yes"]);
+        let absent = raw(
+            "mutation($id: String!, $i: IssueUpdateInput!) { issueUpdate(id: $id, input: $i) { success } }",
+            serde_json::json!({"id": a_id, "i": {"removedLabelIds": [label_id]}}),
+        );
+        eprintln!("live: removing a label the issue lacks is refused: {}", refusal(&absent));
+        assert!(absent["errors"].is_array(), "Linear now takes a label that is not there in removedLabelIds: {absent}");
+    } else {
+        eprintln!("live: team {team} has no label to try");
+    }
+
+    // Two issues already related are not related twice, by Linear itself.
+    let rel = live(&["relation", "create", &a_ident, "blocks", &b_ident, "--yes"]);
+    let rel_id = at(&rel, "relation.id").to_string();
+    let twice = raw(
+        "mutation($i: IssueRelationCreateInput!) { issueRelationCreate(input: $i) { success issueRelation { id } } }",
+        serde_json::json!({"i": {"issueId": a_id, "relatedIssueId": b_id, "type": "blocks"}}),
+    );
+    assert_eq!(at(&twice["data"], "issueRelationCreate.issueRelation.id"), rel_id, "{twice}");
+    std::thread::sleep(Duration::from_secs(2));
+    let shown = live(&["issue", "show", &a_ident, "--fields", "relations"]);
+    assert_eq!(shown["issue"]["relations"].as_array().unwrap().len(), 1, "{shown}");
+
+    // A comment: a taken id is refused like an issue's, and the text it
+    // already has marks it as edited, which is why comment update sends none.
+    let comment_id = new_id();
+    live(&["comment", "create", &a_ident, "--body", "linearctl live test", "--id", &comment_id, "--yes"]);
+    let taken = raw(
+        "mutation($i: CommentCreateInput!) { commentCreate(input: $i) { success } }",
+        serde_json::json!({"i": {"id": comment_id, "issueId": a_id, "body": "linearctl live test"}}),
+    );
+    assert!(refusal(&taken).contains("already exists"), "{taken}");
+    let same = live(&["comment", "update", &comment_id, "--body", "linearctl live test", "--yes"]);
+    assert_eq!(same["changed"], false, "{same}");
+    let edited = raw(
+        "mutation($id: String!, $i: CommentUpdateInput!) { commentUpdate(id: $id, input: $i) { comment { editedAt } } }",
+        serde_json::json!({"id": comment_id, "i": {"body": "linearctl live test"}}),
+    );
+    assert!(
+        edited["data"]["commentUpdate"]["comment"]["editedAt"].is_string(),
+        "Linear no longer marks a comment sent its own text as edited: {edited}"
+    );
+
+    for (ident, keep) in [(&a_ident, &mut keep_a), (&b_ident, &mut keep_b)] {
+        live(&["issue", "archive", ident, "--yes"]);
+        keep.1 = true;
+    }
 }

@@ -633,6 +633,13 @@ exit: 0
             },
             {
               "default": null,
+              "description": "change it only if its updatedAt is still TIME (else exit 7)",
+              "name": "if-updated-at",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
               "description": "apply the change",
               "name": "yes",
               "short": null,
@@ -1355,6 +1362,13 @@ exit: 0
               "name": "help",
               "short": "h",
               "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "change it only if its updatedAt is still TIME (else exit 7)",
+              "name": "if-updated-at",
+              "short": null,
+              "type": "string"
             },
             {
               "default": null,
@@ -3305,6 +3319,13 @@ exit: 0
               "name": "help",
               "short": "h",
               "type": "boolean"
+            },
+            {
+              "default": null,
+              "description": "change it only if its updatedAt is still TIME (else exit 7)",
+              "name": "if-updated-at",
+              "short": null,
+              "type": "string"
             },
             {
               "default": null,
