@@ -34,6 +34,8 @@ read (#12).
   `--add-label` and `--remove-label` still adjust the labels as read.
 - `project update` follows the same rule, and takes `--if-updated-at` (the
   project's `updatedAt`; exit 7 when it no longer holds).
+- `cycle update` follows the same rule, and takes `--if-updated-at`. Its
+  answer's `cycle` now carries `updatedAt`.
 
 ### Fixed
 

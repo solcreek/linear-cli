@@ -1358,6 +1358,13 @@ exit: 0
             },
             {
               "default": null,
+              "description": "change it only if its updatedAt is still TIME (else exit 7)",
+              "name": "if-updated-at",
+              "short": null,
+              "type": "string"
+            },
+            {
+              "default": null,
               "description": "the cycle's custom NAME (Linear shows \"Cycle N\" without one)",
               "name": "name",
               "short": null,

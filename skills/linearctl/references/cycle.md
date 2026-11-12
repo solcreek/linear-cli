@@ -122,9 +122,13 @@ Flags:
 ## linearctl cycle update
 
 ```
-Change a cycle's name, description or dates. Only what differs is sent; when
-nothing does, nothing is sent and the result is changed: false. CYCLE is as for cycle
-show, within --team.
+Change a cycle's name, description or dates. Everything you name is sent, also
+what the cycle already seems to have: Linear can answer a read from before its
+last change. changed says whether the cycle as read differs.
+--if-updated-at TIME refuses (exit 7, conflict) if the cycle changed since you
+read it. It also proves the read current, so only what differs is sent, and
+when nothing does nothing is.
+CYCLE is as for cycle show, within --team.
 Changes things: pass --dry-run to preview, --yes to apply.
 
 Usage:
@@ -135,13 +139,14 @@ Examples:
   linearctl cycle update 24 --team ENG --ends-at 2026-11-05 --yes
 
 Flags:
-      --completed-at TIME   when it was completed, TIME (completes it early)
-      --description TEXT    the cycle's description, TEXT
-      --dry-run             show what would change; change nothing
-      --ends-at TIME        when it ends, TIME
-  -h, --help                help for update
-      --name NAME           the cycle's custom NAME (Linear shows "Cycle N" without one)
-      --starts-at TIME      when it starts, TIME: a date or an RFC 3339 time
-      --team KEY            the cycle's team KEY (falls back to LINEARCTL_TEAM, then default-team)
-      --yes                 apply the change
+      --completed-at TIME    when it was completed, TIME (completes it early)
+      --description TEXT     the cycle's description, TEXT
+      --dry-run              show what would change; change nothing
+      --ends-at TIME         when it ends, TIME
+  -h, --help                 help for update
+      --if-updated-at TIME   change it only if its updatedAt is still TIME (else exit 7)
+      --name NAME            the cycle's custom NAME (Linear shows "Cycle N" without one)
+      --starts-at TIME       when it starts, TIME: a date or an RFC 3339 time
+      --team KEY             the cycle's team KEY (falls back to LINEARCTL_TEAM, then default-team)
+      --yes                  apply the change
 ```

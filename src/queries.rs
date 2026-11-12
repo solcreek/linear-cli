@@ -403,7 +403,7 @@ pub const CYCLES: &str = concat!(
 pub const CYCLE_FIND: &str = concat!(
     "query CycleFind($filter: CycleFilter!) {\n  cycles(filter: $filter, first: 2, includeArchived: true) { nodes { ",
     cycle_row!(),
-    " archivedAt } }\n}"
+    " archivedAt updatedAt } }\n}"
 );
 
 /// cycle create's team, and whether a cycle with the chosen id exists.
@@ -422,7 +422,7 @@ pub const CYCLE_CREATE: &str = concat!(
 pub const CYCLE_UPDATE: &str = concat!(
     "mutation CycleUpdate($id: String!, $input: CycleUpdateInput!) {\n  cycleUpdate(id: $id, input: $input) { success cycle { ",
     cycle_row!(),
-    " } }\n}"
+    " updatedAt } }\n}"
 );
 
 pub const CYCLE_ARCHIVE: &str = "mutation CycleArchive($id: String!) { cycleArchive(id: $id) { success } }";

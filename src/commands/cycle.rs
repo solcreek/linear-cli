@@ -354,9 +354,13 @@ fn find_one(run: &mut Run, cl: &Client, ctx: &Ctx, word: &str) -> R<Value> {
 fn update_cmd() -> Cmd {
     let c = Cmd::new("update CYCLE", "Change a cycle's name, description or dates")
         .long(
-            "Change a cycle's name, description or dates. Only what differs is sent; when\n\
-nothing does, nothing is sent and the result is changed: false. CYCLE is as for cycle\n\
-show, within --team.\n\
+            "Change a cycle's name, description or dates. Everything you name is sent, also\n\
+what the cycle already seems to have: Linear can answer a read from before its\n\
+last change. changed says whether the cycle as read differs.\n\
+--if-updated-at TIME refuses (exit 7, conflict) if the cycle changed since you\n\
+read it. It also proves the read current, so only what differs is sent, and\n\
+when nothing does nothing is.\n\
+CYCLE is as for cycle show, within --team.\n\
 Changes things: pass --dry-run to preview, --yes to apply.",
         )
         .example(
@@ -365,7 +369,7 @@ Changes things: pass --dry-run to preview, --yes to apply.",
         .args(Args::Exact(1))
         .run(update)
         .flag(Flag::str("team", "the cycle's team `KEY` (falls back to LINEARCTL_TEAM, then default-team)"));
-    input_flags(c).mutating()
+    input_flags(c).flag(super::issue::if_updated_at_flag()).mutating()
 }
 
 fn update(run: &mut Run, ctx: &Ctx) -> R {
@@ -376,30 +380,50 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     if input.is_empty() {
         return Err(usage("pass --name, --description, --starts-at, --ends-at or --completed-at"));
     }
+    let since = super::issue::if_updated_at(ctx, "cycle")?;
     let cl = run.client()?;
     let c = find_one(run, &cl, ctx, &word)?;
+    let label = format!("cycle {} in {}", str_at(&c, "number"), str_at(&c, "team.key"));
+    // As issue update: the read may lag a write Linear confirmed, so what it
+    // already shows is still sent, unless --if-updated-at proves it current.
+    let current_read = super::issue::read_is_current(
+        &since,
+        &str_at(&c, "updatedAt"),
+        &label,
+        &format!("'linearctl cycle show {} --team {}'", str_at(&c, "number"), str_at(&c, "team.key")),
+    )?;
+    let mut holds: Vec<&str> = vec![];
     for f in ["name", "description"] {
         if input.get(f).is_some_and(|v| *v == c[f] || (v == "" && c[f].is_null())) {
-            input.remove(f);
+            holds.push(f);
         }
     }
     for (field, t) in &times {
         if c[*field].as_str().and_then(time::parse_rfc3339) == Some(*t) {
-            input.remove(*field);
+            holds.push(field);
         }
     }
-    let changed = !input.is_empty();
-    let label = format!("cycle {} in {}", str_at(&c, "number"), str_at(&c, "team.key"));
+    let changed = input.keys().any(|k| !holds.contains(&k.as_str()));
+    if current_read {
+        for f in holds {
+            input.remove(f);
+        }
+    }
+    let send = !input.is_empty();
     let mut doc = json!({"changed": changed, "dryRun": dry, "id": c["id"], "input": input});
-    if !changed {
+    if !send {
         return run.output(doc, &format!("unchanged {label}"));
+    }
+    if dry && !changed {
+        return run.output(doc, &format!("unchanged {label}, as read; would send it all the same"));
     }
     if dry {
         return run.output(doc, &format!("would update {label}"));
     }
     let mut out = cl.query(run, queries::CYCLE_UPDATE, json!({"id": c["id"], "input": doc["input"]}))?;
     doc["cycle"] = flatten(out["cycleUpdate"]["cycle"].take());
-    run.output(doc, &format!("updated {label}"))
+    let verb = if changed { "updated" } else { "unchanged" };
+    run.output(doc, &format!("{verb} {label}"))
 }
 
 fn archive_cmd() -> Cmd {
