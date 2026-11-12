@@ -1335,6 +1335,45 @@ fn create(run: &mut Run, ctx: &Ctx) -> R {
     run.output(json!({"changed": true, "dryRun": false, "id": id, "issue": it}), &text)
 }
 
+/// The --if-updated-at flag of an update command.
+pub fn if_updated_at_flag() -> Flag {
+    Flag::str("if-updated-at", "change it only if its updatedAt is still `TIME` (else exit 7)")
+}
+
+/// --if-updated-at as given, "" when it is not: checked before anything is
+/// sent. noun is what the command updates ("issue").
+pub fn if_updated_at(ctx: &Ctx, noun: &str) -> R<String> {
+    let since = ctx.str("if-updated-at");
+    if !since.is_empty() && time::parse_rfc3339(&since).is_none() {
+        return Err(usage(format!(
+            "--if-updated-at must be the {noun}'s updatedAt, an RFC 3339 time; got {}",
+            quote_go(&since)
+        )));
+    }
+    Ok(since)
+}
+
+/// Whether the read behind an update is known to be current: since is
+/// --if-updated-at, updated_at what the read shows. Linear can answer a read
+/// from before a write it confirmed, so a read proves nothing about what
+/// holds now unless the caller names the updatedAt of the last write it
+/// knows of and the read carries it. Without the flag, false. With one that
+/// differs, a conflict (exit 7): the thing changed since, or the read lags.
+/// what names the thing; reread is the command that reads it.
+pub fn read_is_current(since: &str, updated_at: &str, what: &str, reread: &str) -> R<bool> {
+    if since.is_empty() {
+        return Ok(false);
+    }
+    let now = time::parse_rfc3339(updated_at);
+    if now.is_some() && now == time::parse_rfc3339(since) {
+        return Ok(true);
+    }
+    Err(Fail::Conflict(format!(
+        "{what} changed at {updated_at}, not {since} as --if-updated-at expects; read it again"
+    ))
+    .hint(format!("{reread} reads it; decide again from what it shows")))
+}
+
 fn update_cmd() -> Cmd {
     let c = Cmd::new("update ISSUE", "Change an issue's fields")
         .long(
@@ -1358,7 +1397,7 @@ Changes things: pass --dry-run to preview, --yes to apply.",
     issue_fields(c)
         .flag(Flag::strs("label", "set the labels to `NAME`s, replacing the rest (repeatable)"))
         .flag(Flag::strs("add-label", "add label `NAME` (repeatable)"))
-        .flag(Flag::str("if-updated-at", "change it only if its updatedAt is still `TIME` (else exit 7)"))
+        .flag(if_updated_at_flag())
         .flag(Flag::strs("remove-label", "remove label `NAME` (repeatable)"))
         .mutating()
 }
@@ -1372,13 +1411,7 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     if ctx.changed("label") && (!add.is_empty() || !remove.is_empty()) {
         return Err(usage("pass --label, or --add-label/--remove-label, not both"));
     }
-    let since = ctx.str("if-updated-at");
-    if !since.is_empty() && time::parse_rfc3339(&since).is_none() {
-        return Err(usage(format!(
-            "--if-updated-at must be the issue's updatedAt, an RFC 3339 time; got {}",
-            quote_go(&since)
-        )));
-    }
+    let since = if_updated_at(ctx, "issue")?;
     let cl = run.client()?;
     let mut extra = add.clone();
     extra.extend(remove.iter().cloned());
@@ -1389,18 +1422,12 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
         .map_err(|e| e.not_found(&format!("issue {r}"), fail::FIND_ISSUE))?;
     let is = &res["issue"];
     let identifier = str_at(is, "identifier");
-    let updated_at = str_at(is, "updatedAt");
-    if !since.is_empty() && !updated_at.is_empty() {
-        let then = time::parse_rfc3339(&since);
-        if let Some(now) = time::parse_rfc3339(&updated_at)
-            && Some(now) != then
-        {
-            return Err(Fail::Conflict(format!(
-                "{identifier} changed at {updated_at}, not {since} as --if-updated-at expects; read it again"
-            ))
-            .hint(format!("'linearctl issue show {identifier}' reads it; decide again from what it shows")));
-        }
-    }
+    let current_read = read_is_current(
+        &since,
+        &str_at(is, "updatedAt"),
+        &identifier,
+        &format!("'linearctl issue show {identifier}'"),
+    )?;
     let team_id = str_at(is, "team.id");
     let current_project = if is["project"].is_object() { str_at(is, "project.id") } else { String::new() };
     w.apply(
@@ -1436,7 +1463,6 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     // matching --if-updated-at proves the read current (a lagging one carries
     // an older updatedAt and is refused above): then what holds is dropped
     // and a rerun sends nothing.
-    let current_read = !since.is_empty();
     let mut holds: Vec<&str> = vec![];
     let id = |v: &Value| if v.is_object() { json!(str_at(v, "id")) } else { Value::Null };
     let description = match &is["description"] {

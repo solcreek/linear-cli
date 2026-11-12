@@ -878,6 +878,19 @@ func TestIssueUpdateIfUpdatedAt(t *testing.T) {
 	}
 }
 
+// A read without an updatedAt proves nothing: it is not taken as current.
+func TestIssueUpdateIfUpdatedAtNeedsTheReadToCarryIt(t *testing.T) {
+	t.Parallel()
+	is := currentIssue()
+	delete(is, "updatedAt")
+	api := newFake(t).on("UpdateResolve", resolveAnswer(map[string]any{"issue": is}))
+	r := runWith(t, opts{api: api, key: testKey}, "issue", "update", "ENG-5", "--title", "New title",
+		"--if-updated-at", "2026-10-02T08:00:00Z", "--yes", "--json")
+	if d := decode(t, r.out); r.code != exitConflict || d["code"] != "CONFLICT" || slices.Contains(api.ops(), "IssueUpdate") {
+		t.Errorf("exit %d, %q", r.code, r.out)
+	}
+}
+
 // Linear's own teamId in --json-input names the team when --team is not
 // given; --team wins when both are.
 func TestIssueCreateTeamFromJSONInput(t *testing.T) {
