@@ -193,11 +193,20 @@ Example: `pbpaste | linearctl auth login --yes`
   (Linear takes a label that is already there and changes nothing);
   `--remove-label` only as far as the read has the label, since Linear refuses
   to remove one the issue lacks, and the whole update with it.
-  `comment update`, `cycle update` and `project update` follow the same rule
-  and take the same flag. Every update answers with the entity as its mutation
-  returned it, `updatedAt` included, never as it was read before.
+  `cycle update` and `project update` follow the same rule and take the same
+  flag. `comment update` takes the flag but still sends nothing for the text
+  the read shows: Linear sets `editedAt` for any `commentUpdate`, so a rerun
+  would mark an untouched comment as edited. Every update answers with the
+  entity as its mutation returned it, `updatedAt` included, never as it was
+  read before.
+- Measured against Linear on 2026-11-12, behind the rules above: an
+  `issueUpdate` with the values the issue has leaves `updatedAt` as it was; a
+  create with a taken id is refused ("Entity Issue with id … already
+  exists."); `issueRelationCreate` for two issues and a type already related
+  makes nothing and answers with the existing relation, so `relation create`
+  needs no id of its own.
 - Still decided by a read alone, so a lagging one can misreport them:
-  `--remove-label`, `relation delete`, `comment delete`, and
+  `--remove-label`, `comment update`, `relation delete`, `comment delete`, and
   the archive commands. Each is a rerun-safe no-op when the read is current.
 - `--json-input` takes Linear's `IssueCreateInput` / `IssueUpdateInput` as is
   (A11); flags given alongside override its fields.

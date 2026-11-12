@@ -144,11 +144,11 @@ fn comment_id(s: &str) -> R<String> {
 fn update_cmd() -> Cmd {
     Cmd::new("update COMMENT", "Replace a comment's text")
         .long(
-            "Replace a comment's Markdown text. The text is sent also when the comment\n\
-already seems to have it: Linear can answer a read from before its last change.\n\
-changed says whether the comment as read differs.\n\
+            "Replace a comment's Markdown text. The same text again is changed: false and\n\
+sends nothing: Linear marks a comment as edited for any text sent, also the\n\
+text it has.\n\
 --if-updated-at TIME refuses (exit 7, conflict) if the comment changed since you\n\
-read it. It also proves the read current, so the same text again sends nothing.\n\
+read it, or if the read is from before its last change.\n\
 Changes things: pass --dry-run to preview, --yes to apply.",
         )
         .example(
@@ -173,34 +173,33 @@ fn update(run: &mut Run, ctx: &Ctx) -> R {
     })?;
     let comment = &res["comment"];
     let url = str_at(comment, "url");
-    // As issue update: the read may lag a write Linear confirmed, so text it
-    // already shows is still sent, unless --if-updated-at proves it current.
-    let current_read = super::issue::read_is_current(
+    // --if-updated-at refuses a comment that changed since, and a read that
+    // lags (it carries an older updatedAt).
+    super::issue::read_is_current(
         &since,
         &str_at(comment, "updatedAt"),
         &format!("comment {id}"),
         "'linearctl comment list ISSUE', for its issue,",
     )?;
+    // Unlike the other updates, text the read already shows is not sent:
+    // Linear sets editedAt for any commentUpdate, also one with the body the
+    // comment has (measured 2026-11-12), so a rerun would mark an untouched
+    // comment as edited. The cost is that a lagging read can drop a revert
+    // sent right after the write it reverts; --if-updated-at catches that.
     let changed = str_at(comment, "body") != body;
     let mut doc = json!({"changed": changed, "dryRun": dry, "id": id});
-    if !changed && current_read {
+    if !changed {
         doc["comment"] = flatten(comment.clone());
         return run.output(doc, &format!("unchanged {url}"));
     }
     if dry {
         doc["input"] = json!({"body": body});
-        let text = if changed {
-            format!("would update {url}")
-        } else {
-            format!("unchanged {url}, as read; would send it all the same")
-        };
-        return run.output(doc, &text);
+        return run.output(doc, &format!("would update {url}"));
     }
     let out = cl.query(run, queries::COMMENT_UPDATE, json!({"id": id, "input": {"body": body}}))?;
     let updated = &out["commentUpdate"]["comment"];
     doc["comment"] = flatten(updated.clone());
-    let verb = if changed { "updated" } else { "unchanged" };
-    run.output(doc, &format!("{verb} {}", str_at(updated, "url")))
+    run.output(doc, &format!("updated {}", str_at(updated, "url")))
 }
 
 fn delete_cmd() -> Cmd {

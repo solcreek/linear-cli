@@ -124,35 +124,25 @@ func TestCommentUpdate(t *testing.T) {
 	if d := decode(t, r.out); str(d, "comment.updatedAt") == "" {
 		t.Errorf("yes: no updatedAt to wait for in %q", r.out)
 	}
-	// The text the read already shows is sent all the same: the read may lag
-	// a write Linear confirmed, and would then drop a revert (#12).
-	r = runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "old", "--yes", "--json")
-	if d := decode(t, r.out); r.code != 0 || d["changed"] != false || api.last("CommentUpdate").Vars["input"].(map[string]any)["body"] != "old" || d["comment"] == nil {
-		t.Errorf("same text: exit %d, %q", r.code, r.out)
+	// The same text again sends nothing, with --if-updated-at or without:
+	// Linear marks a comment as edited for any text sent, also the one it has.
+	for _, extra := range [][]string{nil, {"--if-updated-at", "2026-10-03T08:00:00Z"}} {
+		n := len(api.calls())
+		r = runWith(t, opts{api: api, key: testKey}, append([]string{"comment", "update", id, "--body", "old", "--yes", "--json"}, extra...)...)
+		if d := decode(t, r.out); r.code != 0 || d["changed"] != false || api.ops()[n] != "Comment" || len(api.calls()) != n+1 || d["comment"] == nil {
+			t.Errorf("same text %v: exit %d, %q", extra, r.code, r.out)
+		}
 	}
 	url := "https://linear.app/acme/issue/ENG-5#comment-" + id
-	if r := runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "old", "--yes"); r.out != "unchanged "+url+"\n" {
-		t.Errorf("same text, text: %q", r.out)
-	}
-	r = runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "old", "--dry-run", "--json")
-	if d := decode(t, r.out); r.code != 0 || d["changed"] != false || jsonOf(d["input"]) != `{"body":"old"}` {
-		t.Errorf("same text, dry run: exit %d, %q", r.code, r.out)
-	}
-	if r := runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "old", "--dry-run"); r.out != "unchanged "+url+", as read; would send it all the same\n" {
+	if r := runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "old", "--dry-run"); r.out != "unchanged "+url+"\n" {
 		t.Errorf("same text, dry run text: %q", r.out)
-	}
-	// --if-updated-at proves the read current: the same text sends nothing.
-	n := len(api.calls())
-	r = runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "old", "--if-updated-at", "2026-10-03T08:00:00Z", "--yes", "--json")
-	if d := decode(t, r.out); r.code != 0 || d["changed"] != false || api.ops()[n] != "Comment" || len(api.calls()) != n+1 || d["comment"] == nil {
-		t.Errorf("same text --if-updated-at: exit %d, %q", r.code, r.out)
 	}
 	r = runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "new", "--if-updated-at", "2026-10-03T08:00:00Z", "--yes", "--json")
 	if d := decode(t, r.out); r.code != 0 || d["changed"] != true {
 		t.Errorf("new text --if-updated-at: exit %d, %q", r.code, r.out)
 	}
 	// A comment that changed since, or a read that lags, is refused before anything is sent.
-	n = len(api.calls())
+	n := len(api.calls())
 	r = runWith(t, opts{api: api, key: testKey}, "comment", "update", id, "--body", "new", "--if-updated-at", "2026-10-01T00:00:00Z", "--yes", "--json")
 	if d := decode(t, r.out); r.code != exitConflict || d["code"] != "CONFLICT" || len(api.calls()) != n+1 ||
 		!strings.Contains(str(d, "error"), "comment "+id+" changed at 2026-10-03T08:00:00.000Z") {

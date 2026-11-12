@@ -1,10 +1,10 @@
 exit: 0
 --- stdout
-Replace a comment's Markdown text. The text is sent also when the comment
-already seems to have it: Linear can answer a read from before its last change.
-changed says whether the comment as read differs.
+Replace a comment's Markdown text. The same text again is changed: false and
+sends nothing: Linear marks a comment as edited for any text sent, also the
+text it has.
 --if-updated-at TIME refuses (exit 7, conflict) if the comment changed since you
-read it. It also proves the read current, so the same text again sends nothing.
+read it, or if the read is from before its last change.
 Changes things: pass --dry-run to preview, --yes to apply.
 
 Usage:

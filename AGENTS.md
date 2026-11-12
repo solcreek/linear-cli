@@ -22,12 +22,13 @@ before guessing a flag. Always pass `--json`.
 - A rerun of any mutating command that has nothing to do succeeds with
   `"changed": false`.
 - Linear can answer a read from before a write it just confirmed. So
-  `issue update`, `comment update`, `cycle update` and `project update` send
-  every field you name, and `changed` only compares with what was read. To
-  send nothing when nothing differs, pass `--if-updated-at` with the
-  `updatedAt` of the last answer you got: a read that lags is refused with
-  exit 7; rerun it. To wait for a write to show in reads, compare their
-  `updatedAt` with the one the write answered.
+  `issue update`, `cycle update` and `project update` send every field you
+  name, and `changed` only compares with what was read. To send nothing when
+  nothing differs, pass `--if-updated-at` with the `updatedAt` of the last
+  answer you got: a read that lags is refused with exit 7; rerun it.
+  `comment update` takes it too, and never sends the text a comment already
+  has. To wait for a write to show in reads, compare their `updatedAt` with
+  the one the write answered.
 - Branch on a failure's `code`, not its words: exit 1 alone is `NOT_FOUND`
   (look it up with a list command), `AMBIGUOUS` (name it more precisely),
   `LINEAR_ERROR`, `NETWORK` (rerunning is safe) or `FAILED`; `describe` lists
